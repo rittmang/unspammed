@@ -17,6 +17,9 @@ export default defineConfig({
           ACCESS_AUD: '',
           TELEGRAM_BOT_TOKEN: 'test-token',
           TELEGRAM_WEBHOOK_SECRET: 'test-webhook-secret',
+          TELEGRAM_API_ID: '12345',
+          TELEGRAM_API_HASH: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa',
+          TELEGRAM_SESSION_KEY: 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
           OPENROUTER_API_KEY: 'test-api-key',
           ...(process.env.TEST_POSTGRES_URL
             ? {

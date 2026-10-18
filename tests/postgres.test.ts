@@ -101,6 +101,28 @@ describe.skipIf(!env.TEST_POSTGRES_URL)('Postgres backend in Workers runtime', (
     vi.unstubAllGlobals();
   });
   const stub = () => new GroupService(new PostgresDatabase(env), env);
+  it('limits production ticks to two queued bans and resumes the remainder on the next tick', async () => {
+    await enforce(stub());
+    for (const id of ['41', '42', '43']) {
+      await db.exec(
+        'INSERT INTO users (user_id,name,strikes,last_seen) VALUES (?,?,3,0)',
+        id,
+        'Member',
+      );
+      await db.exec("INSERT INTO actions (kind,user_id,payload) VALUES ('ban',?,'{}')", id);
+    }
+    const productionEnv = { ...env, DEV_MODE: 'false' };
+    await runScheduledWork(productionEnv, 45_000, db);
+    expect(calls.filter((c) => c.method === 'banChatMember')).toHaveLength(2);
+    expect(await db.exec("SELECT COUNT(*) AS n FROM actions WHERE status='pending'")).toEqual([
+      { n: 1 },
+    ]);
+    await runScheduledWork(productionEnv, 45_000, db);
+    expect(calls.filter((c) => c.method === 'banChatMember')).toHaveLength(3);
+    expect(await db.exec("SELECT COUNT(*) AS n FROM actions WHERE status='pending'")).toEqual([
+      { n: 0 },
+    ]);
+  });
   function update(id: number, user = 42): TelegramUpdate {
     return {
       update_id: id,

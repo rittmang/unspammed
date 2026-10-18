@@ -5,6 +5,7 @@ import {
   type Database,
 } from './database';
 import { migrationState } from './storage';
+import { adminStub } from './telegram-admin';
 import {
   evaluationIndexResponse,
   evaluationPageResponse,
@@ -357,14 +358,30 @@ export class GroupService {
     policy: string,
     examples: ClassificationExample[],
     runId?: string,
+    thresholds?: Pick<Settings, 'threshold' | 'reviewThreshold'>,
   ) {
     if (!examples.length) throw new BudgetError();
     await this.assertWorkLease();
-    const reserved = estimateTokens(this.env, provider, model, policy, examples);
+    const decisionThresholds = thresholds || (await this.settings());
+    const reserved = estimateTokens(
+      this.env,
+      provider,
+      model,
+      policy,
+      examples,
+      decisionThresholds,
+    );
     const day = runId ? new Date().toISOString().slice(0, 10) : await this.reserve(reserved);
     let measured: ClassificationUsage | undefined;
     try {
-      const result = await classify(this.env, provider, model, policy, examples);
+      const result = await classify(
+        this.env,
+        provider,
+        model,
+        policy,
+        examples,
+        decisionThresholds,
+      );
       measured = result;
       return result;
     } catch (error) {
@@ -408,6 +425,14 @@ export class GroupService {
     messageId: number | null,
     payload: Record<string, unknown>,
   ) {
+    if (
+      kind === 'ban' &&
+      (await this.one(
+        "SELECT id FROM actions WHERE kind='ban' AND user_id=? AND status IN ('pending','failed') LIMIT 1",
+        userId,
+      ))
+    )
+      return;
     await this.db.exec(
       'INSERT INTO actions (kind,user_id,message_id,payload) VALUES (?,?,?,?)',
       kind,
@@ -467,13 +492,13 @@ export class GroupService {
       if (strikes === 3) await this.queueAction('ban', m.user_id, m.id, {});
     });
   }
-  private async processMessages() {
+  private async processMessages(limit = Infinity) {
     const settings = await this.settings();
     if (settings.mode === 'paused') return;
     const messages = await this.rows<MessageRow>(
       "SELECT * FROM messages WHERE status='pending' AND next_at<=? ORDER BY sent_at,id LIMIT ?",
       Date.now(),
-      settings.batchSize,
+      Math.min(settings.batchSize, limit),
     );
     if (!messages.length) return;
     let processing = messages;
@@ -538,6 +563,8 @@ export class GroupService {
         route.model,
         settings.policy,
         examples,
+        undefined,
+        settings,
       );
       // Config changes during an upstream call invalidate its decisions.
       if (JSON.stringify(await this.settings()) !== JSON.stringify(settings)) return;
@@ -636,12 +663,14 @@ export class GroupService {
       }
       await this.log('classification_error', error);
     }
+    return true;
   }
-  private async processActions() {
+  private async processActions(limit = 12) {
     if ((await this.settings()).mode !== 'enforce') return;
     const actions = await this.rows<Action>(
-      "SELECT * FROM actions WHERE status='pending' AND next_at<=? ORDER BY id LIMIT 12",
+      "SELECT * FROM actions WHERE status='pending' AND next_at<=? ORDER BY CASE WHEN kind='ban' THEN 0 ELSE 1 END,id LIMIT ?",
       Date.now(),
+      limit,
     );
     for (const action of actions) {
       try {
@@ -658,20 +687,52 @@ export class GroupService {
         }
         if ((await this.settings()).mode !== 'enforce') break;
         if (action.kind === 'ban') {
+          if (
+            (
+              await this.one<{ banned: number }>(
+                'SELECT banned FROM users WHERE user_id=?',
+                action.user_id,
+              )
+            )?.banned
+          ) {
+            await this.db.exec(
+              "UPDATE actions SET status='done' WHERE kind='ban' AND user_id=? AND status IN ('pending','failed')",
+              action.user_id,
+            );
+            continue;
+          }
           await this.assertWorkLease();
           await telegram(this.env, 'banChatMember', {
             chat_id: this.env.TELEGRAM_CHAT_ID,
             user_id: Number(action.user_id),
             revoke_messages: true,
           });
-          await this.db.exec('UPDATE users SET banned=1 WHERE user_id=?', action.user_id);
-          await this.db.exec('UPDATE messages SET deleted=1 WHERE user_id=?', action.user_id);
-          await this.log(
-            'banned',
-            'Strike three: permanently banned; Telegram revokes message history in supergroups.',
-            action.user_id,
-            action.message_id,
-          );
+          // A ban confirms membership only. Track message deletion separately.
+          await this.db.transaction(async () => {
+            await this.db.exec('UPDATE users SET banned=1 WHERE user_id=?', action.user_id);
+            const ids = (
+              await this.rows<{ id: number }>(
+                'SELECT id FROM messages WHERE user_id=? AND deleted=0 AND sent_at>? ORDER BY id',
+                action.user_id,
+                Date.now() - 48 * 3600000,
+              )
+            ).map((row) => row.id);
+            for (let i = 0; i < ids.length; i += 100)
+              await this.queueAction('purge', action.user_id, action.message_id, {
+                message_ids: ids.slice(i, i + 100),
+              });
+            await this.log(
+              'banned',
+              `Strike three: permanently banned. Queued deletion of ${ids.length} tracked message(s) within Telegram's 48-hour deletion window; older or untracked history requires Telegram's native cleanup.`,
+              action.user_id,
+              action.message_id,
+            );
+            await this.db.exec(
+              "UPDATE actions SET status='done' WHERE kind='ban' AND user_id=? AND status IN ('pending','failed')",
+              action.user_id,
+            );
+          });
+          continue;
         } else {
           const payload = JSON.parse(action.payload) as {
             message_ids: number[];
@@ -733,6 +794,7 @@ export class GroupService {
         }
       }
     }
+    return actions.length > 0;
   }
   private async decodedExamples(
     table: 'examples' | 'run_examples',
@@ -947,6 +1009,7 @@ export class GroupService {
         run.policy,
         examples,
         run.id,
+        run.settings_snapshot ? JSON.parse(run.settings_snapshot) : await this.settings(),
       );
       if (
         (
@@ -995,14 +1058,21 @@ export class GroupService {
     }
   }
   async alarm() {
+    return this.processBatch();
+  }
+  async processBatch(bounded = false) {
     return this.db.session(() =>
       this.serial(async () => {
         this.overviewCache = null;
         let retry = false;
         try {
           await this.requireLiveStorage();
-          await this.processMessages();
-          await this.processActions();
+          // Existing effects must not wait behind classification or lab work.
+          const acted = await this.processActions(bounded ? 2 : 12);
+          if (bounded && acted) return;
+          const classified = await this.processMessages(bounded ? 2 : Infinity);
+          if (bounded && classified) return;
+          await this.processActions(bounded ? 2 : 12);
           await this.processEvaluation();
           await this.improvement().process();
         } catch (e) {
@@ -1026,7 +1096,7 @@ export class GroupService {
         (?!='paused' AND EXISTS(SELECT 1 FROM messages WHERE status='pending' AND next_at<=?)) OR
         (?='enforce' AND EXISTS(SELECT 1 FROM actions WHERE status='pending' AND next_at<=?)) OR
         EXISTS(SELECT 1 FROM evaluations WHERE status IN ('queued','running')) OR
-        EXISTS(SELECT 1 FROM policy_drafts WHERE status IN ('queued','drafting','development','validation','test'))`,
+        EXISTS(SELECT 1 FROM policy_drafts WHERE status IN ('queued','drafting','preparing','development','validation','test'))`,
         settings.mode,
         Date.now(),
         settings.mode,
@@ -1055,7 +1125,7 @@ export class GroupService {
           )?.at
         : null;
     const run = await this.one(
-      "SELECT id FROM evaluations WHERE status IN ('queued','running') UNION ALL SELECT id FROM policy_drafts WHERE status IN ('queued','drafting','development','validation','test') LIMIT 1",
+      "SELECT id FROM evaluations WHERE status IN ('queued','running') UNION ALL SELECT id FROM policy_drafts WHERE status IN ('queued','drafting','preparing','development','validation','test') LIMIT 1",
     );
     const due = [nextMessage, nextAction, run ? Date.now() : null].filter(
       (n): n is number => n !== null && n !== undefined,
@@ -1424,6 +1494,37 @@ export class GroupService {
             await this.wake();
           });
         return json({ ok: true });
+      }
+      const historyPath = path.match(/^\/api\/users\/([1-9]\d{0,15})\/delete-history$/);
+      if (historyPath && request.method === 'POST') {
+        const userId = historyPath[1];
+        const confirmation = z
+          .object({ confirmUserId: z.literal(userId) })
+          .safeParse(await readJson(request));
+        if (!confirmation.success)
+          throw new HttpError(400, 'Confirm the selected user before deleting history.');
+        const user = await this.one<{ name: string; strikes: number }>(
+          'SELECT name,strikes FROM users WHERE user_id=?',
+          userId,
+        );
+        if (!user) throw new HttpError(404, 'User not found.');
+        if (!user.strikes) throw new HttpError(409, 'This user no longer has strikes.');
+        if (await this.isProtected(userId))
+          throw new HttpError(403, 'Owner, administrators, and exempt senders are protected.');
+        const through = await this.one<{ id: number | null }>(
+          'SELECT MAX(id) AS id FROM messages WHERE user_id=?',
+          userId,
+        );
+        return await adminStub(this.env).fetch('https://admin.internal/queue', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            chatId: this.env.TELEGRAM_CHAT_ID,
+            userId,
+            name: user.name,
+            throughMessageId: through?.id || 0,
+          }),
+        });
       }
       const userPath = path.match(/^\/api\/users\/(\d+)\/reset$/);
       if (userPath && request.method === 'POST')

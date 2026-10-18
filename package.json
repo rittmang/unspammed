@@ -18,15 +18,18 @@
     "deploy": "npm run build && wrangler deploy",
     "telegram:setup": "node scripts/telegram-setup.mjs",
     "telegram:discover": "node scripts/telegram-discover.mjs",
+    "telegram:admin:configure": "node scripts/telegram-admin-configure.mjs",
     "database:setup": "tsx scripts/database-setup.ts"
   },
   "dependencies": {
     "@streamparser/json": "^0.0.26",
+    "big-integer": "^1.6.52",
     "jose": "^6.1.0",
     "lucide-react": "^0.468.0",
     "pg": "^8.23.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "teleproto": "^1.230.1",
     "zod": "^4.0.0"
   },
   "devDependencies": {

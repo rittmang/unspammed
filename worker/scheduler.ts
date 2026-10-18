@@ -13,8 +13,10 @@ export async function runScheduledWork(
   const deadline = Date.now() + durationMs;
   try {
     return await db.withWorkLease(async () => {
-      for (let batches = 0; batches < 20 && (await group.hasDueWork()); batches++) {
-        await group.alarm();
+      // Production gets a fresh CPU allowance on the next cron invocation.
+      const bounded = env.DEV_MODE !== 'true';
+      for (let batches = 0; batches < (bounded ? 1 : 20) && (await group.hasDueWork()); batches++) {
+        await group.processBatch(bounded);
         if (Date.now() >= deadline) break;
       }
     });

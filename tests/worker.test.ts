@@ -143,6 +143,81 @@ async function tick(s: DurableObjectStub) {
 }
 
 describe('durable moderation', () => {
+  it('drains existing bans before classification, bounds work, and coalesces legacy duplicates', async () => {
+    const s = stub();
+    await configure(s, { mode: 'enforce' });
+    await send(s, update(1));
+    await runInDurableObject(s, async (instance: GroupModerator, state) => {
+      state.storage.sql.exec("UPDATE users SET strikes=3 WHERE user_id='42'");
+      for (let i = 0; i < 3; i++)
+        state.storage.sql.exec(
+          "INSERT INTO actions (kind,user_id,payload) VALUES ('ban','42','{}')",
+        );
+      await instance.processBatch(true);
+      expect(
+        state.storage.sql
+          .exec("SELECT COUNT(*) AS n FROM actions WHERE kind='ban' AND status='pending'")
+          .one().n,
+      ).toBe(0);
+    });
+    expect(calls.filter((c) => c.method === 'banChatMember')).toHaveLength(1);
+    expect(calls.some((c) => c.method === 'classify')).toBe(false);
+    expect((await overview(s)).users[0].banned).toBe(1);
+    expect((await overview(s)).messages[0].deleted).toBe(0);
+  });
+  it('deletes recent history separately after a ban, retries failures, and never claims old history was deleted', async () => {
+    const s = stub();
+    await configure(s, { mode: 'enforce' });
+    await send(s, update(1));
+    await send(s, update(2));
+    await runInDurableObject(s, async (instance: GroupModerator, state) => {
+      state.storage.sql.exec("UPDATE users SET strikes=3 WHERE user_id='42'");
+      state.storage.sql.exec("UPDATE messages SET status='spam',strike_awarded=1");
+      state.storage.sql.exec('UPDATE messages SET sent_at=? WHERE id=1', Date.now() - 72 * 3600000);
+      state.storage.sql.exec("INSERT INTO actions (kind,user_id,payload) VALUES ('ban','42','{}')");
+      await instance.processBatch(true);
+      expect(state.storage.sql.exec('SELECT SUM(deleted) AS n FROM messages').one().n).toBe(0);
+      deleteFailures = 1;
+      await instance.processBatch(true);
+      expect(state.storage.sql.exec('SELECT SUM(deleted) AS n FROM messages').one().n).toBe(0);
+      state.storage.sql.exec("UPDATE actions SET next_at=0 WHERE status='pending'");
+      await instance.processBatch(true);
+      expect(
+        state.storage.sql.exec('SELECT id,deleted FROM messages ORDER BY id').toArray(),
+      ).toEqual([
+        { id: 1, deleted: 0 },
+        { id: 2, deleted: 1 },
+      ]);
+    });
+    expect(
+      calls.filter((c) => c.method === 'deleteMessages').map((c) => c.body.message_ids),
+    ).toEqual([[2], [2]]);
+    expect(calls.filter((c) => c.method === 'banChatMember')).toHaveLength(1);
+  });
+  it('queues one ban for repeated strikes and permits a fresh ban after reset', async () => {
+    const s = stub();
+    await configure(s, { mode: 'enforce' });
+    for (let id = 1; id <= 5; id++) {
+      await send(s, update(id));
+      const response = await s.fetch(`https://group.internal/api/messages/${id}/moderate`, {
+        method: 'POST',
+      });
+      expect(response.status).toBe(200);
+    }
+    await runInDurableObject(s, (_instance, state) => {
+      expect(
+        state.storage.sql.exec("SELECT COUNT(*) AS n FROM actions WHERE kind='ban'").one().n,
+      ).toBe(1);
+    });
+    await tick(s);
+    await s.fetch('https://group.internal/api/users/42/reset', { method: 'POST' });
+    for (let id = 6; id <= 8; id++) {
+      await send(s, update(id));
+      await s.fetch(`https://group.internal/api/messages/${id}/moderate`, { method: 'POST' });
+    }
+    await tick(s);
+    expect(calls.filter((c) => c.method === 'banChatMember')).toHaveLength(2);
+  });
   it('reuses overview reads until storage changes or the cache expires', async () => {
     const s = stub();
     await send(s, update(1));

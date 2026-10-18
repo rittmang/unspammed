@@ -7,6 +7,8 @@ import { runScheduledWork } from './scheduler';
 import { HttpError, json, readJson, databaseQuotaResponse } from './http';
 import { updateSchema } from './telegram';
 import { GroupDirectory, groupEnv, type Directory } from './directory';
+import { adminStub } from './telegram-admin';
+export { TelegramAdmin } from './telegram-admin';
 
 function group(env: Env, db?: PostgresDatabase) {
   if (!/^-100\d+$/.test(env.TELEGRAM_CHAT_ID))
@@ -137,6 +139,24 @@ export function createWorker(
         }
         const owner = await authorize(request, env);
         verifyMutation(request);
+        if (url.pathname.startsWith('/api/telegram-admin/')) {
+          const path = url.pathname.slice('/api/telegram-admin'.length);
+          if (
+            ![
+              '/status',
+              '/jobs',
+              '/login/start',
+              '/login/code',
+              '/login/password',
+              '/login/cancel',
+              '/disconnect',
+            ].includes(path)
+          )
+            throw new HttpError(404, 'Unknown admin action.');
+          const target = new URL(`https://admin.internal${path}`);
+          if (path === '/jobs') target.search = url.search;
+          return securityHeaders(await adminStub(env).fetch(new Request(target, request)));
+        }
         if (url.pathname === '/api/groups' || url.pathname.startsWith('/api/groups/'))
           return securityHeaders(await resolveDirectory(env).fetch(request));
         if (url.pathname.startsWith('/api/')) {

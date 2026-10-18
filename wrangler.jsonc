@@ -17,9 +17,12 @@
     { "tag": "v1", "new_sqlite_classes": ["GroupModerator"] },
     { "tag": "v2", "new_sqlite_classes": ["PlanetScaleModerator"] },
     { "tag": "v3", "deleted_classes": ["GroupModerator", "PlanetScaleModerator"] },
+    { "tag": "v4-admin", "new_sqlite_classes": ["TelegramAdmin"] },
   ],
+  "durable_objects": { "bindings": [{ "name": "TELEGRAM_ADMIN", "class_name": "TelegramAdmin" }] },
   "triggers": { "crons": ["* * * * *", "17 3 * * *"] },
   "observability": { "enabled": true },
+  "hyperdrive": [{ "binding": "HYPERDRIVE", "id": "d74a48e0812e4f688808ffd793950206" }],
   "vars": {
     "DEV_MODE": "false",
     "DATABASE_BACKEND": "planetscale",

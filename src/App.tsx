@@ -67,6 +67,7 @@ import { GroupManager, GroupSwitcher } from './groups';
 import { streamExamples, type ImportProgress } from '../shared/import-stream';
 import { FeedbackEditor } from './FeedbackEditor';
 import { PolicyImprovement } from './PolicyImprovement';
+import { StrikeUsers } from './TelegramAdmin';
 import { policyFingerprint } from '../shared/improvement';
 
 type Page = 'overview' | 'messages' | 'users' | 'lab' | 'improvement' | 'settings';
@@ -697,82 +698,20 @@ function GroupWorkspace({
                     title="A fair record."
                     subtitle="Persistent strikes, keyed by Telegram user. Every action has a history."
                   />
-                  <section className="panel">
-                    <div className="panel-heading">
-                      <h2>Users with strikes</h2>
-                      <span className="subtle">{data.users.length} tracked users</span>
-                    </div>
-                    {data.users.length ? (
-                      <div className="table-scroll">
-                        <table>
-                          <thead>
-                            <tr>
-                              <th>User</th>
-                              <th>Strikes</th>
-                              <th>Status</th>
-                              <th>Last seen</th>
-                              <th />
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {data.users.map((u) => (
-                              <tr key={u.user_id}>
-                                <td>
-                                  <div className="user-cell">
-                                    <Avatar name={u.name} id={u.user_id} />
-                                    <div>
-                                      <strong>{u.name}</strong>
-                                      <small>{u.user_id}</small>
-                                    </div>
-                                  </div>
-                                </td>
-                                <td>
-                                  <div className="strike-dots">
-                                    {[1, 2, 3].map((i) => (
-                                      <span className={u.strikes >= i ? 'filled' : ''} key={i} />
-                                    ))}
-                                    <span>{u.strikes} / 3</span>
-                                  </div>
-                                </td>
-                                <td>
-                                  <Badge
-                                    status={
-                                      u.banned ? 'banned' : u.strikes >= 3 ? 'ban queued' : 'active'
-                                    }
-                                  />
-                                </td>
-                                <td className="muted">
-                                  {new Date(u.last_seen).toLocaleDateString()}
-                                </td>
-                                <td>
-                                  <button
-                                    className="text-button"
-                                    disabled={busy}
-                                    onClick={() =>
-                                      void act(
-                                        () =>
-                                          api(`/users/${u.user_id}/reset`, {
-                                            method: 'POST',
-                                            body: '{}',
-                                          }),
-                                        'Strikes reset; bot ban lifted if present.',
-                                      )
-                                    }
-                                  >
-                                    Reset{u.banned ? ' & unban' : ''}
-                                  </button>
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    ) : (
-                      <Empty icon={Users} title="A clean slate">
-                        No strikes have been recorded. Observation mode never awards strikes.
-                      </Empty>
-                    )}
-                  </section>
+                  <StrikeUsers
+                    key={data.chatId}
+                    chatId={data.chatId}
+                    groupTitle={group.title}
+                    users={data.users}
+                    resetBusy={busy}
+                    onComplete={reload}
+                    onReset={(user) =>
+                      void act(
+                        () => api(`/users/${user.user_id}/reset`, { method: 'POST', body: '{}' }),
+                        'Strikes reset; bot ban lifted if present.',
+                      )
+                    }
+                  />
                   <section className="panel audit-panel">
                     <div className="panel-heading">
                       <h2>Action log</h2>

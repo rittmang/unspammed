@@ -2,6 +2,7 @@ import { createWorker } from './index';
 import type { LocalEnv } from './local-group';
 import { LocalDirectory } from './directory';
 export { GroupModerator } from './local-group';
+export { TelegramAdmin } from './telegram-admin';
 export default createWorker(
   (env) => {
     const namespace = (env as LocalEnv).GROUPS;

@@ -29,7 +29,8 @@ export const feedbackSchema = z.object({
 });
 export type FeedbackInput = z.infer<typeof feedbackSchema>;
 export const AUTO_DRAFT_FAMILIES = 3;
-export const referenceMinimum = { spam: 2, ham: 2, review: 1 };
+export const MAX_POLICY_ATTEMPTS = 4;
+export const referenceMinimum = { spam: 2, ham: 2, review: 0 };
 export const normalizedPolicy = (text: string) => text.trim().replace(/\s+/g, ' ');
 export function policyDiff(before: string, after: string) {
   const a = before.split('\n'),
@@ -180,10 +181,50 @@ export interface PolicyGate {
   candidate: PolicyMetrics;
   costRatio: number | null;
 }
+// With the same observed model/provider, this upper-bounds uncached inference cost
+// for any nonnegative input/output token prices. Provider cache discounts cannot
+// make a cold candidate appear more expensive than a warmed baseline.
+export function replayCostRatio(
+  baseline: {
+    cost: number | null;
+    input: number | null;
+    output: number | null;
+    estimated?: boolean;
+  },
+  candidate: {
+    cost: number | null;
+    input: number | null;
+    output: number | null;
+    estimated?: boolean;
+  },
+) {
+  if (
+    [baseline, candidate].some(
+      (r) =>
+        r.estimated ||
+        r.cost === null ||
+        !Number.isFinite(r.cost) ||
+        r.cost < 0 ||
+        r.input === null ||
+        r.output === null ||
+        !Number.isFinite(r.input) ||
+        !Number.isFinite(r.output) ||
+        r.input < 0 ||
+        r.output < 0,
+    )
+  )
+    return null;
+  const ratio = (a: number, b: number) => (a > 0 ? b / a : b === 0 ? 1 : Infinity);
+  return Math.max(
+    ratio(baseline.input!, candidate.input!),
+    ratio(baseline.output!, candidate.output!),
+  );
+}
 export function policyGate(
   baseline: PolicyMetrics,
   candidate: PolicyMetrics,
   costRatio: number | null,
+  minimumImprovement = 1,
 ): PolicyGate {
   const signature = (m: PolicyMetrics) =>
     JSON.stringify(m.rows.map((r) => [r.id, r.family, r.label]).sort());
@@ -197,7 +238,7 @@ export function policyGate(
     preserveCorrectReviews: baseline.correctReviews.every((id) =>
       candidate.correctReviews.includes(id),
     ),
-    improvesWeightedLoss: baseline.loss - candidate.loss >= 1,
+    improvesWeightedLoss: baseline.loss - candidate.loss >= minimumImprovement,
     unnecessaryReviewCap:
       candidate.unnecessaryReviews.length <=
       baseline.unnecessaryReviews.length + Math.floor(0.05 * baseline.total),
@@ -245,11 +286,12 @@ export function splitReferences(pool: Example[], developmentFamilies: Set<string
       phases.development.push(...g);
       groups.delete(f);
     }
-  // Required reviews count as correct decisions: the oracle always has zero loss.
+  // Include available reviews without requiring owners to invent ambiguous labels.
   for (const phase of ['validation', 'test', 'development'] as const)
     for (const label of ['ham', 'spam', 'review'] as const) {
       for (const [family, g] of [...groups]) {
-        if (phases[phase].filter((e) => e.label === label).length >= referenceMinimum[label]) break;
+        const target = label === 'review' ? 1 : referenceMinimum[label];
+        if (phases[phase].filter((e) => e.label === label).length >= target) break;
         if (!g.some((e) => e.label === label)) continue;
         phases[phase].push(...g);
         groups.delete(family);
@@ -315,6 +357,63 @@ export interface PolicyDraft {
   observedRoute?: { model: string; provider: string };
   failedPhase?: 'development' | 'validation' | 'test';
   referenceOrigins?: { source: string; state: string }[];
+  runAllChecks?: boolean;
+  referenceLabels?: Record<'spam' | 'ham' | 'review', number>;
+  criteria?: string[];
+  optimization?: PolicyOptimization;
+  progress?: PolicyProgress;
+}
+export interface PolicyProgress {
+  stage: 'drafting' | 'development' | 'validation' | 'test' | 'approval';
+  completedChecks: number;
+  totalChecks: number;
+}
+export function policyProgress(
+  d: Pick<PolicyDraft, 'status' | 'failedPhase' | 'runs' | 'results'>,
+): PolicyProgress {
+  let stage: PolicyProgress['stage'] = 'drafting';
+  if (['ready', 'published'].includes(d.status)) stage = 'approval';
+  else if (d.status === 'validated') stage = 'test';
+  else if (['development', 'validation', 'test'].includes(d.status))
+    stage = d.status as PolicyProgress['stage'];
+  else if (['failed', 'rejected', 'stale'].includes(d.status))
+    stage =
+      d.failedPhase ||
+      (['test', 'validation', 'development'] as const).find(
+        (phase) => d.runs?.[phase]?.length || d.results?.[phase],
+      ) ||
+      'drafting';
+  return { stage, completedChecks: 0, totalChecks: 0 };
+}
+export interface PolicyRevision {
+  previousPolicy: string;
+  phase: 'development' | 'validation' | 'test';
+  failedChecks: string[];
+  loss: { baseline: number; candidate: number };
+  examples: {
+    source: string;
+    example: Example;
+    baseline: Prediction;
+    candidate: Prediction;
+  }[];
+}
+export interface PolicyOptimization {
+  campaignId: string;
+  attempt: number;
+  maxAttempts: number;
+  previousDraftId?: string;
+  learnedFamilies: string[];
+  learnedInputs?: string[];
+  trainingSources: string[];
+  lessons?: { source: string; example: Example; baseline?: Prediction; candidate?: Prediction }[];
+  revision?: PolicyRevision;
+  history: {
+    policy: string;
+    criteria: string[];
+    phase: string;
+    baselineLoss: number;
+    candidateLoss: number;
+  }[];
 }
 export interface ImprovementOverview {
   triggerFamilies: number;

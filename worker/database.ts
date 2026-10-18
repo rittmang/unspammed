@@ -122,7 +122,7 @@ export function postgresSql(source: string): string {
   return result.replace(/(\$\d+) IS NULL/g, '$1::double precision IS NULL');
 }
 
-export function postgresConfig(connection: string, dev = false): ClientConfig {
+export function postgresConfig(connection: string, dev = false, hyperdrive = false): ClientConfig {
   let url: URL;
   try {
     url = new URL(connection);
@@ -132,7 +132,7 @@ export function postgresConfig(connection: string, dev = false): ClientConfig {
   const local = ['127.0.0.1', 'localhost', '[::1]'].includes(url.hostname);
   if (
     !['postgres:', 'postgresql:'].includes(url.protocol) ||
-    (!url.hostname.endsWith('.psdb.cloud') && !(local && dev))
+    (!hyperdrive && !url.hostname.endsWith('.psdb.cloud') && !(local && dev))
   )
     throw new HttpError(
       503,
@@ -143,7 +143,8 @@ export function postgresConfig(connection: string, dev = false): ClientConfig {
     url.searchParams.delete(key);
   return {
     connectionString: url.href,
-    ssl: local && dev ? false : { rejectUnauthorized: true },
+    // The trusted binding handles origin TLS; direct connections still verify certificates.
+    ssl: hyperdrive || (local && dev) ? false : { rejectUnauthorized: true },
     connectionTimeoutMillis: 10_000,
     query_timeout: 30_000,
     application_name: 'watchtower',
@@ -175,18 +176,26 @@ export class PostgresDatabase implements Database {
   readonly tablePrefix: string;
   private environment: Pick<
     Env,
-    'PLANETSCALE_DATABASE_URL' | 'DEV_MODE' | 'TELEGRAM_CHAT_ID' | 'DATABASE_ROOT_CHAT_ID'
+    | 'PLANETSCALE_DATABASE_URL'
+    | 'HYPERDRIVE'
+    | 'DEV_MODE'
+    | 'TELEGRAM_CHAT_ID'
+    | 'DATABASE_ROOT_CHAT_ID'
   >;
   constructor(
     env: Pick<
       Env,
-      'PLANETSCALE_DATABASE_URL' | 'DEV_MODE' | 'TELEGRAM_CHAT_ID' | 'DATABASE_ROOT_CHAT_ID'
+      | 'PLANETSCALE_DATABASE_URL'
+      | 'HYPERDRIVE'
+      | 'DEV_MODE'
+      | 'TELEGRAM_CHAT_ID'
+      | 'DATABASE_ROOT_CHAT_ID'
     >,
     sessions?: AsyncLocalStorage<Session>,
   ) {
-    if (!env.PLANETSCALE_DATABASE_URL)
-      throw new HttpError(503, 'Configure PLANETSCALE_DATABASE_URL.');
-    this.config = postgresConfig(env.PLANETSCALE_DATABASE_URL, env.DEV_MODE === 'true');
+    const connection = env.HYPERDRIVE?.connectionString || env.PLANETSCALE_DATABASE_URL;
+    if (!connection) throw new HttpError(503, 'Configure PLANETSCALE_DATABASE_URL.');
+    this.config = postgresConfig(connection, env.DEV_MODE === 'true', !!env.HYPERDRIVE);
     this.environment = env;
     const root = env.DATABASE_ROOT_CHAT_ID || env.TELEGRAM_CHAT_ID;
     this.schema = databaseSchema(root);

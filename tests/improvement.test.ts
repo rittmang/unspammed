@@ -7,6 +7,7 @@ import {
   policyFingerprint,
   policyGate,
   policyMetrics,
+  policyProgress,
   referenceIssues,
   relatedText,
   routed,
@@ -70,6 +71,17 @@ function independentPool(): Example[] {
 }
 
 describe('policy routing and reference metrics', () => {
+  it('keeps stopped runs at the check they reached and resets a new revision to drafting', () => {
+    const runs = { development: ['a', 'b'], validation: ['c', 'd'], test: ['e', 'f'] };
+    expect(policyProgress({ status: 'rejected', runs }).stage).toBe('test');
+    expect(policyProgress({ status: 'failed', failedPhase: 'validation' }).stage).toBe(
+      'validation',
+    );
+    expect(policyProgress({ status: 'queued', runs }).stage).toBe('drafting');
+    expect(policyProgress({ status: 'needs_examples', runs }).stage).toBe('drafting');
+    expect(policyProgress({ status: 'ready' }).stage).toBe('approval');
+    expect(policyProgress({ status: 'published' }).stage).toBe('approval');
+  });
   it.each([0, 0.6, 0.9, 1])('routes an explicit review to review even with score %s', (score) => {
     expect(routed({ ...prediction('x', 'spam'), score, needs_review: true }, thresholds)).toBe(
       'review',
@@ -263,6 +275,33 @@ describe('paired policy regression gates', () => {
 });
 
 describe('independent reference phases', () => {
+  it('tests spam and legitimate labels without requiring needs-review examples', () => {
+    const pool = independentPool().filter((e) => e.label !== 'review');
+    const { phases, issues } = splitReferences(pool, new Set(['campaign-00']));
+    expect(issues).toEqual([]);
+    for (const examples of Object.values(phases)) {
+      expect(referenceIssues(examples)).toEqual([]);
+      expect(examples.some((e) => e.label === 'review')).toBe(false);
+      const wrong = Object.fromEntries(
+        examples.map((e) => [e.id, e.label === 'ham' ? 'spam' : 'ham']),
+      ) as Record<string, Decision>;
+      expect(policyGate(measured(examples, wrong), measured(examples, {}), 1).pass).toBe(true);
+    }
+  });
+
+  it('keeps scarce needs-review references without requiring one in every split', () => {
+    const pool = independentPool().filter(
+      (e) => e.label !== 'review' || e.id === 'campaign-00-review',
+    );
+    const { phases, issues } = splitReferences(pool, new Set());
+    expect(issues).toEqual([]);
+    expect(
+      Object.values(phases)
+        .flat()
+        .filter((e) => e.label === 'review'),
+    ).toHaveLength(1);
+  });
+
   it('keeps campaign families together and reserves correction families for development', () => {
     const pool = independentPool();
     const original = structuredClone(pool);
@@ -373,7 +412,7 @@ describe('independent reference phases', () => {
       expect(issues.some((issue) => issue.startsWith(`${phase}:`))).toBe(true);
     }
     expect(issues).toContain('development: Needs at least five independent message families');
-    expect(issues).toContain('test: Needs 1 review references');
+    expect(issues).toContain('test: Needs 2 spam references');
   });
 });
 
