@@ -96,7 +96,7 @@ try {
         .join('\n') + '\n',
       { mode: 0o600 },
     );
-  for (const provider of ['cloudflare', 'railway', 'digitalocean', 'vercel']) {
+  for (const provider of ['cloudflare', 'railway', 'digitalocean', 'vercel', 'render', 'fly']) {
     const directory = join(clean, '.fixtures', provider);
     mkdirSync(directory, { recursive: true });
     save(join(directory, '.env'), fixture);
@@ -127,7 +127,7 @@ try {
     }
   }
   console.log(
-    'All four provider setup paths passed with independent fixture identities and stable generated secrets.',
+    'All six provider setup paths passed with independent fixture identities and stable generated secrets.',
   );
   const database = process.env.TEST_POSTGRES_URL;
   if (!database) {

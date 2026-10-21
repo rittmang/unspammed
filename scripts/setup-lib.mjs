@@ -14,7 +14,7 @@ import { isIP } from 'node:net';
 import { parseEnv } from 'node:util';
 import { canonicalEnvironment } from './setup-env.mjs';
 
-export const providers = ['cloudflare', 'railway', 'digitalocean', 'vercel'];
+export const providers = ['cloudflare', 'railway', 'digitalocean', 'vercel', 'render', 'fly'];
 export const publicKeys = [
   'DEV_MODE',
   'DATABASE_BACKEND',
@@ -76,7 +76,7 @@ export function modelSecretKeys(env) {
         const builtIn = ['OPENROUTER_API_KEY', 'CUSTOM_API_KEY'].includes(key);
         const reserved =
           environmentKeys.includes(key) ||
-          /^(?:WATCHTOWER_|CLOUDFLARE_|CF_|RAILWAY_|DIGITALOCEAN_|DO_|VERCEL_|DATABASE_|PLANETSCALE_|TELEGRAM_|BROWSER_|CRON_|ACCESS_|AWS_|GITHUB_|NODE_|NPM_|HOME$|PATH$)/.test(
+          /^(?:WATCHTOWER_|CLOUDFLARE_|CF_|RAILWAY_|DIGITALOCEAN_|DO_|VERCEL_|RENDER_|FLY_|DATABASE_|PLANETSCALE_|TELEGRAM_|BROWSER_|CRON_|ACCESS_|AWS_|GITHUB_|NODE_|NPM_|HOME$|PATH$)/.test(
             key || '',
           );
         if (!/^[A-Z][A-Z0-9_]*$/.test(key || '') || (!builtIn && reserved))

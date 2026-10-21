@@ -1,0 +1,31 @@
+# Fly.io configuration for Watchtower.
+# Replace the app name with your own Fly app name (fly apps create <name>).
+# Set secrets from your private setup output, for example:
+#   npm run setup -- --provider fly
+#   fly secrets import < .watchtower/runtime.env
+# Then deploy with: fly deploy
+# Keep at least one machine running: scheduling uses the in-process
+# Node scheduler, so the app must not scale to zero.
+app = "your-watchtower-app"
+primary_region = "iad"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  NODE_ENV = "production"
+  PORT = "3000"
+
+[http_service]
+  internal_port = 3000
+  force_https = true
+  auto_stop_machines = "off"
+  min_machines_running = 1
+
+  [[http_service.checks]]
+    type = "http"
+    method = "get"
+    path = "/health"
+    interval = "30s"
+    timeout = "5s"
+    grace_period = "30s"

@@ -13,8 +13,8 @@ Screenshots show example data only.
 - A Telegram account. This account is the owner.
 - A Telegram supergroup. You own this group.
 - A PostgreSQL database.
-- One host: Cloudflare, Railway, DigitalOcean, or Vercel.
-  Any host that runs a Docker image or Node 22 also works.
+- One host: Cloudflare, Railway, DigitalOcean, Vercel, Render, or Fly.io.
+  Any VM or host that runs a Docker image or Node 22 also works (Section 5G).
 - Node 22 or newer on your computer.
 
 You do not need these things:
@@ -43,7 +43,9 @@ You do not need these things:
 ## Step 3. Get a database
 
 1. Create a PostgreSQL database at any provider you like.
-   Examples: Neon, Supabase, Railway, DigitalOcean, Cloudflare Hyperdrive with your own PostgreSQL.
+   All of these work with the same URL format: Neon, Supabase, PlanetScale Postgres, Aiven, Render Postgres, Railway Postgres, DigitalOcean Managed PostgreSQL, Amazon RDS, Google Cloud SQL, Azure Database for PostgreSQL, Crunchy Bridge, Xata, or Cloudflare Hyperdrive with your own PostgreSQL.
+   PlanetScale also sells a MySQL product. That product does not work. Watchtower uses PostgreSQL SQL. Use PlanetScale Postgres, not PlanetScale MySQL.
+   No database on a server yet? Section 5G runs PostgreSQL next to the app on one VM.
 2. Copy the connection URL. It looks like this:
 
 ```text
@@ -210,9 +212,93 @@ npm run setup -- --provider vercel --force
 
 Note: Vercel stops requests larger than 4.5 MB. Very large exports need another host.
 
-### 5E. Any other host
+### 5E. Render
 
-Run setup once to make the value files. Use `railway` as a stand-in name; only the four names above are accepted, and the value files are the same:
+1. Run setup:
+
+```sh
+npm run setup -- --provider render
+npm run setup:doctor
+npm run database:setup
+```
+
+2. In Render: make a new Blueprint from your repository. It uses `render.yaml`.
+3. Set the values Render asks for. Or import `.watchtower/runtime.env`.
+4. Deploy. Copy the `onrender.com` address. Set it as `PUBLIC_URL`.
+   Run setup again with `--force`. Import the values again. Deploy again.
+5. Keep the service on a plan that does not sleep.
+
+### 5F. Fly.io
+
+1. Run setup:
+
+```sh
+npm run setup -- --provider fly
+npm run setup:doctor
+npm run database:setup
+```
+
+2. Install `flyctl`. Run `fly auth login`.
+3. Open `fly.toml`. Set your app name and region.
+4. Run:
+
+```sh
+fly launch --no-deploy
+fly secrets import < .watchtower/runtime.env
+fly deploy
+```
+
+5. Copy the `fly.dev` address. Set it as `PUBLIC_URL`.
+   Run setup again with `--force`. Import the secrets again. Deploy again.
+6. Keep at least one machine running. `fly.toml` already sets this.
+
+### 5G. One VM on any cloud — 1-click style
+
+Use this for a DigitalOcean Droplet, Google Compute Engine, Azure VM, AWS Lightsail or EC2, Hetzner, Linode, Vultr, or Oracle VM. The steps are the same on all of them. This is the pattern Discourse, Ghost, and n8n use: one Docker Compose file, not one image per cloud.
+
+1. Make a Linux VM. Open ports 80 and 443 in its firewall.
+2. Paste `deploy/vm/cloud-init.yaml` as the VM user data. Set your fork URL in it first.
+   No user data field? Skip this. Do step 3 by hand.
+3. SSH into the VM. Edit `/opt/watchtower/app.env`. Set the values from Step 4.
+4. For a database on the same VM: set `POSTGRES_PASSWORD` and the bundled `DATABASE_URL` as shown in `deploy/vm/app.env.example`.
+   For a hosted database: set the normal `DATABASE_URL`.
+5. Run:
+
+```sh
+sh deploy/vm/install.sh
+```
+
+6. For automatic HTTPS: set your domain DNS to the VM (Step 6), then run:
+
+```sh
+WATCHTOWER_DOMAIN=your-domain docker compose --profile https up -d
+```
+
+Add `--profile bundled-db` too if you use the VM database. 7. Set `PUBLIC_URL` to the final HTTPS address. Generate the values again and restart:
+
+```sh
+docker compose up -d --build
+```
+
+No Node is needed on the VM. The install script uses a Node container to make the private values.
+Cloud marketplaces (DigitalOcean Marketplace, Google Cloud Marketplace, Azure Marketplace, AWS Marketplace) need a vendor review before a listing. This repository gives you the same result now, without a listing.
+
+The same `docker-compose.yml` also works in **Coolify** (add it as a Docker Compose resource). **Dokku** and **CapRover** use the `Dockerfile` and `Procfile` instead; give them the values from `.watchtower/runtime.env`.
+
+### 5H. Container services: Cloud Run, Azure Container Apps, AWS
+
+These hosts run the Docker image but stop it between requests. The minute timer does not run.
+
+1. Build and push the `Dockerfile` image with your cloud's tool.
+2. Run it as a service. Set the values from `.watchtower/runtime.env`. Set the port to 3000. Allow at least one always-on instance if the host offers it.
+3. Make a scheduler in the same cloud: Google Cloud Scheduler, Azure Logic Apps, or Amazon EventBridge Scheduler.
+   Every minute, send a `GET` request to `https://your-address/api/cron` with header `Authorization: Bearer YOUR_CRON_SECRET`.
+   Use the `CRON_SECRET` from `.watchtower/runtime.env`.
+4. Copy the service HTTPS address. Set it as `PUBLIC_URL`. Import the values again. Deploy again.
+
+### 5I. Any other host
+
+Run setup once to make the value files. Use one of the six provider names as a stand-in; the value files are the same:
 
 ```sh
 npm run setup -- --provider railway
@@ -223,6 +309,9 @@ Or run Node 22: `npm ci`, `npm run build`, then `npm start`.
 Set the values from `.watchtower/runtime.env` in the host.
 Give the app one public HTTPS address. Set it as `PUBLIC_URL`.
 Keep the process running at all times.
+
+Not supported: Netlify and static-only hosts. They cannot run the timer or the database connection.
+MySQL and PlanetScale MySQL (Vitess) are also not supported. The app stores data with PostgreSQL SQL. Every PostgreSQL-compatible database above works.
 
 ## Step 6. DNS — only if you want your own domain
 

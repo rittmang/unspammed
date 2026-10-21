@@ -1,0 +1,50 @@
+# Render Blueprint for Watchtower.
+# Connect your own repository and account; no account or resource IDs are stored here.
+# Before deploying, run: npm run setup -- --provider render
+# Then import the values from .watchtower/runtime.env into this service's
+# environment variables (the sync: false entries below are prompts for them).
+# Keep the service running continuously: scheduling uses the in-process
+# Node scheduler, so no external cron or CRON_SECRET caller is required.
+#
+# Optional: to use Render Postgres instead of an external DATABASE_URL,
+# remove the DATABASE_URL envVar below, add a databases entry, and wire
+# DATABASE_URL from it, for example:
+#
+# databases:
+#   - name: watchtower-db
+#     plan: basic-256mb
+#
+# and replace the DATABASE_URL entry under envVars with:
+#
+#       - key: DATABASE_URL
+#         fromDatabase:
+#           name: watchtower-db
+#           property: connectionString
+#
+# Do not set both a prompted DATABASE_URL and a fromDatabase DATABASE_URL.
+services:
+  - type: web
+    name: watchtower
+    runtime: docker
+    plan: starter
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: OWNER_TELEGRAM_ID
+        sync: false
+      - key: TELEGRAM_CHAT_ID
+        sync: false
+      - key: TELEGRAM_BOT_USERNAME
+        sync: false
+      - key: PUBLIC_URL
+        sync: false
+      - key: TELEGRAM_WEBHOOK_SECRET
+        generateValue: true
+      - key: CRON_SECRET
+        generateValue: true

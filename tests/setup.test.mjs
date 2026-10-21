@@ -106,7 +106,7 @@ test('environment selection is explicit, process-first, and compatible with lega
 
 test('each hosting setup path uses supplied identities and preserves generated credentials on rerun', (t) => {
   const cwd = temporary(t);
-  for (const provider of ['cloudflare', 'railway', 'digitalocean', 'vercel']) {
+  for (const provider of ['cloudflare', 'railway', 'digitalocean', 'vercel', 'render', 'fly']) {
     const directory = join(cwd, provider);
     mkdirSync(directory);
     save(join(directory, '.env'), {

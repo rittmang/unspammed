@@ -50,8 +50,7 @@ try {
   });
   const loaded = loadEnvironment();
   const provider = options['--provider'] ? options['--provider'] : process.env.WATCHTOWER_PROVIDER;
-  if (provider && !providers.includes(provider))
-    throw new Error('Choose cloudflare, railway, digitalocean, or vercel.');
+  if (provider && !providers.includes(provider)) throw new Error(`Choose ${providers.join(', ')}.`);
   const upload = args.includes('--upload');
   const config = options['--config'];
   if (upload && (provider !== 'cloudflare' || !config || !existsSync(config)))

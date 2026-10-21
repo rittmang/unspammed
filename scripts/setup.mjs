@@ -19,11 +19,11 @@ export async function main(args = process.argv.slice(2)) {
     flags: ['--browser-auth', '--doctor', '--check', '--force', '--help'],
     values: ['--provider'],
     usage:
-      'Usage: npm run setup -- --provider cloudflare|railway|digitalocean|vercel [--browser-auth] [--force]. Keep credentials in a private env file.',
+      'Usage: npm run setup -- --provider cloudflare|railway|digitalocean|vercel|render|fly [--browser-auth] [--force]. Keep credentials in a private env file.',
   });
   if (args.includes('--help')) {
     console.log(
-      'Usage: npm run setup -- --provider cloudflare|railway|digitalocean|vercel [--browser-auth] [--force]',
+      'Usage: npm run setup -- --provider cloudflare|railway|digitalocean|vercel|render|fly [--browser-auth] [--force]',
     );
     console.log('Set inputs in .env or WATCHTOWER_ENV_FILE. Legacy .dev.vars is a fallback.');
     console.log(
@@ -118,6 +118,14 @@ export async function main(args = process.argv.slice(2)) {
   if (provider === 'vercel')
     console.log(
       'Import .watchtower/runtime.env into Vercel Production variables; use vercel.json and a plan supporting minute cron jobs and 300-second functions.',
+    );
+  if (provider === 'render')
+    console.log(
+      'Connect your repository to Render; use render.yaml and import .watchtower/runtime.env as service environment variables. Keep the service running so the in-process scheduler can tick every minute.',
+    );
+  if (provider === 'fly')
+    console.log(
+      'Use fly.toml; import .watchtower/runtime.env with `fly secrets import` (or set secrets individually), then run `fly deploy`. Keep at least one machine running so the in-process scheduler can tick every minute.',
     );
   console.log(
     'Next: npm run database:setup, deploy to your own account, npm run setup:check, then npm run telegram:setup. No resources were created.',

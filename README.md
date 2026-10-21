@@ -39,7 +39,7 @@ Short version:
 ```sh
 npm ci
 cp .env.example .env   # set your bot token, owner/group IDs, DATABASE_URL, PUBLIC_URL
-npm run setup -- --provider cloudflare   # Or: railway, digitalocean, vercel
+npm run setup -- --provider cloudflare   # Or: railway, digitalocean, vercel, render, fly
 npm run setup:doctor
 npm run database:setup
 # deploy on your host, then:

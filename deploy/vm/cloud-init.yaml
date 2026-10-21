@@ -1,0 +1,12 @@
+#cloud-config
+# Paste as user data when you create a VM (DigitalOcean, Google Cloud,
+# Azure, AWS, Hetzner, Linode, Vultr, Oracle). Then SSH in, set your
+# values in app.env, and run deploy/vm/install.sh.
+packages:
+  - git
+  - curl
+runcmd:
+  - curl -fsSL https://get.docker.com | sh
+  - git clone YOUR_FORK_OR_CLONE_URL /opt/watchtower
+  - cp /opt/watchtower/deploy/vm/app.env.example /opt/watchtower/app.env
+  - echo "SSH in, edit /opt/watchtower/app.env, then run: sh /opt/watchtower/deploy/vm/install.sh"
