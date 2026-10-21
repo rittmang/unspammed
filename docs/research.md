@@ -1,6 +1,6 @@
-# Research and implementation decisions
+# Historical research and implementation decisions
 
-> Current implementation: PlanetScale Postgres stores application state and renewable scheduler leases. Stateless Workers receive webhooks and a minute cron drains pending batches. The owner explicitly abandoned the legacy history transfer; both production Durable Object namespaces were removed. The options below document the original design research.
+> Historical research from the original Cloudflare installation. Some design choices below were superseded by portable PostgreSQL, Node hosting, optional browser-token authentication, and the optional Telegram admin service. Use the [current architecture](architecture.md), [hosting guide](hosting.md), and [README](../README.md) for new work. Account-specific deployment history lives in [the archive](deployment-history.md).
 
 Research checked against the primary documentation on 2026-10-10. The code intentionally avoids requiring a Telegram user-account/MTProto session for basic moderation.
 
@@ -42,6 +42,8 @@ Every model receives the same sampled messages, context, policy, and snapshot of
 Live messages are prioritized between evaluation chunks. Each run's cursor and predictions are committed together. A restart resumes the same dataset snapshot; cancellation stops subsequent chunks. An in-flight call can still be billed. Provider-reported cost and summed request latency are operational measures, not estimates of end-to-end group-message latency.
 
 ## Owner-only access
+
+The [Telegram Mini App research and implementation](telegram-mini-app.md) adds a separate `/mini/` static shell and signed owner-only `/mini/api/*` access on the Worker host. The original browser dashboard remains behind Cloudflare Access. The public shell has no application data or credentials; its framing and script permissions are scoped to Telegram. The paragraph below describes the browser path.
 
 Cloudflare Access is the login surface, with an allow policy for a single email. The Worker additionally verifies JWT signature through the team's JWKS, issuer, application audience, expiry, and the exact owner email. All frontend assets use `run_worker_first`; there is no public asset-serving bypass. The Telegram webhook bypasses Access login but requires its independent secret header. [Access validation guidance](https://developers.cloudflare.com/cloudflare-one/access-controls/applications/http-apps/authorization-cookie/validating-json/).
 

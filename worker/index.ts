@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { authorize, isLocal, secureEqual, verifyMutation } from './auth';
+import { authorize, authRoute, isLocal, secureEqual, verifyMutation } from './auth';
 import type { Env } from './env';
 import { GroupService } from './group';
 import { PostgresDatabase } from './database';
@@ -8,6 +8,7 @@ import { HttpError, json, readJson, databaseQuotaResponse } from './http';
 import { updateSchema } from './telegram';
 import { GroupDirectory, groupEnv, type Directory } from './directory';
 import { adminStub } from './telegram-admin';
+import { authorizeMiniApp, exportToTelegram, miniAppAsset } from './mini-app';
 export { TelegramAdmin } from './telegram-admin';
 
 function group(env: Env, db?: PostgresDatabase) {
@@ -15,15 +16,16 @@ function group(env: Env, db?: PostgresDatabase) {
     throw new HttpError(503, 'Configure the numeric Telegram supergroup ID.');
   return new GroupService(db || new PostgresDatabase(env), env);
 }
-function securityHeaders(response: Response) {
+function securityHeaders(response: Response, miniApp = false) {
   const headers = new Headers(response.headers);
   headers.set('X-Content-Type-Options', 'nosniff');
   headers.set('Referrer-Policy', 'no-referrer');
-  headers.set('X-Frame-Options', 'DENY');
+  if (miniApp) headers.delete('X-Frame-Options');
+  else headers.set('X-Frame-Options', 'DENY');
   headers.set('Cache-Control', 'no-store');
   headers.set(
     'Content-Security-Policy',
-    "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; font-src 'self'; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'",
+    `default-src 'self'; script-src 'self'${miniApp ? ' https://telegram.org/js/telegram-web-app.js' : ''}; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; font-src 'self'; object-src 'none'; frame-ancestors ${miniApp ? 'https://web.telegram.org' : "'none'"}; base-uri 'self'; form-action 'self'`,
   );
   return new Response(response.body, {
     status: response.status,
@@ -32,10 +34,11 @@ function securityHeaders(response: Response) {
   });
 }
 async function dispatchGroupWork(env: Env, chatId: string, cleanup: boolean) {
-  if (!env.WORKER_URL || !env.TELEGRAM_WEBHOOK_SECRET)
-    throw new HttpError(503, 'Configure WORKER_URL for multi-group scheduling.');
-  const endpoint = new URL('/internal/work', env.WORKER_URL);
-  if (endpoint.protocol !== 'https:') throw new HttpError(503, 'WORKER_URL must use HTTPS.');
+  const publicUrl = env.PUBLIC_URL || env.WORKER_URL;
+  if (!publicUrl || !env.TELEGRAM_WEBHOOK_SECRET)
+    throw new HttpError(503, 'Configure PUBLIC_URL for multi-group scheduling.');
+  const endpoint = new URL('/internal/work', publicUrl);
+  if (endpoint.protocol !== 'https:') throw new HttpError(503, 'PUBLIC_URL must use HTTPS.');
   const response = await fetch(endpoint, {
     method: 'POST',
     redirect: 'manual',
@@ -57,11 +60,32 @@ export function createWorker(
   ) => { fetch(request: Request): Promise<Response> } = group,
   resolveDirectory: (env: Env) => Directory = (env) =>
     new GroupDirectory(new PostgresDatabase(env), env),
+  runWork = runScheduledWork,
 ) {
+  async function cleanupGroup(env: Env, db?: PostgresDatabase) {
+    const cleanup = async () => {
+      const response = await resolveGroup(env, db).fetch(
+        new Request('https://group.internal/cleanup', { method: 'POST' }),
+      );
+      await response.body?.cancel();
+      if (!response.ok) throw new HttpError(503, 'Retention cleanup will retry.');
+    };
+    if (db) {
+      if (!(await db.withWorkLease(cleanup)))
+        throw new HttpError(503, 'Retention cleanup is already running and will retry.');
+    } else await cleanup();
+  }
   return {
     async fetch(request: Request, env: Env): Promise<Response> {
+      const miniApp = /^\/mini(?:\/|$)/.test(new URL(request.url).pathname);
       try {
         const url = new URL(request.url);
+        if (miniApp) {
+          if (!url.pathname.startsWith('/mini/api/'))
+            return securityHeaders(await miniAppAsset(request, env), true);
+          url.pathname = url.pathname.slice('/mini'.length);
+          request = new Request(url, request);
+        }
         if (url.pathname === '/health' && request.method === 'GET')
           return json({ ok: true, service: 'watchtower' });
         if (url.pathname === '/internal/work') {
@@ -96,12 +120,8 @@ export function createWorker(
             if ((await directory.get(chatId))?.status !== 'active') return json({ skipped: true });
             const selected = groupEnv(env, chatId),
               db = directory.db?.forGroup(chatId);
-            if (cleanup) {
-              const response = await resolveGroup(selected, db).fetch(
-                new Request('https://group.internal/cleanup', { method: 'POST' }),
-              );
-              if (!response.ok) throw new HttpError(503, 'Retention cleanup will retry.');
-            } else await runScheduledWork(selected, 45_000, db);
+            if (cleanup) await cleanupGroup(selected, db);
+            else await runWork(selected, 45_000, db);
             return json({ ok: true });
           });
         }
@@ -137,8 +157,16 @@ export function createWorker(
             return json({ ok: true });
           });
         }
-        const owner = await authorize(request, env);
+        if (!miniApp) {
+          const response = await authRoute(request, env);
+          if (response) return securityHeaders(response);
+        }
+        const owner = miniApp
+          ? await authorizeMiniApp(request, env)
+          : await authorize(request, env);
         verifyMutation(request);
+        if (miniApp && url.pathname === '/api/telegram-export')
+          return securityHeaders(await exportToTelegram(request, env), true);
         if (url.pathname.startsWith('/api/telegram-admin/')) {
           const path = url.pathname.slice('/api/telegram-admin'.length);
           if (
@@ -197,7 +225,7 @@ export function createWorker(
         }
         if (!['GET', 'HEAD'].includes(request.method))
           throw new HttpError(405, 'Method not allowed.');
-        return securityHeaders(await env.ASSETS.fetch(request));
+        throw new HttpError(404, 'Unknown application resource.');
       } catch (e) {
         const quota = databaseQuotaResponse(e);
         if (quota) return securityHeaders(quota);
@@ -215,13 +243,8 @@ export function createWorker(
       const groups = await directory.session(async () => {
         const groups = await directory.active();
         if (groups.length === 1 && groups[0].chat_id === env.TELEGRAM_CHAT_ID) {
-          if (cleanup) {
-            const response = await resolveGroup(env, directory.db).fetch(
-              new Request('https://group.internal/cleanup', { method: 'POST' }),
-            );
-            if (!response.ok)
-              throw new HttpError(503, 'Retention cleanup failed; saved data is retained.');
-          } else await runScheduledWork(env, 45_000, directory.db);
+          if (cleanup) await cleanupGroup(env, directory.db);
+          else await runWork(env, 45_000, directory.db);
           return [];
         }
         return groups;
@@ -235,6 +258,48 @@ export function createWorker(
       if (outcomes.some((result) => result.status === 'rejected'))
         throw new HttpError(503, 'Some groups could not finish this tick; saved work is retained.');
     },
-  } satisfies ExportedHandler<Env>;
+    // Process hosts and Node functions share the same per-group leases as Workers.
+    // A persisted caller-owned cursor advances only after awaited work; no HTTP fanout
+    // or untracked promises can outlive a serverless invocation.
+    async scheduledBounded(
+      env: Env,
+      options: { cleanup?: boolean; cursor?: number; maxGroups?: number; durationMs?: number } = {},
+    ) {
+      if (!env.TELEGRAM_CHAT_ID)
+        return { groups: 0, attempted: 0, failed: 0, deferred: 0, cursor: 0 };
+      const directory = resolveDirectory(env);
+      const groups = await directory.session(() => directory.active());
+      const count = groups.length;
+      if (!count) return { groups: 0, attempted: 0, failed: 0, deferred: 0, cursor: 0 };
+      const start = Math.max(0, Math.floor(options.cursor || 0)) % count;
+      const limit = Math.min(count, Math.max(1, Math.floor(options.maxGroups || 4)));
+      const deadline = Date.now() + Math.max(1, options.durationMs || 120_000);
+      let attempted = 0,
+        failed = 0;
+      while (attempted < limit && Date.now() < deadline) {
+        const selected = groups[(start + attempted) % count];
+        attempted++;
+        try {
+          await directory.session(async () => {
+            // The membership may have changed since the initial registry read.
+            if ((await directory.get(selected.chat_id))?.status !== 'active') return;
+            const selectedEnv = groupEnv(env, selected.chat_id);
+            const db = directory.db?.forGroup(selected.chat_id);
+            if (options.cleanup) await cleanupGroup(selectedEnv, db);
+            else await runWork(selectedEnv, Math.max(1, deadline - Date.now()), db);
+          });
+        } catch {
+          failed++;
+        }
+      }
+      return {
+        groups: count,
+        attempted,
+        failed,
+        deferred: count - attempted,
+        cursor: (start + attempted) % count,
+      };
+    },
+  };
 }
 export default createWorker();

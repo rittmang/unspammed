@@ -13,7 +13,6 @@ import {
   ArrowDownToLine,
   ArrowRight,
   ArrowUpRight,
-  Bell,
   Check,
   ChevronDown,
   ChevronLeft,
@@ -25,6 +24,7 @@ import {
   LayoutDashboard,
   LoaderCircle,
   MessageSquare,
+  Menu,
   MoreHorizontal,
   Play,
   Plus,
@@ -62,12 +62,16 @@ import { reviewedExamples, sameExample } from '../shared/review';
 import { RunReview } from './RunReview';
 import { applyReviewLabel, labelKey, LabelEdits, type LabelEdit } from './label-edits';
 import { EvaluationReader } from './evaluation-load';
-import { api, apiForGroup, download, downloadBlob, setApiGroup } from './api';
+import { api, apiForGroup, download, downloadBlob, fetchApi, setApiGroup } from './api';
+import { isMiniApp, useTelegramBack } from './mini-app';
 import { GroupManager, GroupSwitcher } from './groups';
 import { streamExamples, type ImportProgress } from '../shared/import-stream';
 import { FeedbackEditor } from './FeedbackEditor';
 import { PolicyImprovement } from './PolicyImprovement';
 import { StrikeUsers } from './TelegramAdmin';
+import { ThemeControl } from './ThemeControl';
+import { signOutBrowser } from './SignIn';
+import { Disclosure } from './Disclosure';
 import { policyFingerprint } from '../shared/improvement';
 
 type Page = 'overview' | 'messages' | 'users' | 'lab' | 'improvement' | 'settings';
@@ -96,19 +100,17 @@ const statusLabel: Record<string, string> = {
   paused: 'Paused',
 };
 function Badge({ status }: { status: string }) {
-  return (
-    <span className={`badge ${status}`}>
-      {['spam', 'observed_spam'].includes(status) && <span className="badge-dot" />}
-      {statusLabel[status] || status}
-    </span>
-  );
+  return <span className={`badge ${status}`}>{statusLabel[status] || status}</span>;
 }
 function Avatar({ name, id }: { name: string; id?: string }) {
   const hue = ((id || name).split('').reduce((n, c) => n + c.charCodeAt(0), 0) * 47) % 360;
   return (
     <span
       className="avatar"
-      style={{ background: `hsl(${hue} 25% 91%)`, color: `hsl(${hue} 25% 35%)` }}
+      style={{
+        background: `light-dark(hsl(${hue} 25% 91%), hsl(${hue} 20% 23%))`,
+        color: `light-dark(hsl(${hue} 25% 32%), hsl(${hue} 30% 78%))`,
+      }}
     >
       {name
         .split(' ')
@@ -151,6 +153,7 @@ export default function App() {
   const [manage, setManage] = useState(false),
     [error, setError] = useState('');
   const closeManager = useCallback(() => setManage(false), []);
+  useTelegramBack(closeManager, manage);
   const load = useCallback(async () => {
     const value = await api<GroupDirectoryResponse>('/groups');
     setDirectory(value);
@@ -230,6 +233,49 @@ function GroupWorkspace({
   const [setup, setSetup] = useState(false);
   const [detail, setDetail] = useState<StoredMessage | null>(null);
   const [mobileNav, setMobileNav] = useState(false);
+  useTelegramBack(
+    () => {
+      if (detail) setDetail(null);
+      else if (setup) setSetup(false);
+      else if (mobileNav) setMobileNav(false);
+      else navigate('overview');
+    },
+    page !== 'overview' || !!detail || setup || mobileNav,
+  );
+  useEffect(() => {
+    if (!mobileNav) return;
+    const previous = document.activeElement as HTMLElement | null;
+    const overflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const sidebar = document.getElementById('workspace-navigation')!;
+    sidebar.querySelector<HTMLButtonElement>('button')?.focus();
+    const close = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setMobileNav(false);
+      if (event.key !== 'Tab' || !window.matchMedia('(max-width: 650px)').matches) return;
+      const controls = [...sidebar.querySelectorAll<HTMLElement>('a, button, select')].filter(
+        (control) => control.getClientRects().length && !control.hasAttribute('disabled'),
+      );
+      const first = controls[0],
+        last = controls.at(-1);
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last?.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first?.focus();
+      }
+    };
+    document.addEventListener('keydown', close);
+    const desktop = window.matchMedia('(min-width: 651px)');
+    const closeOnDesktop = () => setMobileNav(false);
+    desktop.addEventListener('change', closeOnDesktop);
+    return () => {
+      document.body.style.overflow = overflow;
+      document.removeEventListener('keydown', close);
+      desktop.removeEventListener('change', closeOnDesktop);
+      previous?.focus();
+    };
+  }, [mobileNav]);
   const reload = useCallback(async () => {
     try {
       setData(await api<Overview>('/overview'));
@@ -260,6 +306,8 @@ function GroupWorkspace({
   useEffect(() => {
     if (!detail && !setup) return;
     const previous = document.activeElement as HTMLElement | null;
+    const overflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
     const frame = requestAnimationFrame(() =>
       document.querySelector<HTMLButtonElement>('.modal button')?.focus(),
     );
@@ -287,6 +335,7 @@ function GroupWorkspace({
     }
     document.addEventListener('keydown', keydown);
     return () => {
+      document.body.style.overflow = overflow;
       cancelAnimationFrame(frame);
       document.removeEventListener('keydown', keydown);
       previous?.focus();
@@ -296,6 +345,7 @@ function GroupWorkspace({
     setPage(page);
     location.hash = page;
     setMobileNav(false);
+    window.scrollTo({ top: 0 });
   }
   async function act(fn: () => Promise<unknown>, success?: string) {
     setBusy(true);
@@ -334,7 +384,7 @@ function GroupWorkspace({
         media: m.media,
       }))
       .filter((m) => m.text);
-    download(`watchtower-messages-${new Date().toISOString().slice(0, 10)}.json`, {
+    await download(`watchtower-messages-${new Date().toISOString().slice(0, 10)}.json`, {
       version: 1,
       chatId: data?.chatId,
       exportedAt: new Date().toISOString(),
@@ -345,7 +395,21 @@ function GroupWorkspace({
   }
   return (
     <div className="app-shell">
-      <aside className={`sidebar ${mobileNav ? 'mobile-open' : ''}`}>
+      {mobileNav && (
+        <button
+          className="nav-backdrop"
+          aria-label="Close navigation"
+          onClick={() => setMobileNav(false)}
+        />
+      )}
+      <aside id="workspace-navigation" className={`sidebar ${mobileNav ? 'mobile-open' : ''}`}>
+        <button
+          className="nav-close icon-button"
+          aria-label="Close navigation"
+          onClick={() => setMobileNav(false)}
+        >
+          <X size={20} />
+        </button>
         <a className="brand" href="#overview" onClick={() => navigate('overview')}>
           <span className="brand-mark">
             <ShieldCheck size={25} strokeWidth={1.7} />
@@ -354,20 +418,29 @@ function GroupWorkspace({
             watchtower<span className="brand-period">.</span>
           </span>
         </a>
-        <GroupSwitcher current={group} groups={groups} onSelect={onSelect} onManage={onManage} />
+        <GroupSwitcher
+          current={group}
+          groups={groups}
+          onSelect={(id) => {
+            setMobileNav(false);
+            onSelect(id);
+          }}
+          onManage={() => {
+            setMobileNav(false);
+            onManage();
+          }}
+        />
         <div className="nav-label">WORKSPACE</div>
         <nav>
           {pages.slice(0, 3).map((p) => (
             <button
               key={p.id}
               className={page === p.id ? 'active' : ''}
+              aria-current={page === p.id ? 'page' : undefined}
               onClick={() => navigate(p.id)}
             >
               <p.icon size={18} />
               <span>{p.title}</span>
-              {p.id === 'messages' && Boolean(data?.stats.review) && (
-                <span className="nav-count">{data!.stats.review}</span>
-              )}
             </button>
           ))}
         </nav>
@@ -377,34 +450,47 @@ function GroupWorkspace({
             <button
               key={p.id}
               className={page === p.id ? 'active' : ''}
+              aria-current={page === p.id ? 'page' : undefined}
               onClick={() => navigate(p.id)}
             >
               <p.icon size={18} />
               <span>{p.title}</span>
-              {p.id === 'lab' && <span className="new-label">LAB</span>}
             </button>
           ))}
         </nav>
         <div className="sidebar-bottom">
-          <div className="edge-card">
-            <span>
-              <Zap size={15} /> BUILT FOR THE EDGE
-            </span>
-            <p>
-              A quieter group.
-              <br />A healthier community.
-            </p>
-            <div>
-              <i /> Cloudflare Workers
-            </div>
+          <div className="sidebar-appearance">
+            <span>Appearance</span>
+            <ThemeControl />
           </div>
-          <button className="help-link" onClick={() => setSetup(true)}>
+          <span className={`connection ${modelReady ? 'ready' : ''}`}>
+            <i /> {modelReady ? 'Provider key configured' : 'Provider key needed'}
+          </span>
+          {isMiniApp && (
+            <div className="mini-app-info">
+              <p>Exports arrive as files in your private bot chat (up to 20 MB).</p>
+              {document.documentElement.dataset.dashboardUrl && (
+                <a
+                  className="help-link"
+                  href={document.documentElement.dataset.dashboardUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Open in browser <ArrowUpRight size={15} />
+                </a>
+              )}
+            </div>
+          )}
+          <button
+            className="help-link"
+            onClick={() => {
+              setMobileNav(false);
+              setSetup(true);
+            }}
+          >
             <CircleHelp size={17} /> Setup & documentation <ArrowUpRight size={15} />
           </button>
           <div className="owner">
-            <div className="owner-avatar">
-              {data?.dev ? 'L' : (data?.owner[0] || 'O').toUpperCase()}
-            </div>
             <div>
               <strong>{data?.dev ? 'Local owner' : data?.owner || 'Workspace owner'}</strong>
               <span>
@@ -413,6 +499,14 @@ function GroupWorkspace({
             </div>
             <Shield size={15} />
           </div>
+          {data?.owner === 'browser-owner' && (
+            <button
+              className="help-link"
+              onClick={() => void signOutBrowser().catch((error) => setError(error.message))}
+            >
+              Sign out
+            </button>
+          )}
         </div>
       </aside>
       <div className="main-shell">
@@ -430,29 +524,16 @@ function GroupWorkspace({
               className="mobile-menu icon-button"
               onClick={() => setMobileNav(!mobileNav)}
               aria-label="Toggle navigation"
+              aria-expanded={mobileNav}
+              aria-controls="workspace-navigation"
             >
-              <LayoutDashboard size={19} />
+              <Menu size={22} />
             </button>
-            <span>Workspace</span>
-            <ChevronRight size={13} />
-            <strong>{pages.find((p) => p.id === page)?.title || 'Overview'}</strong>
-          </div>
-          <div className="topbar-right">
-            <span className={`connection ${modelReady ? 'ready' : ''}`}>
-              <i />
-              {modelReady ? 'Provider connected' : 'Setup pending'}
-            </span>
-            <span className="topbar-divider" />
-            <button
-              className="icon-button"
-              onClick={() => navigate('messages')}
-              aria-label="Review messages"
-            >
-              <Bell size={18} />
-              {Boolean(data?.stats.review) && <i className="notification-dot" />}
-            </button>
-            <div className="mini-avatar">
-              {data?.dev ? 'L' : (data?.owner[0] || 'O').toUpperCase()}
+            <span className="workspace-crumb">Workspace</span>
+            <ChevronRight className="workspace-crumb" size={13} />
+            <div className="workspace-title">
+              <strong>{pages.find((p) => p.id === page)?.title || 'Overview'}</strong>
+              <small>{group.title}</small>
             </div>
           </div>
         </header>
@@ -461,7 +542,7 @@ function GroupWorkspace({
             <div className="alert">
               <AlertCircle size={18} />
               <span>
-                PlanetScale setup is incomplete. Finish database setup to enable moderation and
+                PostgreSQL setup is incomplete. Finish database setup to enable moderation and
                 Settings.
               </span>
             </div>
@@ -493,53 +574,47 @@ function GroupWorkspace({
           {data && (
             <>
               {page === 'overview' && (
-                <>
+                <div className="overview-page">
                   <div className="page-heading">
                     <div>
-                      <div className="eyebrow">
-                        <span className="tiny-line" /> COMMUNITY HEALTH
-                      </div>
-                      <h1>A little less noise.</h1>
-                      <p>Keep the conversation going. We’ll keep an eye on the spam.</p>
+                      <h1>Overview</h1>
+                      <p>Monitor message activity and moderation for this group.</p>
                     </div>
                     <button
                       className="button secondary"
                       disabled={busy}
-                      onClick={() => void act(exportMessages, 'Captured messages exported.')}
+                      onClick={() =>
+                        void act(
+                          exportMessages,
+                          isMiniApp
+                            ? 'Export sent to your private bot chat.'
+                            : 'Captured messages exported.',
+                        )
+                      }
                     >
                       <ArrowDownToLine size={16} /> Export messages
                     </button>
                   </div>
-                  <div className="protection-banner">
-                    <div className="protection-symbol">
-                      <ShieldCheck size={27} />
-                    </div>
-                    <div>
-                      <h3>
+                  <button className={`status-card ${mode}`} onClick={() => navigate('settings')}>
+                    <ShieldCheck size={22} />
+                    <span>
+                      <strong>
                         {mode === 'enforce'
-                          ? 'Your community is protected'
+                          ? 'Moderation active'
                           : mode === 'paused'
-                            ? 'Moderation is paused'
-                            : 'Watching, learning, getting ready'}
-                      </h3>
-                      <p>
+                            ? 'Moderation paused'
+                            : 'Observation mode'}
+                      </strong>
+                      <small>
                         {mode === 'enforce'
-                          ? 'Three-strike moderation is active. New messages are checked on the minute schedule.'
+                          ? 'Spam is deleted. Repeat offenders get strikes.'
                           : mode === 'paused'
-                            ? 'New messages are captured. Classification and moderation are on hold.'
-                            : 'Observation mode records classifications. Enable enforcement when you’re happy with the results.'}
-                      </p>
-                    </div>
-                    <button className={`mode-pill ${mode}`} onClick={() => navigate('settings')}>
-                      <span />
-                      {mode === 'enforce'
-                        ? 'Enforcement on'
-                        : mode === 'observe'
-                          ? 'Observation mode'
-                          : 'Paused'}
-                      <ChevronDown size={13} />
-                    </button>
-                  </div>
+                            ? 'Messages are captured; actions are on hold.'
+                            : 'Decisions are logged. No deletions or strikes.'}
+                      </small>
+                    </span>
+                    <ChevronRight size={18} />
+                  </button>
                   <div className="stats-grid">
                     {[
                       {
@@ -573,27 +648,40 @@ function GroupWorkspace({
                         className: '',
                       },
                     ].map((s) => (
-                      <div className={`stat-card ${s.className}`} key={s.label}>
-                        <div>
-                          <span>{s.label}</span>
-                          <s.icon size={17} />
-                        </div>
-                        <strong>{number(s.value)}</strong>
-                        <small>{s.note}</small>
-                      </div>
+                      <Disclosure
+                        className={`stat-card ${s.className}`}
+                        key={s.label}
+                        title={s.label}
+                        hint={<span className="stat-value">{number(s.value)}</span>}
+                        desktopOpen
+                      >
+                        <small className="stat-note">{s.note}</small>
+                      </Disclosure>
                     ))}
                   </div>
-                  <div className="overview-columns">
-                    <section className="panel activity-panel">
-                      <div className="panel-heading">
-                        <div>
-                          <h2>Message activity</h2>
-                          <p>A pulse check on your community.</p>
-                        </div>
-                        <span className="period">
-                          <Clock3 size={13} /> Last 7 days
-                        </span>
+                  <section className="panel feed-panel">
+                    <div className="panel-heading">
+                      <div className="heading-inline">
+                        <h2>Recent messages</h2>
+                        <span className="subtle">Updates every 30 seconds</span>
                       </div>
+                      <button className="text-button" onClick={() => navigate('messages')}>
+                        View all messages <ArrowRight size={15} />
+                      </button>
+                    </div>
+                    <MessageTable
+                      messages={data.messages.slice(0, 5)}
+                      onSelect={setDetail}
+                      emptyText="Messages will appear here as your bot receives them."
+                    />
+                  </section>
+                  <div className="overview-columns">
+                    <Disclosure
+                      className="panel activity-panel"
+                      title="Message activity"
+                      hint="Last 7 days · retained history"
+                      desktopOpen
+                    >
                       <ActivityChart daily={data.daily} />
                       <div className="chart-footer">
                         <span>
@@ -604,15 +692,13 @@ function GroupWorkspace({
                         </span>
                         <span className="chart-note">UTC · retained history</span>
                       </div>
-                    </section>
-                    <section className="panel policy-panel">
-                      <div className="panel-heading">
-                        <div>
-                          <h2>Three strikes. Clear boundaries.</h2>
-                          <p>A fair escalation for repeat spam.</p>
-                        </div>
-                        <ShieldCheck size={19} className="muted" />
-                      </div>
+                    </Disclosure>
+                    <Disclosure
+                      className="panel policy-panel"
+                      title="Three-strike policy"
+                      hint="Delete, clear history, then ban"
+                      desktopOpen
+                    >
                       <div className="strike-steps">
                         {[
                           {
@@ -648,54 +734,28 @@ function GroupWorkspace({
                           View policy <ArrowRight size={14} />
                         </button>
                       </div>
-                    </section>
+                    </Disclosure>
                   </div>
-                  <section className="panel feed-panel">
-                    <div className="panel-heading">
-                      <div className="heading-inline">
-                        <h2>Recent messages</h2>
-                        <span className="live-dot" />
-                        <span className="subtle">Updates every 30 seconds</span>
-                      </div>
-                      <button className="text-button" onClick={() => navigate('messages')}>
-                        View all messages <ArrowRight size={15} />
-                      </button>
-                    </div>
-                    <MessageTable
-                      messages={data.messages.slice(0, 5)}
-                      onSelect={setDetail}
-                      emptyText="Messages will appear here as your bot receives them."
-                    />
-                  </section>
-                  <div className="lab-callout">
-                    <div className="lab-callout-icon">
-                      <FlaskConical size={22} />
-                    </div>
-                    <div>
-                      <h3>Find the right model for your community.</h3>
-                      <p>
-                        Compare Gemini, Jev, and more on your own messages. Tune your threshold with
-                        confidence.
-                      </p>
-                    </div>
-                    <button className="button secondary" onClick={() => navigate('lab')}>
-                      Open model lab <ArrowUpRight size={16} />
-                    </button>
-                  </div>
-                </>
+                </div>
               )}
               {page === 'messages' && (
                 <MessageFeed
                   data={data}
                   onSelect={setDetail}
-                  onExport={() => void act(exportMessages, 'Captured messages exported.')}
+                  onExport={() =>
+                    void act(
+                      exportMessages,
+                      isMiniApp
+                        ? 'Export sent to your private bot chat.'
+                        : 'Captured messages exported.',
+                    )
+                  }
                 />
               )}
               {page === 'users' && (
                 <>
                   <PageHeading
-                    eyebrow="MODERATION"
-                    title="A fair record."
+                    title="Strike history"
                     subtitle="Persistent strikes, keyed by Telegram user. Every action has a history."
                   />
                   <StrikeUsers
@@ -712,22 +772,23 @@ function GroupWorkspace({
                       )
                     }
                   />
-                  <section className="panel audit-panel">
-                    <div className="panel-heading">
-                      <h2>Action log</h2>
-                      <button
-                        className="text-button"
-                        disabled={busy}
-                        onClick={() =>
-                          void act(
-                            () => api('/actions/retry', { method: 'POST', body: '{}' }),
-                            'Failed actions queued for retry.',
-                          )
-                        }
-                      >
-                        <RefreshCw size={14} /> Retry failed actions
-                      </button>
-                    </div>
+                  <Disclosure
+                    className="panel audit-panel"
+                    title="Action log"
+                    hint={`${data.audit.length} recent events`}
+                  >
+                    <button
+                      className="text-button"
+                      disabled={busy}
+                      onClick={() =>
+                        void act(
+                          () => api('/actions/retry', { method: 'POST', body: '{}' }),
+                          'Failed actions queued for retry.',
+                        )
+                      }
+                    >
+                      <RefreshCw size={14} /> Retry failed actions
+                    </button>
                     {data.audit.length ? (
                       <div className="audit-list">
                         {data.audit.map((a) => (
@@ -755,7 +816,7 @@ function GroupWorkspace({
                         here.
                       </Empty>
                     )}
-                  </section>
+                  </Disclosure>
                 </>
               )}
               {page === 'lab' && <ModelLab data={data} act={act} />}
@@ -765,22 +826,13 @@ function GroupWorkspace({
               {page === 'settings' &&
                 (storageWaiting ? (
                   <Empty icon={Settings2} title="Finish database setup">
-                    Initialize the PlanetScale database to configure live moderation.
+                    Initialize the PostgreSQL database to configure live moderation.
                   </Empty>
                 ) : (
                   <SettingsPage data={data} act={act} busy={busy} />
                 ))}
             </>
           )}
-          <footer className="page-footer">
-            <span>
-              <ShieldCheck size={13} /> watchtower <span>·</span> Thoughtful moderation, at the
-              edge.
-            </span>
-            <span>
-              <LockKeyhole size={12} /> Owner access only
-            </span>
-          </footer>
         </main>
       </div>
       {toast && (
@@ -795,7 +847,7 @@ function GroupWorkspace({
       {detail && (
         <div className="modal-backdrop" onClick={() => setDetail(null)}>
           <section
-            className="modal"
+            className="modal message-detail phone-screen"
             role="dialog"
             aria-modal="true"
             aria-label="Message details"
@@ -815,9 +867,7 @@ function GroupWorkspace({
               <Avatar name={detail.user_name} id={detail.user_id} />
               <div>
                 <strong>{detail.user_name}</strong>
-                <small>
-                  User {detail.user_id} · Message {detail.id}
-                </small>
+                <small>{new Date(detail.sent_at).toLocaleString()}</small>
               </div>
               <Badge status={detail.status} />
             </div>
@@ -841,6 +891,12 @@ function GroupWorkspace({
               <div>
                 <dt>Model</dt>
                 <dd>{detail.model || '—'}</dd>
+              </div>
+              <div>
+                <dt>Identifiers</dt>
+                <dd>
+                  User {detail.user_id} · Message {detail.id}
+                </dd>
               </div>
               <div>
                 <dt>Action</dt>
@@ -929,7 +985,7 @@ function GroupWorkspace({
       {setup && (
         <div className="modal-backdrop" onClick={() => setSetup(false)}>
           <section
-            className="modal setup-modal"
+            className="modal setup-modal phone-screen"
             role="dialog"
             aria-modal="true"
             aria-label="Setup guide"
@@ -937,8 +993,7 @@ function GroupWorkspace({
           >
             <div className="modal-heading">
               <div>
-                <span className="eyebrow">GET CONNECTED</span>
-                <h2>Your watchtower, online.</h2>
+                <h2>Setup guide</h2>
               </div>
               <button
                 className="icon-button"
@@ -976,22 +1031,21 @@ function GroupWorkspace({
               <li>
                 <strong>Connect your credentials</strong>
                 <p>
-                  Add the Telegram token, webhook secret, and model API key using Wrangler secrets.
-                  Set your group ID and owner ID in wrangler.jsonc.
+                  Run the setup command for your hosting provider, then add the generated
+                  environment variables and secrets through your host’s settings.
                 </p>
               </li>
               <li>
                 <strong>Keep the dashboard private</strong>
                 <p>
-                  Create a Cloudflare Access app for your dashboard hostname, allowing only your
-                  email. Configure the team domain, audience, and owner email. Exclude
-                  /telegram/webhook from Access.
+                  Use the owner-only Telegram Mini App. For browser access, enable a generated
+                  browser sign-in token or configure Cloudflare Access.
                 </p>
               </li>
               <li>
                 <strong>Deploy and register the webhook</strong>
                 <code>
-                  npm run deploy
+                  npm run setup:doctor
                   <br />
                   npm run telegram:setup
                 </code>
@@ -1035,12 +1089,10 @@ function GroupWorkspace({
 }
 
 function PageHeading({
-  eyebrow,
   title,
   subtitle,
   children,
 }: {
-  eyebrow: string;
   title: string;
   subtitle: string;
   children?: ReactNode;
@@ -1048,10 +1100,6 @@ function PageHeading({
   return (
     <div className="page-heading">
       <div>
-        <div className="eyebrow">
-          <span className="tiny-line" />
-          {eyebrow}
-        </div>
         <h1>{title}</h1>
         <p>{subtitle}</p>
       </div>
@@ -1127,61 +1175,101 @@ function MessageTable({
       </Empty>
     );
   return (
-    <div className="table-scroll">
-      <table className="message-table">
-        <thead>
-          <tr>
-            <th>Sender</th>
-            <th>Message</th>
-            <th>Spam score</th>
-            <th>Status</th>
-            <th>Time</th>
-            <th />
-          </tr>
-        </thead>
-        <tbody>
-          {messages.map((m) => (
-            <tr key={m.id} onClick={() => onSelect(m)}>
-              <td>
-                <div className="user-cell">
-                  <Avatar name={m.user_name} id={m.user_id} />
+    <>
+      <ul className="message-list" aria-label="Messages">
+        {messages.map((m) => (
+          <li key={m.id}>
+            <button
+              className="message-item"
+              onClick={() => onSelect(m)}
+              aria-label={`Inspect message ${m.id} from ${m.user_name}`}
+            >
+              <Avatar name={m.user_name} id={m.user_id} />
+              <span className="message-item-body">
+                <span className="message-item-heading">
                   <strong>{m.user_name}</strong>
-                </div>
-              </td>
-              <td>
-                <div className="message-preview">{m.text || `[${m.media} without caption]`}</div>
-                {Boolean(m.deleted) && (
-                  <small className="deleted-note">
-                    <Trash2 size={10} /> Deleted
-                  </small>
-                )}
-              </td>
-              <td>
-                <span className={`score ${m.score !== null && m.score >= 0.9 ? 'high' : ''}`}>
-                  {m.score === null ? '—' : percent(m.score)}
+                  <time dateTime={new Date(m.sent_at).toISOString()}>{time(m.sent_at)}</time>
                 </span>
-              </td>
-              <td>
-                <Badge status={m.status} />
-              </td>
-              <td className="time-cell">{time(m.sent_at)}</td>
-              <td>
-                <button
-                  className="icon-button"
-                  aria-label={`Inspect message ${m.id}`}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onSelect(m);
-                  }}
-                >
-                  <MoreHorizontal size={17} />
-                </button>
-              </td>
+                <span className="message-item-preview">
+                  {(m.text || `[${m.media} without caption]`).replace(/\s+/gu, ' ').trim()}
+                </span>
+                <span className="message-item-meta">
+                  <Badge status={m.status} />
+                  {Boolean(m.deleted) && (
+                    <span>
+                      <Trash2 size={12} /> Deleted
+                    </span>
+                  )}
+                  <ChevronRight size={15} aria-hidden="true" />
+                </span>
+              </span>
+            </button>
+          </li>
+        ))}
+      </ul>
+      <div
+        className="table-scroll message-desktop"
+        role="region"
+        aria-label="Messages"
+        tabIndex={0}
+      >
+        <table className="message-table">
+          <thead>
+            <tr>
+              <th>Sender</th>
+              <th>Message</th>
+              <th>Spam score</th>
+              <th>Status</th>
+              <th>Time</th>
+              <th />
             </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+          </thead>
+          <tbody>
+            {messages.map((m) => (
+              <tr key={m.id} onClick={() => onSelect(m)}>
+                <td data-label="Sender">
+                  <div className="user-cell">
+                    <Avatar name={m.user_name} id={m.user_id} />
+                    <strong>{m.user_name}</strong>
+                  </div>
+                </td>
+                <td data-label="Message">
+                  <div className="message-preview">{m.text || `[${m.media} without caption]`}</div>
+                  {Boolean(m.deleted) && (
+                    <small className="deleted-note">
+                      <Trash2 size={10} /> Deleted
+                    </small>
+                  )}
+                </td>
+                <td data-label="Spam score">
+                  <span className={`score ${m.score !== null && m.score >= 0.9 ? 'high' : ''}`}>
+                    {m.score === null ? '—' : percent(m.score)}
+                  </span>
+                </td>
+                <td data-label="Status">
+                  <Badge status={m.status} />
+                </td>
+                <td data-label="Time" className="time-cell">
+                  {time(m.sent_at)}
+                </td>
+                <td>
+                  <button
+                    className="icon-button"
+                    aria-label={`Inspect message ${m.id}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onSelect(m);
+                    }}
+                  >
+                    <MoreHorizontal size={17} />
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </>
   );
 }
 function MessageFeed({
@@ -1215,10 +1303,9 @@ function MessageFeed({
   }, [api, filter, searchQuery, offset, data.stats.total, data.stats.deleted]);
   useVisiblePoll(load, 30_000, (e) => setError(e.message));
   return (
-    <>
+    <div className="message-feed">
       <PageHeading
-        eyebrow="LIVE MODERATION"
-        title="Every message, in view."
+        title="Message feed"
         subtitle="Inspect decisions, label examples, and keep the context behind each action."
       >
         <button className="button secondary" onClick={onExport}>
@@ -1259,6 +1346,25 @@ function MessageFeed({
           />
         </div>
       </div>
+      <div className="mobile-feed-tools">
+        <select
+          aria-label="Filter messages"
+          value={filter}
+          onChange={(e) => {
+            setFilter(e.target.value);
+            setOffset(0);
+          }}
+        >
+          <option value="">All messages</option>
+          <option value="spam">Spam</option>
+          <option value="observed_spam">Would flag</option>
+          <option value="review">Review</option>
+          <option value="error">Errors</option>
+        </select>
+        <button className="button secondary" onClick={onExport} aria-label="Export messages">
+          <ArrowDownToLine size={16} /> Export
+        </button>
+      </div>
       {error && <div className="alert">{error}</div>}
       <section className="panel">
         <MessageTable messages={messages} onSelect={onSelect} />
@@ -1268,27 +1374,29 @@ function MessageFeed({
               ? `${offset + 1}–${Math.min(offset + 30, total)} of ${number(total)} messages`
               : '0 messages'}
           </span>
-          <div>
-            <button
-              className="icon-button"
-              aria-label="Previous message page"
-              disabled={!offset}
-              onClick={() => setOffset(Math.max(0, offset - 30))}
-            >
-              <ChevronLeft size={17} />
-            </button>
-            <button
-              className="icon-button"
-              aria-label="Next message page"
-              disabled={offset + 30 >= total}
-              onClick={() => setOffset(offset + 30)}
-            >
-              <ChevronRight size={17} />
-            </button>
-          </div>
+          {(total > 30 || offset > 0) && (
+            <div>
+              <button
+                className="icon-button"
+                aria-label="Previous message page"
+                disabled={!offset}
+                onClick={() => setOffset(Math.max(0, offset - 30))}
+              >
+                <ChevronLeft size={17} />
+              </button>
+              <button
+                className="icon-button"
+                aria-label="Next message page"
+                disabled={offset + 30 >= total}
+                onClick={() => setOffset(offset + 30)}
+              >
+                <ChevronRight size={17} />
+              </button>
+            </div>
+          )}
         </div>
       </section>
-    </>
+    </div>
   );
 }
 function auditDetail(detail: string) {
@@ -1324,6 +1432,9 @@ function ModelLab({ data, act }: { data: Overview; act: Act }) {
   const [tab, setTab] = useState<'compare' | 'dataset'>('compare'),
     [error, setError] = useState(''),
     [running, setRunning] = useState(false);
+  const [showConfiguration, setShowConfiguration] = useState(
+    () => !window.matchMedia('(max-width: 650px)').matches,
+  );
   const fileRef = useRef<HTMLInputElement>(null);
   const importAbort = useRef<AbortController | null>(null);
   const [importProgress, setImportProgress] = useState<ImportProgress | null>(null);
@@ -1452,6 +1563,68 @@ function ModelLab({ data, act }: { data: Overview; act: Act }) {
         e.label === 'ham' &&
         displayRun.predictions.some((p) => p.id === e.id && p.score >= threshold),
     ) || [];
+  function runActions(r: Evaluation) {
+    const scores = metrics(reviewedExamples(r), r.predictions, threshold);
+    return (
+      <div className="run-actions">
+        {r.status === 'failed' && (
+          <button
+            className="text-button"
+            aria-label={`Resume run ${r.model}`}
+            onClick={(e) => {
+              e.stopPropagation();
+              void act(async () => {
+                await api(`/evaluations/${r.id}/resume`, {
+                  method: 'POST',
+                  body: '{}',
+                });
+                await load();
+              }, 'Run resumed from its saved progress.');
+            }}
+          >
+            Resume
+          </button>
+        )}
+        {['queued', 'running'].includes(r.status) ? (
+          <button
+            className="text-button"
+            onClick={(e) => {
+              e.stopPropagation();
+              void act(async () => {
+                await api(`/evaluations/${r.id}/cancel`, {
+                  method: 'POST',
+                  body: '{}',
+                });
+                await load();
+              }, 'Run cancelled. An in-flight provider call may still be billed.');
+            }}
+          >
+            Cancel
+          </button>
+        ) : (
+          <button
+            className="icon-button"
+            aria-label={`Export run ${r.model}`}
+            onClick={(e) => {
+              e.stopPropagation();
+              void act(
+                () =>
+                  download(`watchtower-run-${r.id}.json`, {
+                    ...r,
+                    effectiveExamples: reviewedExamples(r),
+                    threshold,
+                    metrics: scores,
+                  }),
+                isMiniApp ? 'Export sent to your private bot chat.' : 'Run exported.',
+              );
+            }}
+          >
+            <ArrowDownToLine size={15} />
+          </button>
+        )}
+      </div>
+    );
+  }
   async function importFile(file?: File) {
     if (!file || importAbort.current) return;
     setError('');
@@ -1506,31 +1679,36 @@ function ModelLab({ data, act }: { data: Overview; act: Act }) {
   async function exportDataset() {
     if (!selected || exporting) return;
     setExporting(true);
-    await act(async () => {
-      const parts: BlobPart[] = ['{"version":1,"examples":['];
-      let offset: number | null = 0,
-        first = true;
-      while (offset !== null) {
-        const page: { examples: Example[]; nextOffset: number | null } = await api(
-          `/datasets/${selected}?offset=${offset}&limit=250`,
-        );
-        const text = page.examples.map((e) => JSON.stringify(e)).join(',');
-        if (text) {
-          parts.push(`${first ? '' : ','}${text}`);
-          first = false;
+    await act(
+      async () => {
+        const parts: BlobPart[] = ['{"version":1,"examples":['];
+        let offset: number | null = 0,
+          first = true;
+        while (offset !== null) {
+          const page: { examples: Example[]; nextOffset: number | null } = await api(
+            `/datasets/${selected}?offset=${offset}&limit=250`,
+          );
+          const text = page.examples.map((e) => JSON.stringify(e)).join(',');
+          if (text) {
+            parts.push(`${first ? '' : ','}${text}`);
+            first = false;
+          }
+          offset = page.nextOffset;
         }
-        offset = page.nextOffset;
-      }
-      parts.push(']}');
-      downloadBlob('watchtower-dataset.json', new Blob(parts, { type: 'application/json' }));
-    }, 'Dataset exported.').finally(() => setExporting(false));
+        parts.push(']}');
+        await downloadBlob(
+          'watchtower-dataset.json',
+          new Blob(parts, { type: 'application/json' }),
+        );
+      },
+      isMiniApp ? 'Dataset sent to your private bot chat.' : 'Dataset exported.',
+    ).finally(() => setExporting(false));
   }
   return (
     <>
       <PageHeading
-        eyebrow="EXPERIMENT, THEN ENFORCE"
-        title="A better signal."
-        subtitle="Your messages. Your policy. Find the model that gets your community."
+        title="Model lab"
+        subtitle="Compare models on your messages and review their decisions."
       >
         <button
           className="button secondary"
@@ -1589,7 +1767,7 @@ function ModelLab({ data, act }: { data: Overview; act: Act }) {
           <FlaskConical size={16} /> Model comparison
         </button>
         <button className={tab === 'dataset' ? 'active' : ''} onClick={() => setTab('dataset')}>
-          <FileJson size={16} /> Datasets & labels<span>{datasets.length}</span>
+          <FileJson size={16} /> Datasets & labels
         </button>
       </div>
       {!datasets.length ? (
@@ -1685,21 +1863,14 @@ function ModelLab({ data, act }: { data: Overview; act: Act }) {
               disabled={exporting}
               onClick={() => void exportDataset()}
             >
-              <ArrowDownToLine size={14} /> {exporting ? 'Exporting…' : 'Export dataset'}
+              <ArrowDownToLine size={14} /> {exporting ? 'Exporting…' : 'Export'}
             </button>
           </div>
           {tab === 'dataset' ? (
             <>
-              <div className="lab-info">
-                <CircleHelp size={17} />
-                <p>
-                  Labels are your ground truth. Model scores never become labels automatically.
-                  Saved runs keep a snapshot of the labels and prompt used at the time.
-                </p>
-              </div>
               <section className="panel">
                 <div className="panel-heading">
-                  <h2>Teach the lab what spam looks like</h2>
+                  <h2>Dataset messages</h2>
                   <div className="label-progress">
                     <span>
                       {labelled} / {exampleCount} labelled
@@ -1715,98 +1886,131 @@ function ModelLab({ data, act }: { data: Overview; act: Act }) {
                 </div>
                 <div className="dataset-rows">
                   {examples.map((e) => (
-                    <div key={e.id}>
-                      <span className="example-id">#{e.id}</span>
-                      <div>
-                        <p>{e.text}</p>
-                        {Boolean(e.context?.length) && (
-                          <details>
-                            <summary>{e.context!.length} recent messages from this sender</summary>
-                            {e.context!.map((c, i) => (
-                              <blockquote key={i}>{c}</blockquote>
-                            ))}
-                          </details>
-                        )}
+                    <Disclosure
+                      key={e.id}
+                      className="compact-record dataset-example"
+                      desktopOpen
+                      label={`Dataset message ${e.id}`}
+                      title={
+                        <span className="record-preview">
+                          {e.text.replace(/\s+/gu, ' ').trim() || '[No text]'}
+                        </span>
+                      }
+                      hint={
+                        <span>
+                          #{e.id} ·{' '}
+                          {e.label === 'ham'
+                            ? 'Legitimate'
+                            : e.label === 'spam'
+                              ? 'Spam'
+                              : e.label === 'review'
+                                ? 'Needs context'
+                                : 'Needs a label'}
+                        </span>
+                      }
+                    >
+                      <div className="record-detail">
+                        <div>
+                          <p>{e.text}</p>
+                          {Boolean(e.context?.length) && (
+                            <details>
+                              <summary>
+                                {e.context!.length} recent messages from this sender
+                              </summary>
+                              {e.context!.map((c, i) => (
+                                <blockquote key={i}>{c}</blockquote>
+                              ))}
+                            </details>
+                          )}
+                        </div>
+                        <div className="label-buttons">
+                          <button
+                            className={e.label === 'ham' ? 'selected ham' : ''}
+                            aria-label={`Label message ${e.id} legitimate`}
+                            aria-pressed={e.label === 'ham'}
+                            disabled={savingLabels.has(labelKey(selected, e.id))}
+                            onClick={() =>
+                              void saveLabel(selected, e, e.label === 'ham' ? null : 'ham')
+                            }
+                          >
+                            <Check size={14} /> Legitimate
+                          </button>
+                          <button
+                            className={e.label === 'spam' ? 'selected spam' : ''}
+                            aria-label={`Label message ${e.id} spam`}
+                            aria-pressed={e.label === 'spam'}
+                            disabled={savingLabels.has(labelKey(selected, e.id))}
+                            onClick={() =>
+                              void saveLabel(selected, e, e.label === 'spam' ? null : 'spam')
+                            }
+                          >
+                            <Shield size={14} /> Spam
+                          </button>
+                          <button
+                            className={e.label === 'review' ? 'selected' : ''}
+                            disabled={savingLabels.has(labelKey(selected, e.id))}
+                            onClick={() =>
+                              void saveLabel(selected, e, e.label === 'review' ? null : 'review')
+                            }
+                          >
+                            Needs context
+                          </button>
+                          {savingLabels.has(labelKey(selected, e.id)) && (
+                            <LoaderCircle
+                              size={13}
+                              className="spin"
+                              aria-label={`Saving label for message ${e.id}`}
+                            />
+                          )}
+                        </div>
+                        <FeedbackEditor
+                          key={`${selected}:${e.id}:feedback`}
+                          chatId={data.chatId}
+                          endpoint={`/datasets/${selected}/labels`}
+                          id={e.id}
+                          label={e.label}
+                          disabled={savingLabels.has(labelKey(selected, e.id))}
+                          onSaved={(label) => labelSaved(selected, e, label)}
+                        />
                       </div>
-                      <div className="label-buttons">
-                        <button
-                          className={e.label === 'ham' ? 'selected ham' : ''}
-                          aria-label={`Label message ${e.id} legitimate`}
-                          aria-pressed={e.label === 'ham'}
-                          disabled={savingLabels.has(labelKey(selected, e.id))}
-                          onClick={() =>
-                            void saveLabel(selected, e, e.label === 'ham' ? null : 'ham')
-                          }
-                        >
-                          <Check size={14} /> Legitimate
-                        </button>
-                        <button
-                          className={e.label === 'spam' ? 'selected spam' : ''}
-                          aria-label={`Label message ${e.id} spam`}
-                          aria-pressed={e.label === 'spam'}
-                          disabled={savingLabels.has(labelKey(selected, e.id))}
-                          onClick={() =>
-                            void saveLabel(selected, e, e.label === 'spam' ? null : 'spam')
-                          }
-                        >
-                          <Shield size={14} /> Spam
-                        </button>
-                        <button
-                          className={e.label === 'review' ? 'selected' : ''}
-                          disabled={savingLabels.has(labelKey(selected, e.id))}
-                          onClick={() =>
-                            void saveLabel(selected, e, e.label === 'review' ? null : 'review')
-                          }
-                        >
-                          Needs context
-                        </button>
-                        {savingLabels.has(labelKey(selected, e.id)) && (
-                          <LoaderCircle
-                            size={13}
-                            className="spin"
-                            aria-label={`Saving label for message ${e.id}`}
-                          />
-                        )}
-                      </div>
-                      <FeedbackEditor
-                        key={`${selected}:${e.id}:feedback`}
-                        chatId={data.chatId}
-                        endpoint={`/datasets/${selected}/labels`}
-                        id={e.id}
-                        label={e.label}
-                        disabled={savingLabels.has(labelKey(selected, e.id))}
-                        onSaved={(label) => labelSaved(selected, e, label)}
-                      />
-                    </div>
+                    </Disclosure>
                   ))}
                 </div>
                 <div className="pagination">
                   <span>
                     Labels update saved-score metrics. Re-run only to test a new model or prompt.
                   </span>
-                  <div>
-                    <button
-                      className="icon-button"
-                      aria-label="Previous label page"
-                      disabled={!labelPage}
-                      onClick={() => setLabelPage(labelPage - 1)}
-                    >
-                      <ChevronLeft size={17} />
-                    </button>
-                    <span>
-                      {labelPage + 1} / {Math.max(1, Math.ceil(exampleCount / 25))}
-                    </span>
-                    <button
-                      className="icon-button"
-                      aria-label="Next label page"
-                      disabled={(labelPage + 1) * 25 >= exampleCount}
-                      onClick={() => setLabelPage(labelPage + 1)}
-                    >
-                      <ChevronRight size={17} />
-                    </button>
-                  </div>
+                  {(exampleCount > 25 || labelPage > 0) && (
+                    <div>
+                      <button
+                        className="icon-button"
+                        aria-label="Previous label page"
+                        disabled={!labelPage}
+                        onClick={() => setLabelPage(labelPage - 1)}
+                      >
+                        <ChevronLeft size={17} />
+                      </button>
+                      <span>
+                        {labelPage + 1} / {Math.max(1, Math.ceil(exampleCount / 25))}
+                      </span>
+                      <button
+                        className="icon-button"
+                        aria-label="Next label page"
+                        disabled={(labelPage + 1) * 25 >= exampleCount}
+                        onClick={() => setLabelPage(labelPage + 1)}
+                      >
+                        <ChevronRight size={17} />
+                      </button>
+                    </div>
+                  )}
                 </div>
               </section>
+              <Disclosure className="panel lab-guidance" title="About dataset labels">
+                <p className="record-detail">
+                  Labels are your ground truth. Model scores never become labels automatically.
+                  Saved runs keep the original labels and prompt.
+                </p>
+              </Disclosure>
               <div className="dataset-bottom-actions">
                 <button
                   className="text-button"
@@ -1841,184 +2045,193 @@ function ModelLab({ data, act }: { data: Overview; act: Act }) {
             </>
           ) : (
             <>
-              <section className="panel comparison-config">
-                <div className="panel-heading">
-                  <div>
-                    <h2>Pick your contenders</h2>
-                    <p>Same messages, same policy. An even comparison.</p>
+              <details
+                className="comparison-setup"
+                open={showConfiguration}
+                onToggle={(e) => setShowConfiguration(e.currentTarget.open)}
+              >
+                <summary>
+                  Configure comparison <small>Models, sample size & threshold</small>
+                </summary>
+                <section className="panel comparison-config">
+                  <div className="panel-heading">
+                    <div>
+                      <h2>Models</h2>
+                      <p>Same messages, same policy. An even comparison.</p>
+                    </div>
+                    <span className="tag">Up to 5 models</span>
                   </div>
-                  <span className="tag">Up to 5 models</span>
-                </div>
-                <div className="model-inputs">
-                  {models.map((m, i) => (
-                    <div className="model-input-row" key={i}>
-                      <span className={`model-number color-${i}`}>
-                        {String(i + 1).padStart(2, '0')}
-                      </span>
-                      <select
-                        aria-label={`Model ${i + 1} provider`}
-                        value={m.provider}
-                        onChange={(e) =>
-                          setModels((ms) =>
-                            ms.map((v, j) =>
-                              j === i
-                                ? {
-                                    provider: e.target.value,
-                                    model:
-                                      e.target.value === 'jev'
-                                        ? 'typesafe/jev-1.13'
-                                        : 'google/gemini-2.5-flash-lite',
-                                  }
-                                : v,
-                            ),
-                          )
-                        }
-                      >
-                        {data.providers.map((p) => (
-                          <option key={p.id} value={p.id}>
-                            {p.name}
-                            {p.configured ? '' : ' · key needed'}
-                          </option>
-                        ))}
-                      </select>
-                      <input
-                        aria-label={`Model ${i + 1} ID`}
-                        value={m.model}
-                        onChange={(e) =>
-                          setModels((ms) =>
-                            ms.map((v, j) => (j === i ? { ...v, model: e.target.value } : v)),
-                          )
-                        }
-                        placeholder="Provider model ID"
-                      />
+                  <div className="model-inputs">
+                    {models.map((m, i) => (
+                      <div className="model-input-row" key={i}>
+                        <select
+                          aria-label={`Model ${i + 1} provider`}
+                          value={m.provider}
+                          onChange={(e) =>
+                            setModels((ms) =>
+                              ms.map((v, j) =>
+                                j === i
+                                  ? {
+                                      provider: e.target.value,
+                                      model:
+                                        e.target.value === 'jev'
+                                          ? 'typesafe/jev-1.13'
+                                          : 'google/gemini-2.5-flash-lite',
+                                    }
+                                  : v,
+                              ),
+                            )
+                          }
+                        >
+                          {data.providers.map((p) => (
+                            <option key={p.id} value={p.id}>
+                              {p.name}
+                              {p.configured ? '' : ' · key needed'}
+                            </option>
+                          ))}
+                        </select>
+                        <input
+                          aria-label={`Model ${i + 1} ID`}
+                          value={m.model}
+                          onChange={(e) =>
+                            setModels((ms) =>
+                              ms.map((v, j) => (j === i ? { ...v, model: e.target.value } : v)),
+                            )
+                          }
+                          placeholder="Provider model ID"
+                        />
+                        <button
+                          className="icon-button"
+                          aria-label={`Remove model ${i + 1}`}
+                          disabled={models.length <= 1}
+                          onClick={() => setModels((ms) => ms.filter((_, j) => i !== j))}
+                        >
+                          <X size={16} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="comparison-controls">
+                    <div>
                       <button
-                        className="icon-button"
-                        aria-label={`Remove model ${i + 1}`}
-                        disabled={models.length <= 1}
-                        onClick={() => setModels((ms) => ms.filter((_, j) => i !== j))}
+                        className="text-button"
+                        disabled={models.length >= 5}
+                        onClick={() =>
+                          setModels((ms) => [...ms, { provider: 'openrouter', model: '' }])
+                        }
                       >
-                        <X size={16} />
+                        <Plus size={14} /> Add model
+                      </button>
+                      <button className="text-button" onClick={() => setShowPolicy(!showPolicy)}>
+                        <SlidersHorizontal size={14} /> {showPolicy ? 'Hide' : 'Edit'} experiment
+                        prompt
                       </button>
                     </div>
-                  ))}
-                </div>
-                <div className="comparison-controls">
-                  <div>
-                    <button
-                      className="text-button"
-                      disabled={models.length >= 5}
-                      onClick={() =>
-                        setModels((ms) => [...ms, { provider: 'openrouter', model: '' }])
-                      }
-                    >
-                      <Plus size={14} /> Add model
-                    </button>
-                    <button className="text-button" onClick={() => setShowPolicy(!showPolicy)}>
-                      <SlidersHorizontal size={14} /> {showPolicy ? 'Hide' : 'Edit'} experiment
-                      prompt
-                    </button>
+                    <div>
+                      <label className="sample-field">
+                        Sample
+                        <input
+                          aria-label="Evaluation sample size"
+                          type="number"
+                          min="1"
+                          max="1000"
+                          value={sample}
+                          onChange={(e) => setSample(Number(e.target.value))}
+                        />
+                      </label>
+                      <button
+                        className="button primary"
+                        disabled={running || !exampleCount || models.some((m) => !m.model.trim())}
+                        onClick={() => {
+                          setRunning(true);
+                          void act(async () => {
+                            await api('/evaluations', {
+                              method: 'POST',
+                              body: JSON.stringify({
+                                datasetId: selected,
+                                models,
+                                limit: sample,
+                                policy,
+                              }),
+                            });
+                            await load();
+                          }, 'Comparison queued. Results appear as each model completes.').finally(
+                            () => setRunning(false),
+                          );
+                        }}
+                      >
+                        <Play size={15} /> Run comparison
+                      </button>
+                    </div>
                   </div>
-                  <div>
-                    <label className="sample-field">
-                      Sample
-                      <input
-                        aria-label="Evaluation sample size"
-                        type="number"
-                        min="1"
-                        max="1000"
-                        value={sample}
-                        onChange={(e) => setSample(Number(e.target.value))}
+                  {showPolicy && (
+                    <label className="field experiment-prompt">
+                      Experiment prompt
+                      <textarea
+                        rows={6}
+                        value={policy}
+                        onChange={(e) => setPolicy(e.target.value)}
                       />
+                      <small>
+                        This prompt is saved with the run. Your live moderation policy is edited in
+                        Settings.
+                      </small>
                     </label>
-                    <button
-                      className="button primary"
-                      disabled={running || !exampleCount || models.some((m) => !m.model.trim())}
-                      onClick={() => {
-                        setRunning(true);
-                        void act(async () => {
-                          await api('/evaluations', {
-                            method: 'POST',
-                            body: JSON.stringify({
-                              datasetId: selected,
-                              models,
-                              limit: sample,
-                              policy,
-                            }),
-                          });
-                          await load();
-                        }, 'Comparison queued. Results appear as each model completes.').finally(
-                          () => setRunning(false),
-                        );
-                      }}
-                    >
-                      <Play size={15} /> Run comparison
-                    </button>
+                  )}
+                  <div className="cost-note">
+                    <Zap size={13} /> A comparison makes real provider calls. Adjusting the
+                    threshold afterward is free.
                   </div>
-                </div>
-                {showPolicy && (
-                  <label className="field experiment-prompt">
-                    Experiment prompt
-                    <textarea rows={6} value={policy} onChange={(e) => setPolicy(e.target.value)} />
-                    <small>
-                      This prompt is saved with the run. Your live moderation policy is edited in
-                      Settings.
-                    </small>
+                  <div className="cost-note">
+                    <Clock3 size={13} /> Model lab: {number(data.stats.labTokens)} tokens today. No
+                    daily token limit; provider billing applies. Live moderation has a separate
+                    budget.
+                  </div>
+                  <div className="cost-note">
+                    Jev and Clef use the Decisions API automatically through OpenRouter.
+                  </div>
+                </section>
+                <section className="panel threshold-panel">
+                  <div>
+                    <span className="threshold-icon">
+                      <SlidersHorizontal size={21} />
+                    </span>
+                    <div>
+                      <h3>Decision threshold</h3>
+                      <p>
+                        Higher thresholds mean fewer false positives. Scores are model signals;
+                        validate them on your labels.
+                      </p>
+                    </div>
+                  </div>
+                  <label className="threshold-slider">
+                    <span>
+                      Spam threshold <strong>{threshold.toFixed(2)}</strong>
+                    </span>
+                    <input
+                      aria-label="Comparison spam threshold"
+                      type="range"
+                      min="0"
+                      max="1"
+                      step="0.01"
+                      value={threshold}
+                      onChange={(e) => setThreshold(Number(e.target.value))}
+                    />
+                    <div>
+                      <small>More sensitive</small>
+                      <small>More selective</small>
+                    </div>
                   </label>
-                )}
-                <div className="cost-note">
-                  <Zap size={13} /> A comparison makes real provider calls. Adjusting the threshold
-                  afterward is free.
-                </div>
-                <div className="cost-note">
-                  <Clock3 size={13} /> Model lab: {number(data.stats.labTokens)} tokens today. No
-                  daily token limit; provider billing applies. Live moderation has a separate
-                  budget.
-                </div>
-                <div className="cost-note">
-                  Jev and Clef use the Decisions API automatically through OpenRouter.
-                </div>
-              </section>
-              <section className="panel threshold-panel">
-                <div>
-                  <span className="threshold-icon">
-                    <SlidersHorizontal size={21} />
-                  </span>
-                  <div>
-                    <h3>Find your balance.</h3>
-                    <p>
-                      Higher thresholds mean fewer false positives. Scores are model signals;
-                      validate them on your labels.
-                    </p>
-                  </div>
-                </div>
-                <label className="threshold-slider">
-                  <span>
-                    Spam threshold <strong>{threshold.toFixed(2)}</strong>
-                  </span>
-                  <input
-                    aria-label="Comparison spam threshold"
-                    type="range"
-                    min="0"
-                    max="1"
-                    step="0.01"
-                    value={threshold}
-                    onChange={(e) => setThreshold(Number(e.target.value))}
-                  />
-                  <div>
-                    <small>More sensitive</small>
-                    <small>More selective</small>
-                  </div>
-                </label>
-              </section>
+                </section>
+              </details>
               <section className="panel results-panel">
                 <div className="panel-heading">
                   <div>
-                    <h2>Results, without the guesswork.</h2>
+                    <h2>Comparison results</h2>
                     <p>Review the saved scores below. Human labels unlock precision and recall.</p>
                   </div>
                   {selectedRuns.length > 0 && (
                     <div className="run-actions">
-                      <span className="tag">{selectedRuns.length} recent runs</span>
                       {displayRun?.predictions.length ? (
                         <button
                           className="button secondary"
@@ -2041,7 +2254,100 @@ function ModelLab({ data, act }: { data: Overview; act: Act }) {
                   </Empty>
                 ) : (
                   <>
-                    <div className="table-scroll">
+                    <div className="phone-only compact-list run-list">
+                      {selectedRuns.map((r) => {
+                        const scores = metrics(reviewedExamples(r), r.predictions, threshold);
+                        return (
+                          <Disclosure
+                            key={r.id}
+                            className="compact-record"
+                            label={`Run details for ${r.model}`}
+                            title={r.model.split('/').at(-1)}
+                            hint={
+                              <>
+                                {r.status} · {r.cursor}/{r.total} scored
+                                <span className="record-metrics">
+                                  {scores.count
+                                    ? `Precision ${percent(scores.precision)} · Recall ${percent(scores.recall)}`
+                                    : 'Add labels to measure accuracy'}
+                                </span>
+                              </>
+                            }
+                          >
+                            <div className="record-detail">
+                              <p className="full-model">{r.model}</p>
+                              <dl className="fact-grid">
+                                <div>
+                                  <dt>Precision</dt>
+                                  <dd>{percent(scores.precision)}</dd>
+                                </div>
+                                <div>
+                                  <dt>Recall</dt>
+                                  <dd>{percent(scores.recall)}</dd>
+                                </div>
+                                <div>
+                                  <dt>F1</dt>
+                                  <dd>{scores.f1 === null ? '—' : scores.f1.toFixed(3)}</dd>
+                                </div>
+                                <div>
+                                  <dt>False positives</dt>
+                                  <dd>{scores.count ? scores.fp : '—'}</dd>
+                                </div>
+                                <div>
+                                  <dt>Tokens</dt>
+                                  <dd>
+                                    {!r.input_tokens &&
+                                    !r.output_tokens &&
+                                    (r.usage_incomplete || r.error.includes('message ID'))
+                                      ? 'unknown'
+                                      : number(r.input_tokens + r.output_tokens)}
+                                    {r.usage_estimated ? ' est.' : ''}
+                                    {r.usage_incomplete && (r.input_tokens || r.output_tokens)
+                                      ? ' + unknown'
+                                      : ''}
+                                  </dd>
+                                </div>
+                                <div>
+                                  <dt>Total latency</dt>
+                                  <dd>
+                                    {r.latency_ms ? `${(r.latency_ms / 1000).toFixed(1)}s` : '—'}
+                                  </dd>
+                                </div>
+                                <div>
+                                  <dt>Cost</dt>
+                                  <dd>{r.cost === null ? '—' : `$${r.cost.toFixed(5)}`}</dd>
+                                </div>
+                                <div>
+                                  <dt>Human labels</dt>
+                                  <dd>{scores.count}</dd>
+                                </div>
+                              </dl>
+                              {r.error && <p className="alert">{r.error}</p>}
+                              <button
+                                className="button secondary"
+                                onClick={() => {
+                                  setRunSelected(r.id);
+                                  requestAnimationFrame(() =>
+                                    document
+                                      .getElementById('run-review')
+                                      ?.scrollIntoView({ block: 'start' }),
+                                  );
+                                }}
+                              >
+                                Review this run <ArrowRight size={14} />
+                              </button>
+                              {runActions(r)}
+                            </div>
+                          </Disclosure>
+                        );
+                      })}
+                    </div>
+                    <div
+                      className="table-scroll desktop-only"
+                      role="region"
+                      aria-label="Model comparison results"
+                      tabIndex={0}
+                    >
                       <table className="results-table">
                         <thead>
                           <tr>
@@ -2057,7 +2363,7 @@ function ModelLab({ data, act }: { data: Overview; act: Act }) {
                           </tr>
                         </thead>
                         <tbody>
-                          {selectedRuns.map((r, i) => {
+                          {selectedRuns.map((r) => {
                             const scores = metrics(reviewedExamples(r), r.predictions, threshold);
                             return (
                               <tr
@@ -2067,11 +2373,14 @@ function ModelLab({ data, act }: { data: Overview; act: Act }) {
                               >
                                 <td>
                                   <div className="run-model">
-                                    <span className={`model-number color-${i % 5}`}>
-                                      <FlaskConical size={15} />
-                                    </span>
                                     <div>
-                                      <strong>{r.model}</strong>
+                                      <button
+                                        className="run-select"
+                                        aria-pressed={displayRun?.id === r.id}
+                                        onClick={() => setRunSelected(r.id)}
+                                      >
+                                        <strong>{r.model}</strong>
+                                      </button>
                                       <small>
                                         {r.status} · {r.cursor}/{r.total} scored · {scores.count}{' '}
                                         labelled
@@ -2080,15 +2389,17 @@ function ModelLab({ data, act }: { data: Overview; act: Act }) {
                                     </div>
                                   </div>
                                 </td>
-                                <td>{percent(scores.precision)}</td>
-                                <td>{percent(scores.recall)}</td>
-                                <td>{scores.f1 === null ? '—' : scores.f1.toFixed(3)}</td>
-                                <td>
+                                <td data-label="Precision">{percent(scores.precision)}</td>
+                                <td data-label="Recall">{percent(scores.recall)}</td>
+                                <td data-label="F1">
+                                  {scores.f1 === null ? '—' : scores.f1.toFixed(3)}
+                                </td>
+                                <td data-label="False positives">
                                   <span className={scores.fp ? 'red' : ''}>
                                     {scores.count ? scores.fp : '—'}
                                   </span>
                                 </td>
-                                <td>
+                                <td data-label="Tokens">
                                   {!r.input_tokens &&
                                   !r.output_tokens &&
                                   (r.usage_incomplete || r.error.includes('message ID'))
@@ -2099,65 +2410,13 @@ function ModelLab({ data, act }: { data: Overview; act: Act }) {
                                     ? ' + unknown'
                                     : ''}
                                 </td>
-                                <td>
+                                <td data-label="Total latency">
                                   {r.latency_ms ? `${(r.latency_ms / 1000).toFixed(1)}s` : '—'}
                                 </td>
-                                <td>{r.cost === null ? '—' : `$${r.cost.toFixed(5)}`}</td>
-                                <td>
-                                  <div className="run-actions">
-                                    {r.status === 'failed' && (
-                                      <button
-                                        className="text-button"
-                                        aria-label={`Resume run ${r.model}`}
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          void act(async () => {
-                                            await api(`/evaluations/${r.id}/resume`, {
-                                              method: 'POST',
-                                              body: '{}',
-                                            });
-                                            await load();
-                                          }, 'Run resumed from its saved progress.');
-                                        }}
-                                      >
-                                        Resume
-                                      </button>
-                                    )}
-                                    {['queued', 'running'].includes(r.status) ? (
-                                      <button
-                                        className="text-button"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          void act(async () => {
-                                            await api(`/evaluations/${r.id}/cancel`, {
-                                              method: 'POST',
-                                              body: '{}',
-                                            });
-                                            await load();
-                                          }, 'Run cancelled. An in-flight provider call may still be billed.');
-                                        }}
-                                      >
-                                        Cancel
-                                      </button>
-                                    ) : (
-                                      <button
-                                        className="icon-button"
-                                        aria-label={`Export run ${r.model}`}
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          download(`watchtower-run-${r.id}.json`, {
-                                            ...r,
-                                            effectiveExamples: reviewedExamples(r),
-                                            threshold,
-                                            metrics: scores,
-                                          });
-                                        }}
-                                      >
-                                        <ArrowDownToLine size={15} />
-                                      </button>
-                                    )}
-                                  </div>
+                                <td data-label="Cost">
+                                  {r.cost === null ? '—' : `$${r.cost.toFixed(5)}`}
                                 </td>
+                                <td>{runActions(r)}</td>
                               </tr>
                             );
                           })}
@@ -2196,7 +2455,6 @@ function ModelLab({ data, act }: { data: Overview; act: Act }) {
                           <h2>Threshold trade-off</h2>
                           <p>{displayRun.model}</p>
                         </div>
-                        <span className="tag">Saved scores</span>
                       </div>
                       <ThresholdChart run={displayRun} threshold={threshold} />
                       <div className="chart-footer">
@@ -2275,7 +2533,7 @@ function ThresholdChart({ run, threshold }: { run: Evaluation; threshold: number
               y1={175 - v * 140}
               x2="450"
               y2={175 - v * 140}
-              stroke="#e9ece5"
+              stroke="var(--line)"
               strokeDasharray="3 4"
             />
             <text x="30" y={179 - v * 140} textAnchor="end">
@@ -2286,14 +2544,14 @@ function ThresholdChart({ run, threshold }: { run: Evaluation; threshold: number
             </text>
           </g>
         ))}
-        <path d={path('precision')} stroke="#6c8760" strokeWidth="2.5" fill="none" />
-        <path d={path('recall')} stroke="#d78961" strokeWidth="2.5" fill="none" />
+        <path d={path('precision')} stroke="var(--green)" strokeWidth="2.5" fill="none" />
+        <path d={path('recall')} stroke="var(--orange)" strokeWidth="2.5" fill="none" />
         <line
           x1={40 + threshold * 410}
           x2={40 + threshold * 410}
           y1="28"
           y2="180"
-          stroke="#333e31"
+          stroke="var(--foreground)"
           strokeDasharray="4 4"
         />
         <text
@@ -2311,12 +2569,39 @@ function ThresholdChart({ run, threshold }: { run: Evaluation; threshold: number
 
 function MessageImage({ id, chatId }: { id: number; chatId: string }) {
   const [failed, setFailed] = useState(false);
+  const [source, setSource] = useState('');
+  useEffect(() => {
+    const controller = new AbortController();
+    let objectUrl = '';
+    void fetchApi(`/messages/${id}/image?group=${encodeURIComponent(chatId)}`, {
+      signal: controller.signal,
+    })
+      .then(async (response) => {
+        if (!response.ok) throw new Error('Image unavailable');
+        const blob = await response.blob();
+        if (!controller.signal.aborted) {
+          objectUrl = URL.createObjectURL(blob);
+          setSource(objectUrl);
+        }
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setFailed(true);
+      });
+    return () => {
+      controller.abort();
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [id, chatId]);
   return failed ? (
     <p className="field-help">The image is no longer available from Telegram.</p>
+  ) : !source ? (
+    <p className="field-help" role="status">
+      Loading image…
+    </p>
   ) : (
     <img
       className="message-image"
-      src={`/api/messages/${id}/image?group=${encodeURIComponent(chatId)}`}
+      src={source}
       alt="Telegram message attachment"
       onError={() => setFailed(true)}
     />
@@ -2337,11 +2622,17 @@ function SettingsPage({ data, act, busy }: { data: Overview; act: Act; busy: boo
   return (
     <>
       <PageHeading
-        eyebrow="YOUR COMMUNITY, YOUR RULES"
-        title="Set the boundaries."
+        title="Settings"
         subtitle="Evolve the policy, choose your model, and control when moderation takes action."
       />
       <form
+        onInvalidCapture={(event) => {
+          let section = (event.target as HTMLElement).closest('details');
+          while (section) {
+            section.open = true;
+            section = section.parentElement?.closest('details') || null;
+          }
+        }}
         onSubmit={(e) => {
           e.preventDefault();
           void act(async () => {
@@ -2357,14 +2648,18 @@ function SettingsPage({ data, act, busy }: { data: Overview; act: Act; busy: boo
           }, 'Moderation settings saved.');
         }}
       >
-        <section className="panel settings-panel">
-          <div className="panel-heading">
-            <div>
-              <h2>Moderation mode</h2>
-              <p>Start by observing. Switch to enforcement when your policy is ready.</p>
-            </div>
-            <ShieldCheck size={20} className="muted" />
-          </div>
+        <Disclosure
+          className="panel settings-panel"
+          title="Moderation mode"
+          hint={
+            settings.mode === 'enforce'
+              ? 'Enforce · deletions and strikes'
+              : settings.mode === 'observe'
+                ? 'Observe · log decisions only'
+                : 'Paused'
+          }
+          desktopOpen
+        >
           <div className="mode-options">
             {[
               {
@@ -2399,15 +2694,13 @@ function SettingsPage({ data, act, busy }: { data: Overview; act: Act; busy: boo
               </button>
             ))}
           </div>
-        </section>
-        <section className="panel settings-panel">
-          <div className="panel-heading">
-            <div>
-              <h2>The spam policy</h2>
-              <p>A living prompt. Adapt it as your community and spam patterns change.</p>
-            </div>
-            <span className="tag">Editable</span>
-          </div>
+        </Disclosure>
+        <Disclosure
+          className="panel settings-panel"
+          title="The spam policy"
+          hint={`${settings.policy.length.toLocaleString()} characters · edit classification instructions`}
+          desktopOpen
+        >
           <label className="field">
             Classification instructions
             <textarea
@@ -2424,15 +2717,13 @@ function SettingsPage({ data, act, busy }: { data: Overview; act: Act; busy: boo
               snapshot.
             </small>
           </label>
-        </section>
-        <section className="panel settings-panel">
-          <div className="panel-heading">
-            <div>
-              <h2>Model & decision thresholds</h2>
-              <p>Use Model lab to test changes before applying them here.</p>
-            </div>
-            <FlaskConical size={20} className="muted" />
-          </div>
+        </Disclosure>
+        <Disclosure
+          className="panel settings-panel"
+          title="Model & decision thresholds"
+          hint={`${settings.model.split('/').at(-1)} · spam at ${Math.round(settings.threshold * 100)}%`}
+          desktopOpen
+        >
           <div className="fields-grid">
             <label className="field">
               Provider
@@ -2488,18 +2779,17 @@ function SettingsPage({ data, act, busy }: { data: Overview; act: Act; busy: boo
               <small>Uncertain messages stay visible and enter review.</small>
             </label>
           </div>
-        </section>
-        <section className="panel settings-panel">
-          <div className="panel-heading">
-            <div>
-              <h2>Image moderation</h2>
-              <p>
-                Check photos and image attachments together with their captions using the same spam
-                policy.
-              </p>
-            </div>
-            <ShieldCheck size={20} className="muted" />
-          </div>
+        </Disclosure>
+        <Disclosure
+          className="panel settings-panel"
+          title="Image moderation"
+          hint={
+            settings.imageModeration
+              ? 'Enabled · photo and caption checks'
+              : 'Disabled · captions only'
+          }
+          desktopOpen
+        >
           <div className="fields-grid">
             <label className="field">
               Image processing
@@ -2602,15 +2892,13 @@ function SettingsPage({ data, act, busy }: { data: Overview; act: Act; busy: boo
               </p>
             )}
           </div>
-        </section>
-        <section className="panel settings-panel">
-          <div className="panel-heading">
-            <div>
-              <h2>Batching & storage</h2>
-              <p>Balance response time, prompt overhead, and retained history.</p>
-            </div>
-            <Zap size={20} className="muted" />
-          </div>
+        </Disclosure>
+        <Disclosure
+          className="panel settings-panel"
+          title="Batching & storage"
+          hint={`${settings.batchSeconds}s batches · ${settings.retentionDays} days retained`}
+          desktopOpen
+        >
           <div className="fields-grid">
             <label className="field">
               Batch window (seconds)
@@ -2679,15 +2967,13 @@ function SettingsPage({ data, act, busy }: { data: Overview; act: Act; busy: boo
               hard billing cap.
             </small>
           </div>
-        </section>
-        <section className="panel settings-panel">
-          <div className="panel-heading">
-            <div>
-              <h2>Protected users</h2>
-              <p>The owner and Telegram administrators are always exempt.</p>
-            </div>
-            <LockKeyhole size={20} className="muted" />
-          </div>
+        </Disclosure>
+        <Disclosure
+          className="panel settings-panel"
+          title="Protected users"
+          hint={`Owner, admins and ${settings.exemptUserIds.length} additional users`}
+          desktopOpen
+        >
           <label className="field">
             Additional exempt Telegram user IDs
             <input
@@ -2705,7 +2991,7 @@ function SettingsPage({ data, act, busy }: { data: Overview; act: Act; busy: boo
             />
             <small>Comma-separated numeric user IDs. Usernames are not stable identifiers.</small>
           </label>
-        </section>
+        </Disclosure>
         <div className="settings-save">
           <span>{dirty ? 'You have unsaved changes.' : 'Your settings are up to date.'}</span>
           <button type="submit" className="button primary" disabled={busy || !dirty}>
@@ -2713,19 +2999,19 @@ function SettingsPage({ data, act, busy }: { data: Overview; act: Act; busy: boo
           </button>
         </div>
       </form>
-      <section className="panel settings-panel connection-panel">
-        <div className="panel-heading">
-          <div>
-            <h2>Connections</h2>
-            <p>Credentials stay on the worker. The browser never receives API keys.</p>
-          </div>
-          <button
-            className="text-button"
-            onClick={() => void act(async () => setTelegramStatus(await api('/telegram/status')))}
-          >
-            <RefreshCw size={14} /> Check Telegram
-          </button>
-        </div>
+      <Disclosure
+        className="panel settings-panel connection-panel"
+        title="Connections"
+        hint={`${data.providers.filter((provider) => provider.configured).length} provider keys configured`}
+        desktopOpen
+      >
+        <button
+          className="text-button"
+          type="button"
+          onClick={() => void act(async () => setTelegramStatus(await api('/telegram/status')))}
+        >
+          <RefreshCw size={14} /> Check Telegram
+        </button>
         <div className="connections-list">
           {data.providers.map((p) => (
             <div key={p.id}>
@@ -2746,9 +3032,9 @@ function SettingsPage({ data, act, busy }: { data: Overview; act: Act; busy: boo
         )}
         <p className="field-help">
           Add custom OpenAI-compatible endpoints through MODEL_PROVIDERS_JSON. See README.md for
-          secrets and Cloudflare Access configuration.
+          secrets and authentication configuration.
         </p>
-      </section>
+      </Disclosure>
     </>
   );
 }

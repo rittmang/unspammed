@@ -1,18 +1,20 @@
-import { existsSync, readFileSync, writeFileSync, chmodSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import { randomBytes } from 'node:crypto';
 import { spawn } from 'node:child_process';
+import { resolve } from 'node:path';
+import { loadEnvironment } from './setup-env.mjs';
+import {
+  saveEnvironmentDefaults,
+  writePrivate,
+  providers,
+  assertPrivatePaths,
+  safeErrorMessage,
+  parseOptions,
+  readCloudflareConfiguration,
+} from './setup-lib.mjs';
 
-if (existsSync('.dev.vars')) process.loadEnvFile('.dev.vars');
-const apiId = process.env.TELEGRAM_API_ID;
-const apiHash = process.env.TELEGRAM_API_HASH;
-if (!/^\d+$/.test(apiId || '') || !/^[a-f0-9]{32}$/i.test(apiHash || '')) {
-  console.error(
-    'Save TELEGRAM_API_ID and TELEGRAM_API_HASH from my.telegram.org/apps in ignored .dev.vars first.',
-  );
-  process.exit(1);
-}
-function wrangler(args, input) {
-  return new Promise((resolve, reject) => {
+function wrangler(args, input = '') {
+  return new Promise((resolveCall, reject) => {
     const child = spawn(process.execPath, ['node_modules/wrangler/bin/wrangler.js', ...args], {
       stdio: ['pipe', 'pipe', 'pipe'],
     });
@@ -20,51 +22,107 @@ function wrangler(args, input) {
     child.stdout.on('data', (data) => {
       output += data;
     });
-    // Do not echo CLI errors: the only output needed here is success or failure.
     child.stderr.resume();
     child.on('error', () => reject(new Error('Could not start Wrangler.')));
     child.on('close', (code) =>
       code === 0
-        ? resolve(output)
+        ? resolveCall(output)
         : reject(
             new Error(
-              `Wrangler ${args.slice(0, 2).join(' ')} failed (exit ${code}). Check your Cloudflare login.`,
+              'Wrangler secret operation failed. Check your Cloudflare login and explicit config.',
             ),
           ),
     );
-    child.stdin.end(input || '');
+    child.stdin.on('error', () =>
+      reject(new Error('Wrangler secret operation could not receive input.')),
+    );
+    child.stdin.end(input);
   });
 }
+
 try {
+  const args = process.argv.slice(2);
+  const options = parseOptions(args, {
+    values: ['--provider', '--config'],
+    flags: ['--upload', '--new-session-key'],
+    usage:
+      'Usage: npm run telegram:admin:configure -- [--provider NAME] [--new-session-key] [--upload --config YOUR_CONFIG]',
+  });
+  const loaded = loadEnvironment();
+  const provider = options['--provider'] ? options['--provider'] : process.env.WATCHTOWER_PROVIDER;
+  if (provider && !providers.includes(provider))
+    throw new Error('Choose cloudflare, railway, digitalocean, or vercel.');
+  const upload = args.includes('--upload');
+  const config = options['--config'];
+  if (upload && (provider !== 'cloudflare' || !config || !existsSync(config)))
+    throw new Error(
+      'Automatic upload requires --provider cloudflare --upload --config YOUR_CONFIG. Other hosts import the private generated file.',
+    );
+  if (
+    upload &&
+    (!readCloudflareConfiguration(config).name ||
+      readCloudflareConfiguration(config).name === 'watchtower-unconfigured')
+  )
+    throw new Error(
+      'Run setup and select your generated config, or explicitly select your preserved production config.',
+    );
+  const envPath = loaded.path || resolve('.env');
+  assertPrivatePaths(process.cwd(), [
+    envPath,
+    '.watchtower/admin-secrets.json',
+    ...(existsSync('.watchtower/runtime.env') ? ['.watchtower/runtime.env'] : []),
+  ]);
+  const apiId = process.env.TELEGRAM_API_ID;
+  const apiHash = process.env.TELEGRAM_API_HASH;
+  if (
+    !/^[1-9]\d*$/.test(apiId || '') ||
+    !Number.isSafeInteger(Number(apiId)) ||
+    !/^[a-f0-9]{32}$/i.test(apiHash || '')
+  )
+    throw new Error(
+      'Set TELEGRAM_API_ID and TELEGRAM_API_HASH from my.telegram.org/apps in your private environment file.',
+    );
   let sessionKey = process.env.TELEGRAM_SESSION_KEY;
   if (!sessionKey) {
-    const deployed = await wrangler(['secret', 'list']);
-    if (/"name"\s*:\s*"TELEGRAM_SESSION_KEY"/.test(deployed))
+    if (!args.includes('--new-session-key'))
       throw new Error(
-        'A session encryption key already exists in Cloudflare. Restore your local backup; do not replace it.',
+        'Restore TELEGRAM_SESSION_KEY from your backup. Only a fresh installation without saved sessions should use --new-session-key.',
       );
+    if (upload) {
+      const deployed = await wrangler(['secret', 'list', '--config', config]);
+      if (/"name"\s*:\s*"TELEGRAM_SESSION_KEY"/.test(deployed))
+        throw new Error(
+          'A session encryption key already exists in Cloudflare. Restore its local backup; do not replace it.',
+        );
+    }
     sessionKey = randomBytes(32).toString('hex');
-    const previous = existsSync('.dev.vars') ? readFileSync('.dev.vars', 'utf8') : '';
-    const updated = /^TELEGRAM_SESSION_KEY=/m.test(previous)
-      ? previous.replace(/^TELEGRAM_SESSION_KEY=.*$/m, `TELEGRAM_SESSION_KEY=${sessionKey}`)
-      : `${previous.trimEnd()}\nTELEGRAM_SESSION_KEY=${sessionKey}\n`;
-    writeFileSync('.dev.vars', updated, { mode: 0o600 });
-    chmodSync('.dev.vars', 0o600);
   }
   if (!/^[a-f0-9]{64}$/i.test(sessionKey))
-    throw new Error('TELEGRAM_SESSION_KEY must be 32 random bytes encoded as 64 hex characters.');
-  await wrangler(
-    ['secret', 'bulk'],
-    JSON.stringify({
-      TELEGRAM_API_ID: apiId,
-      TELEGRAM_API_HASH: apiHash,
-      TELEGRAM_SESSION_KEY: sessionKey,
-    }),
+    throw new Error(
+      'TELEGRAM_SESSION_KEY must contain 64 hex characters. Restore the existing key to retain saved sessions.',
+    );
+  const secrets = {
+    TELEGRAM_API_ID: apiId,
+    TELEGRAM_API_HASH: apiHash,
+    TELEGRAM_SESSION_KEY: sessionKey,
+  };
+  saveEnvironmentDefaults(envPath, secrets);
+  writePrivate(resolve('.watchtower/admin-secrets.json'), `${JSON.stringify(secrets, null, 2)}\n`, {
+    force: true,
+  });
+  // Include new optional values in an already-prepared runtime env without replacing other values.
+  if (existsSync('.watchtower/runtime.env'))
+    saveEnvironmentDefaults(resolve('.watchtower/runtime.env'), secrets);
+  if (upload) await wrangler(['secret', 'bulk', '--config', config], JSON.stringify(secrets));
+  console.log(
+    upload
+      ? 'Telegram admin secrets uploaded to the explicitly selected Cloudflare config.'
+      : 'Telegram admin secrets prepared in private .watchtower/admin-secrets.json (0600). Import these three values into your host runtime variables.',
   );
   console.log(
-    'Telegram admin secrets configured. The encryption key is backed up in ignored .dev.vars.',
+    'The existing session encryption key was preserved and backed up in your private environment file.',
   );
 } catch (error) {
-  console.error(error.message);
+  console.error(safeErrorMessage(error));
   process.exitCode = 1;
 }

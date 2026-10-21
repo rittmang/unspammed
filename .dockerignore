@@ -1,0 +1,16 @@
+node_modules
+dist
+.git
+.env
+.env.*
+.dev.vars
+.dev.vars.*
+.watchtower
+.tmp
+.wrangler
+.vercel
+.vercel-static
+wrangler.production.jsonc
+wrangler.generated.jsonc
+coverage
+*.log

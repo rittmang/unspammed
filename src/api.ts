@@ -1,3 +1,5 @@
+import { isMiniApp, telegramApp } from './mini-app';
+
 export class ApiError extends Error {
   constructor(
     message: string,
@@ -58,15 +60,17 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
   }
 }
 async function requestApi<T>(path: string, init: RequestInit): Promise<T> {
-  const response = await fetch(`/api${path}`, {
-    ...init,
-    headers: { 'Content-Type': 'application/json', 'X-Watchtower-Request': '1', ...init.headers },
-  });
-  if (response.status === 401)
+  const response = await fetchApi(path, init);
+  if (response.status === 401) {
+    if (!isMiniApp && typeof window !== 'undefined')
+      window.dispatchEvent?.(new Event('watchtower:unauthorized'));
     throw new ApiError(
-      'Owner authentication required. Open the dashboard through your Cloudflare Access hostname.',
+      isMiniApp
+        ? 'Close and reopen the Mini App from the bot to sign in.'
+        : 'Your owner session has expired. Sign in again from the dashboard sign-in page.',
       response.status,
     );
+  }
   let data: T & { error?: string };
   const body = await response.text();
   try {
@@ -94,6 +98,23 @@ async function requestApi<T>(path: string, init: RequestInit): Promise<T> {
   }
   return data as T;
 }
+export function fetchApi(path: string, init: RequestInit = {}) {
+  const prefix = `${isMiniApp ? '/mini' : ''}/api`;
+  const target = `${prefix}${path}`;
+  const pathname = new URL(target, 'https://watchtower.invalid').pathname;
+  if (!path.startsWith('/') || !pathname.startsWith(`${prefix}/`))
+    throw new Error('Invalid dashboard API path.');
+  return fetch(target, {
+    ...init,
+    ...(isMiniApp ? { credentials: 'omit', redirect: 'error' } : {}),
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Watchtower-Request': '1',
+      ...Object.fromEntries(new Headers(init.headers)),
+      ...(isMiniApp ? { 'X-Telegram-Init-Data': telegramApp?.initData || '' } : {}),
+    },
+  });
+}
 function waitForRetry(delay: number, signal?: AbortSignal | null) {
   signal?.throwIfAborted();
   return new Promise<void>((resolve, reject) => {
@@ -109,9 +130,24 @@ function waitForRetry(delay: number, signal?: AbortSignal | null) {
   });
 }
 export function download(name: string, value: unknown) {
-  downloadBlob(name, new Blob([JSON.stringify(value, null, 2)], { type: 'application/json' }));
+  return downloadBlob(
+    name,
+    new Blob([JSON.stringify(value, null, 2)], { type: 'application/json' }),
+  );
 }
-export function downloadBlob(name: string, blob: Blob) {
+export async function downloadBlob(name: string, blob: Blob) {
+  if (isMiniApp) {
+    if (blob.size > 20_000_000)
+      throw new Error(
+        'Telegram exports are limited to 20 MB. Choose Open in browser for larger exports.',
+      );
+    await api('/telegram-export', {
+      method: 'POST',
+      headers: { 'X-Watchtower-File-Name': name },
+      body: blob,
+    });
+    return;
+  }
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;

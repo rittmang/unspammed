@@ -33,6 +33,14 @@ export function databaseQuotaResponse(error: unknown): Response | null {
 export async function readJson(request: Request, limit = 1_000_000): Promise<unknown> {
   if (!request.headers.get('content-type')?.startsWith('application/json'))
     throw new HttpError(415, 'Send application/json.');
+  const bytes = await readBody(request, limit);
+  try {
+    return JSON.parse(new TextDecoder().decode(bytes));
+  } catch {
+    throw new HttpError(400, 'Invalid JSON.');
+  }
+}
+export async function readBody(request: Request, limit: number) {
   if (Number(request.headers.get('content-length')) > limit)
     throw new HttpError(413, 'Request is too large.');
   const reader = request.body?.getReader();
@@ -55,9 +63,5 @@ export async function readJson(request: Request, limit = 1_000_000): Promise<unk
     bytes.set(chunk, offset);
     offset += chunk.length;
   }
-  try {
-    return JSON.parse(new TextDecoder().decode(bytes));
-  } catch {
-    throw new HttpError(400, 'Invalid JSON.');
-  }
+  return bytes;
 }

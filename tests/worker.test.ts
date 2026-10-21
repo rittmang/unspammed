@@ -776,9 +776,9 @@ describe('worker authorization', () => {
     );
     expect(authorized.status).toBe(200);
   });
-  it('fails closed without Access configuration and restricts development bypass to loopback', async () => {
+  it('requires owner authentication without optional Access configuration and restricts development bypass to loopback', async () => {
     expect((await worker.fetch(new Request('https://bot.example/api/overview'), env)).status).toBe(
-      503,
+      401,
     );
     expect((await worker.fetch(new Request('http://127.0.0.1/api/overview'), env)).status).toBe(
       200,
@@ -790,7 +790,7 @@ describe('worker authorization', () => {
           DEV_MODE: 'false',
         })
       ).status,
-    ).toBe(503);
+    ).toBe(401);
     expect((await worker.fetch(new Request('https://bot.example/health'), env)).status).toBe(200);
   });
   it('blocks cross-origin writes and missing mutation headers', async () => {

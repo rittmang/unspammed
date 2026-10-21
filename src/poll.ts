@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { ApiError } from './api';
+import { appHidden } from './mini-app';
 
 // Poll only visible tabs, never overlap requests, and back off after failures.
 // A null interval loads on entry/return to the tab without idle polling.
@@ -18,10 +19,10 @@ export function useVisiblePoll(
     let failures = 0;
     function schedule(delay: number) {
       clearTimeout(timer);
-      if (active && !document.hidden) timer = setTimeout(tick, delay);
+      if (active && !appHidden()) timer = setTimeout(tick, delay);
     }
     async function tick() {
-      if (!active || document.hidden) return;
+      if (!active || appHidden()) return;
       if (Date.now() < retryAt.current) {
         schedule(retryAt.current - Date.now());
         return;
@@ -31,7 +32,7 @@ export function useVisiblePoll(
         // Wait for an old query before loading a changed filter; interval changes reuse it.
         if (inFlight.current && inFlight.current.load !== load) {
           await inFlight.current.request.catch(() => {});
-          if (!active || document.hidden) return;
+          if (!active || appHidden()) return;
         }
         const request = inFlight.current?.load === load ? inFlight.current.request : load();
         inFlight.current = { load, request };
@@ -52,7 +53,7 @@ export function useVisiblePoll(
     }
     function visibility() {
       clearTimeout(timer);
-      if (!document.hidden) void tick();
+      if (!appHidden()) void tick();
     }
     document.addEventListener('visibilitychange', visibility);
     void tick();

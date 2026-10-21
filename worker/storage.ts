@@ -1,8 +1,12 @@
 import pg from 'pg';
-import { PostgresDatabase, databaseSchema, postgresConfig } from './database';
+import {
+  PostgresDatabase,
+  databaseSchema,
+  postgresEnvironmentConfig,
+  type DatabaseEnvironment,
+} from './database';
 import { POSTGRES_SCHEMA } from './postgres-schema';
 import { defaultSettings } from '../shared/types';
-import type { Env } from './env';
 
 export interface MigrationState {
   ready: boolean;
@@ -24,16 +28,9 @@ export const initialMigration = (): MigrationState => ({
   offset: 0,
   error: '',
 });
-export async function initializePostgres(
-  env: Pick<Env, 'PLANETSCALE_DATABASE_URL' | 'DEV_MODE' | 'TELEGRAM_CHAT_ID'>,
-  fresh = true,
-) {
-  if (!env.PLANETSCALE_DATABASE_URL)
-    throw new Error('Save PLANETSCALE_DATABASE_URL in .dev.vars first.');
-  const schema = databaseSchema(env.TELEGRAM_CHAT_ID);
-  const client = new pg.Client(
-    postgresConfig(env.PLANETSCALE_DATABASE_URL, env.DEV_MODE === 'true'),
-  );
+export async function initializePostgres(env: DatabaseEnvironment, fresh = true) {
+  const schema = databaseSchema(env.DATABASE_ROOT_CHAT_ID || env.TELEGRAM_CHAT_ID);
+  const client = new pg.Client(postgresEnvironmentConfig(env));
   client.on('error', () => {});
   await client.connect();
   try {
@@ -68,7 +65,7 @@ export async function initializePostgres(
 }
 export async function migrationState(db: PostgresDatabase): Promise<MigrationState> {
   const rows = await db.exec<{ value: string }>('SELECT value FROM storage_state WHERE id=1');
-  if (!rows[0]) throw new Error('Initialize the PlanetScale database before deployment.');
+  if (!rows[0]) throw new Error('Initialize the PostgreSQL database before deployment.');
   return JSON.parse(rows[0].value);
 }
 export async function writeMigration(db: PostgresDatabase, state: MigrationState) {

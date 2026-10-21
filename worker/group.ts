@@ -122,7 +122,7 @@ export class GroupService {
   private async requireLiveStorage() {
     if (this.db instanceof PostgresDatabase && !(await migrationState(this.db)).ready) {
       await this.scheduleRemaining();
-      throw new HttpError(503, 'Finish the PlanetScale database setup to enable live moderation.');
+      throw new HttpError(503, 'Finish the PostgreSQL database setup to enable live moderation.');
     }
   }
   private async hiddenLabIds(kind: 'dataset' | 'run') {
@@ -143,7 +143,7 @@ export class GroupService {
     // Inspect the seal in SQL instead of decoding every historical policy payload
     // or doing a round trip per draft on the free Worker.
     const expected =
-      this.db.kind === 'planetscale'
+      this.db.kind === 'postgres'
         ? "SELECT d.id AS draft_id,x.value AS run_id FROM policy_drafts d CROSS JOIN LATERAL jsonb_array_elements_text(COALESCE(d.payload::jsonb->'runs'->'test','[]'::jsonb)) x"
         : "SELECT d.id AS draft_id,x.value AS run_id FROM policy_drafts d,json_each(d.payload,'$.runs.test') x";
     const rows = await this.rows<{ id: string }>(`WITH expected AS (${expected}), sealed AS (
@@ -249,7 +249,7 @@ export class GroupService {
         media,
         imageFileId,
         version,
-        this.db.kind === 'planetscale' ? Date.now() + settings.batchSeconds * 1000 : 0,
+        this.db.kind === 'postgres' ? Date.now() + settings.batchSeconds * 1000 : 0,
       );
       accepted = status === 'pending';
     });
@@ -1076,7 +1076,7 @@ export class GroupService {
           await this.processEvaluation();
           await this.improvement().process();
         } catch (e) {
-          if (this.db.kind === 'planetscale') throw e;
+          if (this.db.kind === 'postgres') throw e;
           if (databaseQuotaResponse(e)) {
             retry = true;
             await this.wake(300000);
@@ -1106,7 +1106,7 @@ export class GroupService {
   }
   private async scheduleRemaining() {
     // Only the local SQLite adapter supplies an alarm callback. Production uses cron.
-    if (this.db.kind === 'planetscale') return;
+    if (this.db.kind === 'postgres') return;
     const settings = await this.settings();
     const nextMessage =
       settings.mode !== 'paused'
@@ -1144,7 +1144,7 @@ export class GroupService {
         providers: publicProviders(this.env),
         chatId: this.env.TELEGRAM_CHAT_ID,
         storage: {
-          backend: 'planetscale',
+          backend: 'postgres',
           ready: state.ready,
           status: state.status,
           copied: state.tables.reduce((sum, t) => sum + t.copied, 0),

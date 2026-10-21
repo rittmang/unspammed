@@ -1,39 +1,30 @@
-import { existsSync } from 'node:fs';
 import { initializePostgres, discardLegacyHistory } from '../worker/storage';
-import { PostgresDatabase } from '../worker/database';
+import { PostgresDatabase, type DatabaseEnvironment } from '../worker/database';
 import { initializeDirectory, provision } from '../worker/directory';
 import { defaultSettings } from '../shared/types';
-if (existsSync('.dev.vars')) process.loadEnvFile('.dev.vars');
-let url = process.env.PLANETSCALE_ADMIN_DATABASE_URL || process.env.PLANETSCALE_DATABASE_URL;
-const chatId = process.env.TELEGRAM_CHAT_ID || '-1001255868451';
-if (!url) throw new Error('Save PLANETSCALE_DATABASE_URL in ignored .dev.vars.');
-const connection = new URL(url);
-if (connection.hostname.endsWith('.psdb.cloud')) {
-  connection.port = '5432';
-  url = connection.href;
-}
+import { canonicalEnvironment, loadEnvironment } from './setup-env.mjs';
+
 try {
-  await initializePostgres(
-    {
-      PLANETSCALE_DATABASE_URL: url,
-      TELEGRAM_CHAT_ID: chatId,
-      DEV_MODE: process.env.DEV_MODE || 'false',
-    },
-    true,
-  );
-  if (process.argv.includes('--discard-legacy-history'))
-    await discardLegacyHistory(
-      new PostgresDatabase({
-        PLANETSCALE_DATABASE_URL: url,
-        TELEGRAM_CHAT_ID: chatId,
-        DEV_MODE: process.env.DEV_MODE || 'false',
-      }),
-    );
-  const db = new PostgresDatabase({
-    PLANETSCALE_DATABASE_URL: url,
+  loadEnvironment();
+  const configured = canonicalEnvironment();
+  const chatId = configured.DATABASE_ROOT_CHAT_ID || configured.TELEGRAM_CHAT_ID;
+  if (!chatId || !/^-100\d+$/.test(chatId))
+    throw new Error('Configure TELEGRAM_CHAT_ID with your numeric supergroup ID.');
+  const url = configured.DATABASE_ADMIN_URL || configured.DATABASE_URL;
+  if (!url) throw new Error('Configure DATABASE_URL before database setup.');
+  const connection = new URL(url);
+  // PlanetScale's transaction pool port cannot run schema administration.
+  if (connection.hostname.endsWith('.psdb.cloud')) connection.port = '5432';
+  const environment: DatabaseEnvironment = {
+    DATABASE_URL: connection.href,
+    DATABASE_SSL_MODE: configured.DATABASE_SSL_MODE as DatabaseEnvironment['DATABASE_SSL_MODE'],
+    DATABASE_SSL_CA: configured.DATABASE_SSL_CA,
     TELEGRAM_CHAT_ID: chatId,
-    DEV_MODE: process.env.DEV_MODE || 'false',
-  });
+    DEV_MODE: configured.DEV_MODE || 'false',
+  };
+  await initializePostgres(environment, true);
+  const db = new PostgresDatabase(environment);
+  if (process.argv.includes('--discard-legacy-history')) await discardLegacyHistory(db);
   await initializeDirectory(db, { TELEGRAM_CHAT_ID: chatId });
   await db.transaction(async () => {
     const groups = await db.exec<{ chat_id: string }>(
@@ -44,12 +35,13 @@ try {
 } catch (error) {
   if (error && typeof error === 'object' && 'code' in error && error.code === '42501') {
     console.error(
-      'This role cannot create the initial schema. Save a temporary default-role connection as PLANETSCALE_ADMIN_DATABASE_URL in ignored .dev.vars, then rerun setup. The Worker will keep using the separate application role.',
+      'The database role needs schema/table creation privileges. Use DATABASE_ADMIN_URL for setup if required, then grant the runtime role access to the application schema. Never deploy the administrator connection.',
     );
-  } else
+  } else {
     console.error(
-      'Database setup failed. Verify the database connection and schema privileges. No connection credentials were printed.',
+      'Database setup failed. Check TELEGRAM_CHAT_ID, DATABASE_URL, TLS settings, and schema privileges. No connection credentials were printed.',
     );
+  }
   process.exit(1);
 }
-console.log('Postgres schema is ready. Existing application data was preserved.');
+console.log('PostgreSQL schema is ready. Existing application data was preserved.');

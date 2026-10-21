@@ -8,7 +8,7 @@ export class DatabaseUnavailableError extends HttpError {
   constructor() {
     super(
       503,
-      'PlanetScale is temporarily unavailable. Saved progress is retained; please retry shortly.',
+      'PostgreSQL is temporarily unavailable. Saved progress is retained; please retry shortly.',
     );
   }
 }
@@ -29,7 +29,7 @@ function databaseError(error: unknown): never {
   throw new DatabaseUnavailableError();
 }
 export interface Database {
-  readonly kind: 'sqlite' | 'planetscale';
+  readonly kind: 'sqlite' | 'postgres';
   exec<T = Record<string, SqlValue>>(sql: string, ...params: SqlValue[]): Promise<T[]>;
   transaction<T>(callback: () => Promise<T>): Promise<T>;
   session<T>(callback: () => Promise<T>): Promise<T>;
@@ -122,29 +122,47 @@ export function postgresSql(source: string): string {
   return result.replace(/(\$\d+) IS NULL/g, '$1::double precision IS NULL');
 }
 
-export function postgresConfig(connection: string, dev = false, hyperdrive = false): ClientConfig {
+export interface PostgresTransport {
+  sslMode?: 'verify-full' | 'disable';
+  sslCa?: string;
+}
+export function postgresConfig(
+  connection: string,
+  dev = false,
+  hyperdrive = false,
+  options: PostgresTransport = {},
+): ClientConfig {
   let url: URL;
   try {
     url = new URL(connection);
   } catch {
-    throw new HttpError(503, 'Invalid PlanetScale database connection configuration.');
+    throw new HttpError(503, 'Invalid PostgreSQL connection configuration.');
   }
   const local = ['127.0.0.1', 'localhost', '[::1]'].includes(url.hostname);
   if (
     !['postgres:', 'postgresql:'].includes(url.protocol) ||
-    (!hyperdrive && !url.hostname.endsWith('.psdb.cloud') && !(local && dev))
+    !url.hostname ||
+    url.hash ||
+    (local && !dev && !hyperdrive && options.sslMode !== 'disable')
   )
     throw new HttpError(
       503,
-      'Use a PlanetScale Postgres connection, or a loopback database in development.',
+      'Use a PostgreSQL connection. Loopback connections require development mode or explicit DATABASE_SSL_MODE=disable.',
     );
+  if (options.sslMode && !['verify-full', 'disable'].includes(options.sslMode))
+    throw new HttpError(503, 'DATABASE_SSL_MODE must be verify-full or disable.');
+  if (options.sslCa && (options.sslMode === 'disable' || hyperdrive))
+    throw new HttpError(503, 'Configure the CA on the TLS connection, not a plaintext connection.');
   // Do not let URL options silently disable TLS or replace the verified SSL configuration.
-  for (const key of ['sslmode', 'sslrootcert', 'sslcert', 'sslkey', 'sslnegotiation'])
+  for (const key of ['ssl', 'sslmode', 'sslrootcert', 'sslcert', 'sslkey', 'sslnegotiation'])
     url.searchParams.delete(key);
   return {
     connectionString: url.href,
     // The trusted binding handles origin TLS; direct connections still verify certificates.
-    ssl: hyperdrive || (local && dev) ? false : { rejectUnauthorized: true },
+    ssl:
+      hyperdrive || options.sslMode === 'disable' || (local && dev && !options.sslMode)
+        ? false
+        : { rejectUnauthorized: true, ...(options.sslCa ? { ca: options.sslCa } : {}) },
     connectionTimeoutMillis: 10_000,
     query_timeout: 30_000,
     application_name: 'watchtower',
@@ -163,39 +181,42 @@ export function postgresConfig(connection: string, dev = false, hyperdrive = fal
   };
 }
 
+export type DatabaseEnvironment = Pick<
+  Env,
+  | 'DATABASE_URL'
+  | 'PLANETSCALE_DATABASE_URL'
+  | 'DATABASE_SSL_MODE'
+  | 'DATABASE_SSL_CA'
+  | 'HYPERDRIVE'
+  | 'DEV_MODE'
+  | 'TELEGRAM_CHAT_ID'
+  | 'DATABASE_ROOT_CHAT_ID'
+>;
+
+export function postgresEnvironmentConfig(env: DatabaseEnvironment): ClientConfig {
+  const connection =
+    env.HYPERDRIVE?.connectionString || env.DATABASE_URL || env.PLANETSCALE_DATABASE_URL;
+  if (!connection) throw new HttpError(503, 'Configure DATABASE_URL.');
+  return postgresConfig(connection, env.DEV_MODE === 'true', !!env.HYPERDRIVE, {
+    sslMode: env.DATABASE_SSL_MODE,
+    sslCa: env.DATABASE_SSL_CA,
+  });
+}
+
 interface Session {
   client?: Promise<pg.Client>;
   transaction: boolean;
   lease?: string;
 }
 export class PostgresDatabase implements Database {
-  readonly kind = 'planetscale';
+  readonly kind = 'postgres';
   private sessions = new AsyncLocalStorage<Session>();
   readonly schema: string;
   private config: ClientConfig;
   readonly tablePrefix: string;
-  private environment: Pick<
-    Env,
-    | 'PLANETSCALE_DATABASE_URL'
-    | 'HYPERDRIVE'
-    | 'DEV_MODE'
-    | 'TELEGRAM_CHAT_ID'
-    | 'DATABASE_ROOT_CHAT_ID'
-  >;
-  constructor(
-    env: Pick<
-      Env,
-      | 'PLANETSCALE_DATABASE_URL'
-      | 'HYPERDRIVE'
-      | 'DEV_MODE'
-      | 'TELEGRAM_CHAT_ID'
-      | 'DATABASE_ROOT_CHAT_ID'
-    >,
-    sessions?: AsyncLocalStorage<Session>,
-  ) {
-    const connection = env.HYPERDRIVE?.connectionString || env.PLANETSCALE_DATABASE_URL;
-    if (!connection) throw new HttpError(503, 'Configure PLANETSCALE_DATABASE_URL.');
-    this.config = postgresConfig(connection, env.DEV_MODE === 'true', !!env.HYPERDRIVE);
+  private environment: DatabaseEnvironment;
+  constructor(env: DatabaseEnvironment, sessions?: AsyncLocalStorage<Session>) {
+    this.config = postgresEnvironmentConfig(env);
     this.environment = env;
     const root = env.DATABASE_ROOT_CHAT_ID || env.TELEGRAM_CHAT_ID;
     this.schema = databaseSchema(root);

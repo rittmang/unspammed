@@ -11,6 +11,7 @@ import {
   ExternalLink,
 } from 'lucide-react';
 import { api } from './api';
+import { Disclosure } from './Disclosure';
 import type { GroupDirectoryResponse, WatchtowerGroup } from '../shared/types';
 
 export function GroupSwitcher({
@@ -116,14 +117,17 @@ export function GroupManager({
   const dialog = useRef<HTMLElement>(null);
   useEffect(() => {
     const previous = document.activeElement as HTMLElement | null;
+    const overflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
     dialog.current?.querySelector<HTMLButtonElement>('button')?.focus();
     const key = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
       if (e.key !== 'Tab') return;
       const nodes = [
-        ...(dialog.current?.querySelectorAll<HTMLElement>('button:not(:disabled),a,select,input') ||
-          []),
-      ];
+        ...(dialog.current?.querySelectorAll<HTMLElement>(
+          'button:not(:disabled),a,select,input,summary',
+        ) || []),
+      ].filter((node) => node.checkVisibility());
       const first = nodes[0],
         last = nodes.at(-1);
       if (e.shiftKey && document.activeElement === first) {
@@ -137,6 +141,7 @@ export function GroupManager({
     };
     document.addEventListener('keydown', key);
     return () => {
+      document.body.style.overflow = overflow;
       document.removeEventListener('keydown', key);
       previous?.focus();
     };
@@ -165,7 +170,7 @@ export function GroupManager({
     <div className="modal-backdrop" onClick={onClose}>
       <section
         ref={dialog}
-        className="modal group-manager"
+        className="modal group-manager phone-screen"
         role="dialog"
         aria-modal="true"
         aria-label="Connect Telegram groups"
@@ -173,17 +178,12 @@ export function GroupManager({
       >
         <div className="modal-heading">
           <div>
-            <span className="eyebrow">YOUR GROUPS</span>
-            <h2>One watchtower. More communities.</h2>
+            <h2>Manage Telegram groups</h2>
           </div>
           <button className="icon-button" aria-label="Close group setup" onClick={onClose}>
             <X size={20} />
           </button>
         </div>
-        <p className="group-intro">
-          Add the bot as an administrator with Delete messages and Ban users. Your group appears
-          below, ready for you to activate.
-        </p>
         <div className="group-setup-actions">
           {link && (
             <a className="button primary" href={link} target="_blank" rel="noreferrer">
@@ -200,31 +200,6 @@ export function GroupManager({
             Refresh groups
           </button>
         </div>
-        <p className="field-help">
-          Already added it? Send <code>/watchtower</code> from your owner Telegram account in that
-          group, then refresh. Full three-strike moderation requires a supergroup.
-        </p>
-        <label className="group-template">
-          Settings for the next group
-          <select
-            aria-label="New group settings"
-            value={copyFrom}
-            onChange={(e) => setCopyFrom(e.target.value)}
-          >
-            <option value="">Start with the default policy</option>
-            {directory.groups
-              .filter((g) => g.provisioned)
-              .map((g) => (
-                <option key={g.chat_id} value={g.chat_id}>
-                  Copy from {g.title}
-                </option>
-              ))}
-          </select>
-          <small>
-            Copies policy, model, thresholds and limits. Every new group starts in Observe;
-            messages, strikes and labels stay separate.
-          </small>
-        </label>
         {error && (
           <div className="alert" role="alert">
             {error}
@@ -239,22 +214,22 @@ export function GroupManager({
               !!g.can_ban;
             const busy = working.has(g.chat_id);
             return (
-              <article className="group-card" key={g.chat_id}>
-                <div className="group-card-heading">
-                  <div>
-                    <strong>{g.title}</strong>
-                    <code>{g.chat_id}</code>
-                  </div>
-                  <span className={`tag ${g.status === 'active' ? 'group-active' : ''}`}>
-                    {g.status === 'active'
-                      ? 'Connected'
-                      : g.status === 'removed'
-                        ? 'Bot removed'
-                        : g.status === 'needs_permissions'
-                          ? 'Permissions changed'
-                          : 'Awaiting activation'}
-                  </span>
-                </div>
+              <Disclosure
+                className="group-card compact-record"
+                key={g.chat_id}
+                title={g.title}
+                hint={
+                  g.status === 'active'
+                    ? 'Connected'
+                    : g.status === 'removed'
+                      ? 'Bot removed'
+                      : g.status === 'needs_permissions'
+                        ? 'Permissions changed'
+                        : 'Awaiting activation'
+                }
+                desktopOpen
+              >
+                <code>{g.chat_id}</code>
                 <div className="group-permissions">
                   <span>
                     <Check size={13} />
@@ -294,10 +269,45 @@ export function GroupManager({
                     </button>
                   )}
                 </div>
-              </article>
+              </Disclosure>
             );
           })}
         </div>
+        <Disclosure
+          className="group-setup-guide"
+          title="Connection instructions & defaults"
+          hint="Set up or activate another group"
+        >
+          <p className="group-intro">
+            Add the bot as an administrator with Delete messages and Ban users. Your group appears
+            below, ready for you to activate.
+          </p>
+          <p className="field-help">
+            Already added it? Send <code>/watchtower</code> from your owner Telegram account in that
+            group, then refresh. Full three-strike moderation requires a supergroup.
+          </p>
+          <label className="group-template">
+            Settings for the next group
+            <select
+              aria-label="New group settings"
+              value={copyFrom}
+              onChange={(e) => setCopyFrom(e.target.value)}
+            >
+              <option value="">Start with the default policy</option>
+              {directory.groups
+                .filter((g) => g.provisioned)
+                .map((g) => (
+                  <option key={g.chat_id} value={g.chat_id}>
+                    Copy from {g.title}
+                  </option>
+                ))}
+            </select>
+            <small>
+              Copies policy, model, thresholds and limits. Every new group starts in Observe;
+              messages, strikes and labels stay separate.
+            </small>
+          </label>
+        </Disclosure>
       </section>
     </div>
   );

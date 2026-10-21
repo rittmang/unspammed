@@ -51,7 +51,7 @@ export function adminFailure(error: unknown): {
     PHONE_NUMBER_INVALID: 'Enter your phone number with its country code.',
     PHONE_NUMBER_BANNED: 'Telegram cannot sign in this phone number.',
     PASSWORD_HASH_INVALID: 'That two-step verification password is incorrect.',
-    API_ID_INVALID: 'The Telegram API ID or hash is invalid. Check the Worker secrets.',
+    API_ID_INVALID: 'The Telegram API ID or hash is invalid. Check the server configuration.',
     CHAT_ADMIN_REQUIRED: 'Your connected account needs Delete messages permission in this group.',
     CHANNEL_PRIVATE: 'Your connected account no longer has access to this group.',
     PARTICIPANT_ID_INVALID: 'Telegram could not resolve this user in the selected group.',
@@ -103,7 +103,7 @@ export class TelegramAdminService {
     if (!this.configured())
       throw new HttpError(
         503,
-        'Configure TELEGRAM_API_ID, TELEGRAM_API_HASH and TELEGRAM_SESSION_KEY as Worker secrets.',
+        'Configure TELEGRAM_API_ID, TELEGRAM_API_HASH and TELEGRAM_SESSION_KEY as server secrets.',
       );
     const bytes = Uint8Array.from(this.env.TELEGRAM_SESSION_KEY!.match(/../g)!, (s) =>
       parseInt(s, 16),
@@ -403,6 +403,7 @@ export class TelegramAdminService {
 }
 
 export function adminStub(env: Env) {
+  if (env.TELEGRAM_ADMIN_SERVICE) return env.TELEGRAM_ADMIN_SERVICE;
   if (!env.TELEGRAM_ADMIN) throw new HttpError(503, 'Telegram admin connection is not configured.');
   return env.TELEGRAM_ADMIN.get(env.TELEGRAM_ADMIN.idFromName('owner'));
 }
@@ -426,56 +427,63 @@ export async function acknowledgeHistoryCleanup(db: Database, job: HistoryCleanu
   });
 }
 
+export function createTelegramAdminService(
+  store: AdminStore,
+  env: Env,
+  factory: AdminClientFactory = async (...args) =>
+    (await import('./telegram-admin-client')).createAdminClient(...args),
+) {
+  const dbFor = async (
+    chatId: string,
+    fn: (db: import('./database').PostgresDatabase) => Promise<void>,
+  ) => {
+    const { PostgresDatabase } = await import('./database');
+    const db = new PostgresDatabase(env).forGroup(chatId);
+    await db.session(() => fn(db));
+  };
+  return new TelegramAdminService(
+    store,
+    env,
+    factory,
+    async (job) => {
+      await dbFor(job.chatId, (db) => acknowledgeHistoryCleanup(db, job));
+    },
+    async (chatId, userId) => {
+      const { GroupDirectory } = await import('./directory');
+      const { PostgresDatabase } = await import('./database');
+      const { telegram } = await import('./telegram');
+      const directory = new GroupDirectory(new PostgresDatabase(env), env);
+      await directory.session(async () => {
+        if ((await directory.get(chatId))?.status !== 'active')
+          throw new HttpError(409, 'Reconnect this group before deleting history.');
+      });
+      await dbFor(chatId, async (db) => {
+        const user = (
+          await db.exec<{ strikes: number }>('SELECT strikes FROM users WHERE user_id=?', userId)
+        )[0];
+        if (!user?.strikes) throw new HttpError(409, 'This user no longer has strikes.');
+        const config = (await db.exec<{ value: string }>('SELECT value FROM config WHERE id=1'))[0];
+        if (
+          userId === env.OWNER_TELEGRAM_ID ||
+          JSON.parse(config.value).exemptUserIds?.includes(userId)
+        )
+          throw new HttpError(403, 'Owner and exempt users are protected.');
+      });
+      const member = await telegram<{ status: string }>(env, 'getChatMember', {
+        chat_id: chatId,
+        user_id: Number(userId),
+      });
+      if (['administrator', 'creator'].includes(member.status))
+        throw new HttpError(403, 'Administrators and the group creator are protected.');
+    },
+  );
+}
+
 export class TelegramAdmin {
   private service: TelegramAdminService;
   private execution: Promise<unknown> = Promise.resolve();
   constructor(ctx: DurableObjectState, env: Env) {
-    const dbFor = async (
-      chatId: string,
-      fn: (db: import('./database').PostgresDatabase) => Promise<void>,
-    ) => {
-      const { PostgresDatabase } = await import('./database');
-      const db = new PostgresDatabase(env).forGroup(chatId);
-      await db.session(() => fn(db));
-    };
-    this.service = new TelegramAdminService(
-      ctx.storage,
-      env,
-      async (...args) => (await import('./telegram-admin-client')).createAdminClient(...args),
-      async (job) => {
-        await dbFor(job.chatId, (db) => acknowledgeHistoryCleanup(db, job));
-      },
-      async (chatId, userId) => {
-        const { GroupDirectory } = await import('./directory');
-        const { PostgresDatabase } = await import('./database');
-        const { telegram } = await import('./telegram');
-        const directory = new GroupDirectory(new PostgresDatabase(env), env);
-        await directory.session(async () => {
-          if ((await directory.get(chatId))?.status !== 'active')
-            throw new HttpError(409, 'Reconnect this group before deleting history.');
-        });
-        await dbFor(chatId, async (db) => {
-          const user = (
-            await db.exec<{ strikes: number }>('SELECT strikes FROM users WHERE user_id=?', userId)
-          )[0];
-          if (!user?.strikes) throw new HttpError(409, 'This user no longer has strikes.');
-          const config = (
-            await db.exec<{ value: string }>('SELECT value FROM config WHERE id=1')
-          )[0];
-          if (
-            userId === env.OWNER_TELEGRAM_ID ||
-            JSON.parse(config.value).exemptUserIds?.includes(userId)
-          )
-            throw new HttpError(403, 'Owner and exempt users are protected.');
-        });
-        const member = await telegram<{ status: string }>(env, 'getChatMember', {
-          chat_id: chatId,
-          user_id: Number(userId),
-        });
-        if (['administrator', 'creator'].includes(member.status))
-          throw new HttpError(403, 'Administrators and the group creator are protected.');
-      },
-    );
+    this.service = createTelegramAdminService(ctx.storage, env);
   }
   private serial<T>(fn: () => Promise<T>) {
     const result = this.execution.then(fn, fn);

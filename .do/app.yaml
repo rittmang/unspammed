@@ -1,0 +1,33 @@
+# Replace repo and branch with your own repository before creating an app.
+# Import .watchtower/runtime.env as encrypted RUN_TIME variables in App Platform.
+# Keep DATABASE_ADMIN_URL and provider API tokens out of runtime variables.
+name: watchtower
+ingress:
+  rules:
+    - match:
+        path:
+          prefix: /
+      component:
+        name: web
+services:
+  - name: web
+    github:
+      repo: YOUR_GITHUB_OWNER/YOUR_REPOSITORY
+      branch: main
+      deploy_on_push: false
+    dockerfile_path: Dockerfile
+    source_dir: /
+    http_port: 3000
+    instance_count: 1
+    instance_size_slug: apps-s-1vcpu-0.5gb
+    health_check:
+      http_path: /health
+      initial_delay_seconds: 15
+      period_seconds: 10
+    envs:
+      - key: NODE_ENV
+        value: production
+        scope: RUN_TIME
+      - key: PORT
+        value: '3000'
+        scope: RUN_TIME

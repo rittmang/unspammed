@@ -1,17 +1,8 @@
 import { spawn } from 'node:child_process';
-import { existsSync, copyFileSync, readFileSync, writeFileSync, chmodSync } from 'node:fs';
+import { existsSync } from 'node:fs';
+import { prepareDevEnvironment } from './dev-env.mjs';
 
-if (!existsSync('.dev.vars')) copyFileSync('.dev.vars.example', '.dev.vars');
-let vars = readFileSync('.dev.vars', 'utf8');
-// Keep the loopback override through Wrangler config reloads as well as startup.
-if (!/^DEV_MODE=true\s*$/m.test(vars)) {
-  vars = /^DEV_MODE=/m.test(vars)
-    ? vars.replace(/^DEV_MODE=.*$/gm, 'DEV_MODE=true')
-    : `DEV_MODE=true\n${vars}`;
-  writeFileSync('.dev.vars', vars);
-}
-chmodSync('.dev.vars', 0o600);
-const hasChat = /^TELEGRAM_CHAT_ID=-100\d+\s*$/m.test(vars);
+const { path: envPath, childEnv, explicit } = prepareDevEnvironment();
 const args = [
   'exec',
   '--',
@@ -19,6 +10,10 @@ const args = [
   'dev',
   '--config',
   'wrangler.local.jsonc',
+  '--env-file',
+  envPath,
+  '--persist-to',
+  '.tmp/dev/state',
   '--ip',
   '127.0.0.1',
   '--port',
@@ -32,19 +27,18 @@ const args = [
   '--var',
   'DATABASE_BACKEND:sqlite',
 ];
-if (!hasChat) args.push('--var', 'TELEGRAM_CHAT_ID:-1001234567890');
 console.log(
-  'Watchtower: http://127.0.0.1:5173 (local owner access). Local credentials are read from .dev.vars.',
+  `Watchtower: http://127.0.0.1:5173 (local owner access). ${explicit ? 'Explicit test credentials copied into isolated local configuration.' : 'Demo data only; existing .env and .dev.vars are untouched.'}`,
 );
 // Assets must exist for Wrangler, even though Vite serves the UI in development.
 if (!existsSync('dist/index.html')) {
-  const build = spawn('npm', ['run', 'build'], { stdio: 'inherit' });
+  const build = spawn('npm', ['run', 'build'], { stdio: 'inherit', env: childEnv });
   await new Promise((resolve) =>
     build.on('exit', (code) => (code ? process.exit(code) : resolve())),
   );
 }
-const worker = spawn('npm', args, { stdio: 'inherit' });
-const ui = spawn('npm', ['run', 'dev:ui'], { stdio: 'inherit' });
+const worker = spawn('npm', args, { stdio: 'inherit', env: childEnv });
+const ui = spawn('npm', ['run', 'dev:ui'], { stdio: 'inherit', env: childEnv });
 let stopping = false;
 function stop() {
   if (stopping) return;

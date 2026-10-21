@@ -151,7 +151,7 @@ export interface EvaluationPage {
 }
 export interface Overview {
   storage?: {
-    backend: 'sqlite' | 'planetscale';
+    backend: 'sqlite' | 'postgres';
     ready: boolean;
     status?: 'waiting_source' | 'copying' | 'complete' | 'cancelled';
     copied?: number;

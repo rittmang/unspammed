@@ -12,5 +12,5 @@
     "resolveJsonModule": true,
     "types": ["@cloudflare/workers-types", "vite/client", "node", "@cloudflare/vitest-plugin/types"]
   },
-  "include": ["src", "worker", "shared", "tests", "*.ts"]
+  "include": ["src", "worker", "shared", "tests", "*.ts", "server", "api"]
 }

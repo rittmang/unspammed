@@ -1,47 +1,61 @@
-import { telegram as call } from './telegram-client.mjs';
 import { isIPv4 } from 'node:net';
+import { resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { telegram, checkTelegramConfiguration } from './telegram-client.mjs';
+import { canonicalEnvironment, loadEnvironment } from './setup-env.mjs';
+import {
+  saveEnvironmentDefaults,
+  validatePublicOrigin,
+  safeErrorMessage,
+  assertPrivatePaths,
+} from './setup-lib.mjs';
 
-// Reads credentials from the environment or ignored .dev.vars; never CLI arguments.
-const token = process.env.TELEGRAM_BOT_TOKEN;
-const secret = process.env.TELEGRAM_WEBHOOK_SECRET;
-const chatId = process.env.TELEGRAM_CHAT_ID;
-const ownerId = process.env.OWNER_TELEGRAM_ID;
-const base = process.env.WORKER_URL;
-const webhookIp = process.env.TELEGRAM_WEBHOOK_IP;
-if (!token || !secret || !chatId || !ownerId || !base)
-  throw new Error(
-    'Set TELEGRAM_BOT_TOKEN, TELEGRAM_WEBHOOK_SECRET, TELEGRAM_CHAT_ID, OWNER_TELEGRAM_ID, and WORKER_URL in .dev.vars or the environment.',
+export async function configureWebhook(input = process.env, call, { check = false } = {}) {
+  const env = canonicalEnvironment(input);
+  call ||= (method, body) => telegram(method, body, env);
+  if (!/^[A-Za-z0-9_-]{16,256}$/.test(env.TELEGRAM_WEBHOOK_SECRET || ''))
+    throw new Error('Set TELEGRAM_WEBHOOK_SECRET; npm run setup generates a secure value.');
+  const origin = validatePublicOrigin(env.PUBLIC_URL);
+  if (env.TELEGRAM_WEBHOOK_IP && !isIPv4(env.TELEGRAM_WEBHOOK_IP))
+    throw new Error('TELEGRAM_WEBHOOK_IP must be an IPv4 address for your webhook host.');
+  const { me } = await checkTelegramConfiguration(env, call);
+  const url = new URL('/telegram/webhook', origin).href;
+  if (!check)
+    await call('setWebhook', {
+      url,
+      secret_token: env.TELEGRAM_WEBHOOK_SECRET,
+      allowed_updates: ['message', 'edited_message', 'my_chat_member'],
+      max_connections: 10,
+      drop_pending_updates: false,
+      ...(env.TELEGRAM_WEBHOOK_IP ? { ip_address: env.TELEGRAM_WEBHOOK_IP } : {}),
+    });
+  const info = await call('getWebhookInfo');
+  if (info.url !== url)
+    throw new Error(
+      'Webhook URL does not match PUBLIC_URL. Run npm run telegram:setup after deployment.',
+    );
+  return { me, url, pending: info.pending_update_count };
+}
+
+async function main() {
+  if (process.argv.slice(2).some((arg) => arg !== '--check'))
+    throw new Error('Usage: npm run telegram:setup -- [--check]');
+  const loaded = loadEnvironment();
+  const check = process.argv.includes('--check');
+  if (!check && loaded.path) assertPrivatePaths(process.cwd(), [loaded.path]);
+  const result = await configureWebhook(process.env, telegram, { check });
+  if (!check && loaded.path)
+    saveEnvironmentDefaults(loaded.path, { TELEGRAM_BOT_USERNAME: result.me.username });
+  console.log(
+    `@${result.me.username} webhook ${check ? 'verified' : 'registered'} at ${result.url}`,
   );
-if (!/^[A-Za-z0-9_-]{16,256}$/.test(secret))
-  throw new Error('Webhook secret must contain 16–256 letters, digits, underscores, or hyphens.');
-if (!/^-100\d+$/.test(chatId) || !/^\d+$/.test(ownerId))
-  throw new Error('Use the numeric supergroup and owner IDs.');
-const url = new URL(base);
-if (url.protocol !== 'https:' || url.username || url.password)
-  throw new Error('WORKER_URL must be a public HTTPS URL.');
-if (webhookIp && !isIPv4(webhookIp))
-  throw new Error('Optional TELEGRAM_WEBHOOK_IP must be an IPv4 address for your webhook host.');
-const me = await call('getMe');
-const membership = await call('getChatMember', { chat_id: chatId, user_id: me.id });
-const owner = await call('getChatMember', { chat_id: chatId, user_id: Number(ownerId) });
-if (
-  membership.status !== 'administrator' ||
-  !membership.can_delete_messages ||
-  !membership.can_restrict_members
-)
-  throw new Error('Make the bot an administrator with Delete messages and Ban users permissions.');
-if (!['creator', 'administrator'].includes(owner.status))
-  throw new Error('Configured owner is not an administrator of this group.');
-await call('setWebhook', {
-  url: new URL('/telegram/webhook', url).href,
-  secret_token: secret,
-  allowed_updates: ['message', 'edited_message', 'my_chat_member'],
-  max_connections: 10,
-  drop_pending_updates: false,
-  ...(webhookIp ? { ip_address: webhookIp } : {}),
-});
-const info = await call('getWebhookInfo');
-console.log(`@${me.username} webhook registered: ${info.url}`);
-console.log(
-  `Pending updates: ${info.pending_update_count}. Start in observation mode, then enable enforcement in the dashboard.`,
-);
+  console.log(
+    `Pending updates: ${Number(result.pending) || 0}. Pending updates were preserved. Start in observation mode.`,
+  );
+}
+if (process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1])) {
+  main().catch((error) => {
+    console.error(safeErrorMessage(error));
+    process.exitCode = 1;
+  });
+}

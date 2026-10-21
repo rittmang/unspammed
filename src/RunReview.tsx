@@ -4,6 +4,7 @@ import type { Evaluation, Label } from '../shared/types';
 import { comparableRuns, reviewedExamples } from '../shared/review';
 import { labelKey } from './label-edits';
 import { FeedbackEditor } from './FeedbackEditor';
+import { Disclosure } from './Disclosure';
 
 type Filter =
   'all' | 'flagged' | 'disagreements' | 'unlabelled' | 'false-positive' | 'false-negative';
@@ -77,6 +78,103 @@ export function RunReview({
   const pages = Math.max(1, Math.ceil(rows.length / 10));
   const activePage = Math.min(page, pages - 1);
   const visible = rows.slice(activePage * 10, activePage * 10 + 10);
+  type ReviewRow = (typeof rows)[number];
+  function renderLabel(row: ReviewRow) {
+    return (
+      <>
+        {' '}
+        <div className="label-buttons">
+          <button
+            aria-label={`Review message ${row.example.id} legitimate`}
+            aria-pressed={row.example.label === 'ham'}
+            className={row.example.label === 'ham' ? 'selected ham' : ''}
+            disabled={savingLabels.has(labelKey(run.dataset_id, row.example.id))}
+            onClick={() => void onLabel(run.id, row.example.id, 'ham')}
+          >
+            <Check size={13} />
+            Legitimate
+          </button>
+          <button
+            aria-label={`Review message ${row.example.id} spam`}
+            aria-pressed={row.example.label === 'spam'}
+            className={row.example.label === 'spam' ? 'selected spam' : ''}
+            disabled={savingLabels.has(labelKey(run.dataset_id, row.example.id))}
+            onClick={() => void onLabel(run.id, row.example.id, 'spam')}
+          >
+            <Shield size={13} />
+            Spam
+          </button>
+          <button
+            aria-label={`Review message ${row.example.id} needs context`}
+            aria-pressed={row.example.label === 'review'}
+            className={row.example.label === 'review' ? 'selected' : ''}
+            disabled={savingLabels.has(labelKey(run.dataset_id, row.example.id))}
+            onClick={() => void onLabel(run.id, row.example.id, 'review')}
+          >
+            Needs context
+          </button>
+        </div>
+        {savingLabels.has(labelKey(run.dataset_id, row.example.id)) ? (
+          <LoaderCircle
+            size={13}
+            className="spin"
+            aria-label={`Saving label for message ${row.example.id}`}
+          />
+        ) : row.example.label !== null ? (
+          <button
+            className="text-button"
+            aria-label={`Clear review label ${row.example.id}`}
+            disabled={savingLabels.has(labelKey(run.dataset_id, row.example.id))}
+            onClick={() => void onLabel(run.id, row.example.id, null)}
+          >
+            Clear label
+          </button>
+        ) : (
+          <small>Not labelled</small>
+        )}
+        <FeedbackEditor
+          key={`${run.id}:${row.example.id}:feedback`}
+          chatId={chatId}
+          endpoint={`/evaluations/${run.id}/reviews`}
+          id={row.example.id}
+          label={row.example.label}
+          disabled={savingLabels.has(labelKey(run.dataset_id, row.example.id))}
+          onSaved={(label) => onFeedbackSaved(row.example.id, label)}
+        />
+      </>
+    );
+  }
+  function renderPrediction(p: ReviewRow['predictions'][number]) {
+    return (
+      <>
+        {' '}
+        {hideScores ? (
+          <span className="muted">Hidden for review</span>
+        ) : p ? (
+          <>
+            <strong className={p.score >= threshold ? 'red' : 'review-low-score'}>
+              {(p.score * 100).toFixed(1)}%
+            </strong>
+            <span
+              className={`tag ${!p.needs_review && p.score >= threshold ? 'review-spam-tag' : ''}`}
+            >
+              {p.needs_review ? 'Review' : p.score >= threshold ? 'Spam' : 'Allowed'}
+            </span>
+            <details className="prediction-reason">
+              <summary>Explanation</summary>
+              <p>
+                {/^(Jev|Decision model) policy probability/.test(p.reason)
+                  ? 'Probability only; no generated explanation.'
+                  : p.reason}
+              </p>
+            </details>
+          </>
+        ) : (
+          <span className="muted">Not scored yet</span>
+        )}
+      </>
+    );
+  }
   return (
     <section className="panel run-review" id="run-review">
       <div className="panel-heading">
@@ -91,78 +189,85 @@ export function RunReview({
           {labelled}/{examples.length} labelled
         </span>
       </div>
-      <div className="review-models">
-        {candidates.map((r) => {
-          const active = !excluded.includes(r.id);
-          const flagged = r.predictions.filter(
-            (p) => !p.needs_review && p.score >= threshold,
-          ).length;
-          return (
-            <button
-              key={r.id}
-              type="button"
-              aria-pressed={active}
-              className={`review-model-chip ${active ? 'active' : ''}`}
-              title={r.model}
-              onClick={() => {
-                if (active && compared.length === 1) return;
-                setExcluded((ids) => (active ? [...ids, r.id] : ids.filter((id) => id !== r.id)));
-                setPage(0);
+      <Disclosure
+        className="review-options"
+        title="Review options"
+        hint={`${rows.length} messages · ${hideScores ? 'Scores hidden' : `${compared.length} models`}`}
+        desktopOpen
+      >
+        <div className="review-models">
+          {candidates.map((r) => {
+            const active = !excluded.includes(r.id);
+            const flagged = r.predictions.filter(
+              (p) => !p.needs_review && p.score >= threshold,
+            ).length;
+            return (
+              <button
+                key={r.id}
+                type="button"
+                aria-pressed={active}
+                className={`review-model-chip ${active ? 'active' : ''}`}
+                title={r.model}
+                onClick={() => {
+                  if (active && compared.length === 1) return;
+                  setExcluded((ids) => (active ? [...ids, r.id] : ids.filter((id) => id !== r.id)));
+                  setPage(0);
+                }}
+              >
+                <strong>{r.model.split('/').at(-1)}</strong>
+                <span>
+                  {hideScores
+                    ? 'Scores hidden'
+                    : `${flagged}/${r.predictions.length} flagged at ${threshold.toFixed(2)}`}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+        <div className="review-controls">
+          <label className="search-field">
+            <Search size={14} />
+            <input
+              aria-label="Search scored messages"
+              placeholder="Search the scored sample…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </label>
+          <select
+            aria-label="Filter scored messages"
+            value={filter}
+            onChange={(e) => setFilter(e.target.value as Filter)}
+          >
+            <option value="all">All scored messages</option>
+            <option value="flagged">Flagged as spam</option>
+            <option value="disagreements">Models disagree</option>
+            <option value="unlabelled">Needs a label</option>
+            <option value="false-positive">False positives</option>
+            <option value="false-negative">Missed spam</option>
+          </select>
+          <select
+            aria-label="Sort scored messages"
+            value={sort}
+            onChange={(e) => setSort(e.target.value as typeof sort)}
+          >
+            <option value="score">Highest spam score first</option>
+            <option value="order">Conversation order</option>
+          </select>
+          <label className="review-blind">
+            <input
+              type="checkbox"
+              checked={hideScores}
+              onChange={(e) => {
+                setHideScores(e.target.checked);
+                if (e.target.checked) setSort('order');
+                if (e.target.checked) setFilter('all');
               }}
-            >
-              <strong>{r.model.split('/').at(-1)}</strong>
-              <span>
-                {hideScores
-                  ? 'Scores hidden'
-                  : `${flagged}/${r.predictions.length} flagged at ${threshold.toFixed(2)}`}
-              </span>
-            </button>
-          );
-        })}
-      </div>
-      <div className="review-controls">
-        <label className="search-field">
-          <Search size={14} />
-          <input
-            aria-label="Search scored messages"
-            placeholder="Search the scored sample…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-        </label>
-        <select
-          aria-label="Filter scored messages"
-          value={filter}
-          onChange={(e) => setFilter(e.target.value as Filter)}
-        >
-          <option value="all">All scored messages</option>
-          <option value="flagged">Flagged as spam</option>
-          <option value="disagreements">Models disagree</option>
-          <option value="unlabelled">Needs a label</option>
-          <option value="false-positive">False positives</option>
-          <option value="false-negative">Missed spam</option>
-        </select>
-        <select
-          aria-label="Sort scored messages"
-          value={sort}
-          onChange={(e) => setSort(e.target.value as typeof sort)}
-        >
-          <option value="score">Highest spam score first</option>
-          <option value="order">Conversation order</option>
-        </select>
-        <label className="review-blind">
-          <input
-            type="checkbox"
-            checked={hideScores}
-            onChange={(e) => {
-              setHideScores(e.target.checked);
-              if (e.target.checked) setSort('order');
-              if (e.target.checked) setFilter('all');
-            }}
-          />
-          Hide scores while labelling
-        </label>
-      </div>
+            />
+            Hide scores while labelling
+          </label>
+        </div>
+      </Disclosure>
       {!visible.length ? (
         <div className="review-empty">
           {run.predictions.length
@@ -170,141 +275,118 @@ export function RunReview({
             : 'Choose a run with saved scores from the results above.'}
         </div>
       ) : (
-        <div className="table-scroll">
-          <table className="review-table">
-            <thead>
-              <tr>
-                <th>Message</th>
-                {compared.map((r) => (
-                  <th key={r.id} title={r.model}>
-                    {r.model.split('/').at(-1)}
-                    <small>
-                      {r.predictions.length}/{r.total} scored
-                    </small>
-                  </th>
-                ))}
-                <th>Your label</th>
-              </tr>
-            </thead>
-            <tbody>
-              {visible.map((row) => (
-                <tr
-                  key={row.example.id}
-                  className={!hideScores && row.disagreement ? 'review-disagreement' : ''}
-                >
-                  <td className="review-message">
-                    <span className="review-message-id">
-                      #{row.example.id}
-                      {!hideScores && row.disagreement && (
-                        <span className="tag">Models disagree</span>
-                      )}
-                    </span>
-                    <p>{row.example.text}</p>
-                    <details>
-                      <summary>
-                        Full message{row.example.context?.length ? ' & recent context' : ''}
-                      </summary>
-                      <pre>{row.example.text}</pre>
-                      {row.example.context?.length ? (
-                        <div className="review-context">
-                          <strong>Recent messages from the same sender</strong>
-                          {row.example.context.map((text, i) => (
-                            <p key={i}>{text}</p>
-                          ))}
-                        </div>
-                      ) : null}
-                    </details>
-                  </td>
-                  {row.predictions.map((p, i) => (
-                    <td key={compared[i].id} className="review-prediction">
-                      {hideScores ? (
-                        <span className="muted">Hidden for review</span>
-                      ) : p ? (
-                        <>
-                          <strong className={p.score >= threshold ? 'red' : 'review-low-score'}>
-                            {(p.score * 100).toFixed(1)}%
-                          </strong>
-                          <span
-                            className={`tag ${!p.needs_review && p.score >= threshold ? 'review-spam-tag' : ''}`}
-                          >
-                            {p.needs_review ? 'Review' : p.score >= threshold ? 'Spam' : 'Allowed'}
-                          </span>
-                          <p title={p.reason}>
-                            {/^(Jev|Decision model) policy probability/.test(p.reason)
-                              ? 'Probability only; no generated explanation.'
-                              : p.reason}
-                          </p>
-                        </>
-                      ) : (
-                        <span className="muted">Not scored yet</span>
-                      )}
-                    </td>
+        <>
+          <div className="phone-only compact-list scored-list">
+            {visible.map((row) => (
+              <Disclosure
+                key={row.example.id}
+                className="compact-record"
+                label={`Review details for message ${row.example.id}`}
+                title={
+                  <span className="record-preview">
+                    {row.example.text.replace(/\s+/gu, ' ').trim()}
+                  </span>
+                }
+                hint={`#${row.example.id} · ${row.example.label === 'ham' ? 'Legitimate' : row.example.label === 'spam' ? 'Spam' : row.example.label === 'review' ? 'Needs context' : 'Needs a label'}${!hideScores && row.disagreement ? ' · Models disagree' : ''}`}
+              >
+                <div className="record-detail">
+                  <p className="full-message">{row.example.text}</p>
+                  {row.example.context?.length ? (
+                    <Disclosure
+                      title="Recent sender context"
+                      hint={`${row.example.context.length} messages`}
+                    >
+                      {row.example.context.map((text, i) => (
+                        <p className="full-message" key={i}>
+                          {text}
+                        </p>
+                      ))}
+                    </Disclosure>
+                  ) : null}
+                  <div className="review-label">{renderLabel(row)}</div>
+                  <Disclosure
+                    title="Model decisions"
+                    hint={hideScores ? 'Hidden for blind review' : `${compared.length} models`}
+                  >
+                    {row.predictions.map((prediction, i) => (
+                      <div className="review-prediction" key={compared[i].id}>
+                        <strong className="decision-model">{compared[i].model}</strong>
+                        {renderPrediction(prediction)}
+                      </div>
+                    ))}
+                  </Disclosure>
+                </div>
+              </Disclosure>
+            ))}
+          </div>
+          <div
+            className="table-scroll desktop-only"
+            role="region"
+            aria-label="Scored message review"
+            tabIndex={0}
+          >
+            <table className="review-table">
+              <thead>
+                <tr>
+                  <th>Message</th>
+                  {compared.map((r) => (
+                    <th key={r.id} title={r.model}>
+                      {r.model.split('/').at(-1)}
+                      <small>
+                        {r.predictions.length}/{r.total} scored
+                      </small>
+                    </th>
                   ))}
-                  <td className="review-label">
-                    <div className="label-buttons">
-                      <button
-                        aria-label={`Review message ${row.example.id} legitimate`}
-                        aria-pressed={row.example.label === 'ham'}
-                        className={row.example.label === 'ham' ? 'selected ham' : ''}
-                        disabled={savingLabels.has(labelKey(run.dataset_id, row.example.id))}
-                        onClick={() => void onLabel(run.id, row.example.id, 'ham')}
-                      >
-                        <Check size={13} />
-                        Legitimate
-                      </button>
-                      <button
-                        aria-label={`Review message ${row.example.id} spam`}
-                        aria-pressed={row.example.label === 'spam'}
-                        className={row.example.label === 'spam' ? 'selected spam' : ''}
-                        disabled={savingLabels.has(labelKey(run.dataset_id, row.example.id))}
-                        onClick={() => void onLabel(run.id, row.example.id, 'spam')}
-                      >
-                        <Shield size={13} />
-                        Spam
-                      </button>
-                      <button
-                        aria-label={`Review message ${row.example.id} needs context`}
-                        aria-pressed={row.example.label === 'review'}
-                        className={row.example.label === 'review' ? 'selected' : ''}
-                        disabled={savingLabels.has(labelKey(run.dataset_id, row.example.id))}
-                        onClick={() => void onLabel(run.id, row.example.id, 'review')}
-                      >
-                        Needs context
-                      </button>
-                    </div>
-                    {savingLabels.has(labelKey(run.dataset_id, row.example.id)) ? (
-                      <LoaderCircle
-                        size={13}
-                        className="spin"
-                        aria-label={`Saving label for message ${row.example.id}`}
-                      />
-                    ) : row.example.label !== null ? (
-                      <button
-                        className="text-button"
-                        aria-label={`Clear review label ${row.example.id}`}
-                        disabled={savingLabels.has(labelKey(run.dataset_id, row.example.id))}
-                        onClick={() => void onLabel(run.id, row.example.id, null)}
-                      >
-                        Clear label
-                      </button>
-                    ) : (
-                      <small>Not labelled</small>
-                    )}
-                    <FeedbackEditor
-                      key={`${run.id}:${row.example.id}:feedback`}
-                      chatId={chatId}
-                      endpoint={`/evaluations/${run.id}/reviews`}
-                      id={row.example.id}
-                      label={row.example.label}
-                      disabled={savingLabels.has(labelKey(run.dataset_id, row.example.id))}
-                      onSaved={(label) => onFeedbackSaved(row.example.id, label)}
-                    />
-                  </td>
+                  <th>Your label</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {visible.map((row) => (
+                  <tr
+                    key={row.example.id}
+                    className={!hideScores && row.disagreement ? 'review-disagreement' : ''}
+                  >
+                    <td className="review-message">
+                      <span className="review-message-id">
+                        #{row.example.id}
+                        {!hideScores && row.disagreement && (
+                          <span className="tag">Models disagree</span>
+                        )}
+                      </span>
+                      <p>{row.example.text}</p>
+                      <details>
+                        <summary>
+                          Full message{row.example.context?.length ? ' & recent context' : ''}
+                        </summary>
+                        <pre>{row.example.text}</pre>
+                        {row.example.context?.length ? (
+                          <div className="review-context">
+                            <strong>Recent messages from the same sender</strong>
+                            {row.example.context.map((text, i) => (
+                              <p key={i}>{text}</p>
+                            ))}
+                          </div>
+                        ) : null}
+                      </details>
+                    </td>
+                    {row.predictions.map((p, i) => (
+                      <td
+                        key={compared[i].id}
+                        className="review-prediction"
+                        data-label={compared[i].model.split('/').at(-1)}
+                      >
+                        {renderPrediction(p)}
+                      </td>
+                    ))}
+                    <td className="review-label" data-label="Your label">
+                      {renderLabel(row)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
       <div className="pagination">
         <span>
@@ -313,27 +395,29 @@ export function RunReview({
             : '0 messages'}{' '}
           · Human labels are shared across matching saved samples.
         </span>
-        <div>
-          <button
-            className="icon-button"
-            aria-label="Previous review page"
-            disabled={activePage === 0}
-            onClick={() => setPage(activePage - 1)}
-          >
-            <ChevronLeft size={15} />
-          </button>
-          <span>
-            {activePage + 1}/{pages}
-          </span>
-          <button
-            className="icon-button"
-            aria-label="Next review page"
-            disabled={activePage + 1 >= pages}
-            onClick={() => setPage(activePage + 1)}
-          >
-            <ChevronRight size={15} />
-          </button>
-        </div>
+        {pages > 1 && (
+          <div>
+            <button
+              className="icon-button"
+              aria-label="Previous review page"
+              disabled={activePage === 0}
+              onClick={() => setPage(activePage - 1)}
+            >
+              <ChevronLeft size={15} />
+            </button>
+            <span>
+              {activePage + 1}/{pages}
+            </span>
+            <button
+              className="icon-button"
+              aria-label="Next review page"
+              disabled={activePage + 1 >= pages}
+              onClick={() => setPage(activePage + 1)}
+            >
+              <ChevronRight size={15} />
+            </button>
+          </div>
+        )}
       </div>
       <div className="results-footer">
         Model scores are suggestions. Your labels are the ground truth. Original run labels,

@@ -177,7 +177,7 @@ describe.skipIf(!env.TEST_POSTGRES_URL)('Postgres backend in Workers runtime', (
     const overview = await get<Overview>(s, '/api/overview');
     expect(overview.users[0]).toMatchObject({ user_id: '42', strikes: 3, banned: 1 });
     expect(overview.stats).toMatchObject({ total: 3, spam: 3, deleted: 3, tokens: 450, banned: 1 });
-    expect(overview.storage).toMatchObject({ backend: 'planetscale', ready: true });
+    expect(overview.storage).toMatchObject({ backend: 'postgres', ready: true });
     expect(calls.filter((c) => c.method === 'banChatMember')).toHaveLength(1);
     expect(calls.filter((c) => c.method === 'classify')).toHaveLength(3);
     const feed = await get<{ total: number }>(s, '/api/messages?search=signals');
@@ -262,7 +262,7 @@ describe.skipIf(!env.TEST_POSTGRES_URL)('Postgres backend in Workers runtime', (
     expect(response.status).toBe(503);
     expect(response.headers.get('Retry-After')).toBe('5');
     const body = await response.text();
-    expect(body).toContain('PlanetScale is temporarily unavailable');
+    expect(body).toContain('PostgreSQL is temporarily unavailable');
     expect(body).not.toMatch(/private-user|private-password|127\.0\.0\.1/);
   });
   it('imports idempotent chunks, scores lab runs and updates review metrics without a new model call', async () => {

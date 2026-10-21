@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { Check, LoaderCircle, RotateCcw } from 'lucide-react';
 import { apiForGroup } from './api';
 import { useVisiblePoll } from './poll';
+import { Disclosure } from './Disclosure';
 import {
   digest,
   policyProgress,
@@ -64,27 +65,34 @@ function ImprovementProgress({ draft }: { draft: PolicyDraft }) {
           style={{ width: `${(value / stages.length) * 100}%` }}
         />
       </div>
-      <ol className="policy-progress-stages" aria-label="Improvement stages">
-        {stages.map((s, i) => {
-          const done = published || i < stage;
-          const current = !published && i === stage;
-          return (
-            <li
-              key={s.id}
-              className={done ? 'is-complete' : current ? 'is-current' : ''}
-              aria-current={current ? 'step' : undefined}
-            >
-              <span className="policy-progress-marker" aria-hidden="true">
-                {done ? <Check size={13} /> : i + 1}
-              </span>
-              <span>{s.label}</span>
-              <span className="sr-only">
-                {done ? ' complete' : current ? ' current step' : ' upcoming'}
-              </span>
-            </li>
-          );
-        })}
-      </ol>
+      <Disclosure
+        className="progress-steps"
+        title="Improvement steps"
+        hint={stages[stage].label}
+        desktopOpen
+      >
+        <ol className="policy-progress-stages" aria-label="Improvement stages">
+          {stages.map((s, i) => {
+            const done = published || i < stage;
+            const current = !published && i === stage;
+            return (
+              <li
+                key={s.id}
+                className={done ? 'is-complete' : current ? 'is-current' : ''}
+                aria-current={current ? 'step' : undefined}
+              >
+                <span className="policy-progress-marker" aria-hidden="true">
+                  {done ? <Check size={13} /> : i + 1}
+                </span>
+                <span>{s.label}</span>
+                <span className="sr-only">
+                  {done ? ' complete' : current ? ' current step' : ' upcoming'}
+                </span>
+              </li>
+            );
+          })}
+        </ol>{' '}
+      </Disclosure>
       {progress.totalChecks > 0 && (
         <p className="policy-progress-detail">
           {progress.completedChecks} of {progress.totalChecks} checks complete
@@ -203,8 +211,7 @@ export function PolicyImprovement({
     <>
       <div className="page-heading">
         <div>
-          <div className="eyebrow">LEARNING FROM YOUR FEEDBACK</div>
-          <h1>Your policy keeps learning.</h1>
+          <h1>Policy improvement</h1>
           <p>Feedback becomes a tested improvement automatically. You decide when it goes live.</p>
         </div>
       </div>
@@ -241,24 +248,26 @@ export function PolicyImprovement({
             {updateDescription(current)}
           </p>
           <ImprovementProgress draft={current} />
-          {['ready', 'published'].includes(current.status) && Boolean(current.criteria?.length) && (
-            <ul className="policy-change-summary">
-              {current.criteria!.map((criterion, i) => (
-                <li key={i}>{criterion}</li>
-              ))}
-            </ul>
+          {['ready', 'published'].includes(current.status) && (
+            <Disclosure
+              className="policy-test-details"
+              title="Review proposed changes"
+              hint={`${current.criteria?.length || 0} ${current.criteria?.length === 1 ? 'change' : 'changes'} · full policy`}
+            >
+              {Boolean(current.criteria?.length) && (
+                <ul className="policy-change-summary">
+                  {current.criteria!.map((criterion, i) => (
+                    <li key={i}>{criterion}</li>
+                  ))}
+                </ul>
+              )}
+              <pre className="policy-proposed-text">{current.candidate}</pre>
+            </Disclosure>
           )}
           {current.status === 'ready' && (
-            <>
-              <details className="policy-test-details">
-                <summary>Review proposed policy</summary>
-                <pre className="policy-proposed-text">{current.candidate}</pre>
-              </details>
-              <p className="policy-update-description">
-                Approval starts this policy in Observe so you can review live decisions before
-                enabling Enforce.
-              </p>
-            </>
+            <p className="policy-update-description">
+              Approval starts this policy in Observe before you enable Enforce.
+            </p>
           )}
           <div className="policy-actions">
             {current.status === 'ready' && (
@@ -324,8 +333,11 @@ export function PolicyImprovement({
           <ActionError message={actionErrors[current.id]} dismiss={() => dismiss(current.id)} />
         </section>
       )}
-      <details className="panel improvement-clarification policy-instruction">
-        <summary>Add a policy instruction</summary>
+      <Disclosure
+        className="panel improvement-clarification policy-instruction"
+        title="Add a policy instruction"
+        hint="Describe a rule to improve"
+      >
         <p>
           Describe the general rule you want the bot to follow. We’ll work out the wording and test
           the change.
@@ -352,14 +364,22 @@ export function PolicyImprovement({
           {busy === 'instruction' && <LoaderCircle size={16} className="spin" />} Improve policy
         </button>
         <ActionError message={actionErrors.instruction} dismiss={() => dismiss('instruction')} />
-      </details>
+      </Disclosure>
       {Boolean(data?.versions.length) && (
-        <details className="panel improvement-intro policy-history">
-          <summary>Policy history</summary>
+        <Disclosure
+          className="panel improvement-intro policy-history"
+          title="Policy history"
+          hint={`${data!.versions.length} saved versions`}
+        >
           <p>You can restore an earlier policy while keeping your current operating mode.</p>
           {data!.versions.map((version) => (
-            <div className="policy-version" key={version.id}>
-              <span>{new Date(version.created_at).toLocaleString()}</span>
+            <Disclosure
+              className="policy-version"
+              key={version.id}
+              title={new Date(version.created_at).toLocaleString()}
+              hint={version.id === data!.activeVersion ? 'Current policy' : 'Earlier policy'}
+            >
+              <pre>{version.policy}</pre>
               {version.id === data!.activeVersion ? (
                 <span className="tag">Current</span>
               ) : (
@@ -378,14 +398,10 @@ export function PolicyImprovement({
                   <RotateCcw size={14} /> Restore policy
                 </button>
               )}
-              <details>
-                <summary>View policy</summary>
-                <pre>{version.policy}</pre>
-              </details>
               <ActionError message={actionErrors[version.id]} dismiss={() => dismiss(version.id)} />
-            </div>
+            </Disclosure>
           ))}
-        </details>
+        </Disclosure>
       )}
     </>
   );

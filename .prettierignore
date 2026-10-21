@@ -3,3 +3,12 @@ dist
 .wrangler
 package-lock.json
 .dev.vars*
+
+.env
+.env.*
+.watchtower
+.tmp
+.vercel
+.vercel-static
+wrangler.generated.jsonc
+wrangler.production.jsonc

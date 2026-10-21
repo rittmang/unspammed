@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { LoaderCircle, ShieldCheck, Trash2, X } from 'lucide-react';
+import { LoaderCircle, Trash2, X, Search } from 'lucide-react';
 import { apiForGroup } from './api';
+import { Disclosure } from './Disclosure';
 import { useVisiblePoll } from './poll';
+import { useTelegramBack } from './mini-app';
 import type { UserState } from '../shared/types';
 import type { HistoryCleanup, TelegramAdminStatus } from '../shared/telegram-admin';
 
@@ -30,6 +32,15 @@ export function StrikeUsers({
   const [value, setValue] = useState('');
   const [expanded, setExpanded] = useState(false);
   const [confirm, setConfirm] = useState<UserState | null>(null);
+  const [search, setSearch] = useState('');
+  const visibleUsers = users.filter((user) =>
+    `${user.name} ${user.user_id}`.toLowerCase().includes(search.toLowerCase()),
+  );
+  useTelegramBack(() => {
+    if (busy) return;
+    if (confirm) setConfirm(null);
+    else setExpanded(false);
+  }, !!confirm || expanded);
   const dialog = useRef<HTMLDivElement>(null);
   const previousJobs = useRef<HistoryCleanup[]>([]);
   useEffect(() => {
@@ -112,262 +123,349 @@ export function StrikeUsers({
       }
     });
   }
+  function userActions(user: UserState, job?: HistoryCleanup) {
+    const pending = job && ['queued', 'running'].includes(job.status);
+    return (
+      <div className="user-actions">
+        <div>
+          <button
+            className="text-button"
+            disabled={resetBusy || !!pending}
+            onClick={() => onReset(user)}
+          >
+            Reset{user.banned ? ' & unban' : ''}
+          </button>
+          <button
+            className="text-button danger"
+            disabled={!status?.connected || !!pending || busy === user.user_id}
+            title={!status?.connected ? 'Connect your Telegram admin account first' : undefined}
+            onClick={() => setConfirm(user)}
+          >
+            {pending ? <LoaderCircle size={14} className="spin" /> : <Trash2 size={14} />}
+            {pending
+              ? job.status === 'running'
+                ? 'Deleting history…'
+                : 'Cleanup queued'
+              : job?.status === 'failed'
+                ? 'Retry cleanup'
+                : 'Delete all messages'}
+          </button>
+        </div>
+        {job && (
+          <small role="status" className={job.status === 'failed' ? 'history-error' : 'subtle'}>
+            {job.status === 'complete'
+              ? `History deleted · ${new Date(job.updatedAt).toLocaleString()}`
+              : job.error || (pending ? 'Full history, including older messages' : '')}
+          </small>
+        )}
+      </div>
+    );
+  }
   const active = jobs.filter((j) => ['queued', 'running'].includes(j.status));
   return (
     <>
-      <section className="panel telegram-admin-panel">
+      <section className="panel strikes-panel">
         <div className="panel-heading">
-          <div>
-            <h2>
-              <ShieldCheck size={18} /> Telegram admin account
-            </h2>
-            <p className="subtle">
-              Delete a user’s full message history, including messages older than 48 hours.
+          <h2>
+            {users.length} {users.length === 1 ? 'person' : 'people'} with strikes
+          </h2>
+        </div>
+        <label className="search-field strike-search">
+          <Search size={16} />
+          <input
+            aria-label="Search strike history"
+            type="search"
+            placeholder="Find a person…"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+          />
+        </label>
+        {visibleUsers.length ? (
+          <>
+            <div className="phone-only compact-list strike-list">
+              {visibleUsers.map((user) => {
+                const job = jobs.find((item) => item.userId === user.user_id);
+                const state = user.banned ? 'Banned' : user.strikes >= 3 ? 'Ban queued' : 'Active';
+                return (
+                  <Disclosure
+                    key={user.user_id}
+                    className="compact-record"
+                    label={`Strike details for ${user.name}`}
+                    title={
+                      <span className="record-title">
+                        <span>{user.name}</span>
+                        <span className={`record-count ${user.strikes >= 2 ? 'red' : ''}`}>
+                          {user.strikes} / 3
+                        </span>
+                      </span>
+                    }
+                    hint={
+                      <>
+                        <span>
+                          {state} · Seen{' '}
+                          {new Date(user.last_seen).toLocaleDateString(undefined, {
+                            month: 'short',
+                            day: 'numeric',
+                          })}
+                        </span>
+                        {job && ['queued', 'running', 'failed'].includes(job.status) && (
+                          <span className={job.status === 'failed' ? 'red' : ''}>
+                            {' '}
+                            · {job.status === 'failed' ? 'Cleanup failed' : 'Cleanup in progress'}
+                          </span>
+                        )}
+                      </>
+                    }
+                  >
+                    <div className="record-detail">
+                      <dl className="fact-grid">
+                        <div>
+                          <dt>Telegram user ID</dt>
+                          <dd>{user.user_id}</dd>
+                        </div>
+                        <div>
+                          <dt>Last seen</dt>
+                          <dd>{new Date(user.last_seen).toLocaleString()}</dd>
+                        </div>
+                      </dl>
+                      {userActions(user, job)}
+                      {!status?.connected && (
+                        <p className="field-help">
+                          <a
+                            href="#telegram-admin-account"
+                            onClick={(event) => {
+                              event.preventDefault();
+                              const account = document.getElementById(
+                                'telegram-admin-account',
+                              ) as HTMLDetailsElement;
+                              if (!account.open) account.querySelector('summary')?.click();
+                              document
+                                .getElementById('telegram-admin-account')
+                                ?.scrollIntoView({ block: 'start' });
+                            }}
+                          >
+                            Connect your Telegram account
+                          </a>{' '}
+                          to delete full history.
+                        </p>
+                      )}
+                    </div>
+                  </Disclosure>
+                );
+              })}
+            </div>
+            <div
+              className="table-scroll desktop-only"
+              role="region"
+              aria-label="Strike history"
+              tabIndex={0}
+            >
+              <table className="strike-table">
+                <thead>
+                  <tr>
+                    <th>User</th>
+                    <th>Strikes</th>
+                    <th>Status</th>
+                    <th>Last seen</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {visibleUsers.map((user) => {
+                    const job = jobs.find((j) => j.userId === user.user_id);
+                    const pending = job && ['queued', 'running'].includes(job.status);
+                    return (
+                      <tr key={user.user_id}>
+                        <td>
+                          <div className="user-cell">
+                            <div>
+                              <strong>{user.name}</strong>
+                              <small>{user.user_id}</small>
+                            </div>
+                          </div>
+                        </td>
+                        <td data-label="Strikes">
+                          <span className="strike-count">{user.strikes} / 3</span>
+                        </td>
+                        <td data-label="Status">
+                          <span
+                            className={`badge ${user.banned ? 'banned' : user.strikes >= 3 ? 'pending' : 'active'}`}
+                          >
+                            {user.banned ? 'banned' : user.strikes >= 3 ? 'ban queued' : 'active'}
+                          </span>
+                        </td>
+                        <td className="muted" data-label="Last seen">
+                          {new Date(user.last_seen).toLocaleDateString()}
+                        </td>
+                        <td className="history-actions">{userActions(user, job)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </>
+        ) : (
+          <div className="empty-state">
+            <h3>{search ? 'No matching people' : 'A clean slate'}</h3>
+            <p>
+              {search
+                ? 'Try a different name or Telegram ID.'
+                : 'No strikes have been recorded. Observation mode never awards strikes.'}
             </p>
           </div>
-          {status?.connected ? (
-            <span className="badge active">Connected as {status.account?.name}</span>
-          ) : (
+        )}
+      </section>
+      <Disclosure
+        id="telegram-admin-account"
+        className="panel telegram-admin-panel"
+        title="Telegram admin account"
+        hint={
+          status?.connected
+            ? `Connected as ${status.account?.name}`
+            : 'Connect for full-history cleanup'
+        }
+      >
+        <div className="account-settings">
+          <p className="field-help">
+            Delete a user's full message history, including older messages.
+          </p>
+          {!status?.connected && (
             <button
               className="button secondary"
-              disabled={!status || !status.configured || !!busy}
+              disabled={!status?.configured || !!busy}
               onClick={() => setExpanded(!expanded)}
             >
               Connect account
             </button>
           )}
-        </div>
-        {status && !status.configured && (
-          <p className="field-help">
-            The admin connection needs its one-time Telegram application setup. Get your API ID and
-            hash from{' '}
-            <a href="https://my.telegram.org/apps" target="_blank" rel="noreferrer">
-              my.telegram.org
-            </a>{' '}
-            and configure them on the server.
-          </p>
-        )}
-        {status?.connected && (
-          <div className="admin-account-detail">
+          {status && !status.configured && (
             <p className="field-help">
-              Connected to your owner account. History cleanup runs only when you confirm it for a
-              selected user.
+              The admin connection needs its one-time Telegram application setup. Get your API ID
+              and hash from{' '}
+              <a href="https://my.telegram.org/apps" target="_blank" rel="noreferrer">
+                my.telegram.org
+              </a>{' '}
+              and configure them on the server.
             </p>
-            <button
-              className="text-button"
-              disabled={!!busy}
-              onClick={() =>
-                void action('disconnect', async () => {
-                  setStatus(
-                    await api<TelegramAdminStatus>('/telegram-admin/disconnect', {
-                      method: 'POST',
-                      body: '{}',
-                    }),
-                  );
-                  await load();
-                })
-              }
-            >
-              Disconnect account
-            </button>
-          </div>
-        )}
-        {expanded && status && !status.connected && (
-          <form
-            className="admin-login"
-            onSubmit={(e) => {
-              e.preventDefault();
-              void login();
-            }}
-          >
-            <label className="field">
-              <span>
-                {status.loginStep === 'phone'
-                  ? 'Your Telegram phone number'
-                  : status.loginStep === 'code'
-                    ? 'Telegram login code'
-                    : 'Two-step verification password'}
-              </span>
-              {status.loginStep === 'phone' ? (
-                <input
-                  autoFocus
-                  type="tel"
-                  autoComplete="tel"
-                  placeholder="+1 555 123 4567"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value.replace(/[\s()-]/g, ''))}
-                  required
-                />
-              ) : (
-                <input
-                  autoFocus
-                  key={status.loginStep}
-                  type={status.loginStep === 'password' ? 'password' : 'text'}
-                  inputMode={status.loginStep === 'code' ? 'numeric' : undefined}
-                  autoComplete={status.loginStep === 'code' ? 'one-time-code' : 'off'}
-                  value={value}
-                  onChange={(e) => setValue(e.target.value)}
-                  required
-                />
-              )}
-            </label>
-            <p className="field-help">
-              {status.loginStep === 'phone'
-                ? 'Use the account configured as Watchtower’s owner. Telegram sends the code to your Telegram app or phone.'
-                : status.loginStep === 'code'
-                  ? 'Enter the code Telegram sent you. Keep this page open while connecting.'
-                  : 'Your password is used once to sign in and is never saved.'}
-            </p>
-            <div className="admin-login-actions">
-              <button className="button primary" disabled={!!busy} type="submit">
-                {busy === 'login' && <LoaderCircle size={14} className="spin" />}
-                {status.loginStep === 'phone' ? 'Send login code' : 'Continue'}
-              </button>
+          )}
+          {status?.connected && (
+            <div className="admin-account-detail">
+              <p className="field-help">
+                Connected to your owner account. History cleanup runs only when you confirm it for a
+                selected user.
+              </p>
               <button
-                type="button"
                 className="text-button"
                 disabled={!!busy}
                 onClick={() =>
-                  void action('cancel', async () => {
+                  void action('disconnect', async () => {
                     setStatus(
-                      await api<TelegramAdminStatus>('/telegram-admin/login/cancel', {
+                      await api<TelegramAdminStatus>('/telegram-admin/disconnect', {
                         method: 'POST',
                         body: '{}',
                       }),
                     );
-                    setExpanded(false);
-                    setPhone('');
-                    setValue('');
+                    await load();
                   })
                 }
               >
-                Cancel
+                Disconnect account
               </button>
             </div>
-          </form>
-        )}
-        {error && (
-          <p className="alert" role="alert">
-            {error}
-          </p>
-        )}
-        {notice && (
-          <p role="status" className="field-help">
-            {notice}
-          </p>
-        )}
-        {!!active.length && (
-          <p className="field-help" role="status">
-            {active.length} history {active.length === 1 ? 'cleanup is' : 'cleanups are'} queued or
-            running. You can leave this page; progress is saved.
-          </p>
-        )}
-      </section>
-      <section className="panel">
-        <div className="panel-heading">
-          <h2>Users with strikes</h2>
-          <span className="subtle">{users.length} tracked users</span>
+          )}
+          {expanded && status && !status.connected && (
+            <form
+              className="admin-login"
+              onSubmit={(e) => {
+                e.preventDefault();
+                void login();
+              }}
+            >
+              <label className="field">
+                <span>
+                  {status.loginStep === 'phone'
+                    ? 'Your Telegram phone number'
+                    : status.loginStep === 'code'
+                      ? 'Telegram login code'
+                      : 'Two-step verification password'}
+                </span>
+                {status.loginStep === 'phone' ? (
+                  <input
+                    autoFocus
+                    type="tel"
+                    autoComplete="tel"
+                    placeholder="+1 555 123 4567"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value.replace(/[\s()-]/g, ''))}
+                    required
+                  />
+                ) : (
+                  <input
+                    autoFocus
+                    key={status.loginStep}
+                    type={status.loginStep === 'password' ? 'password' : 'text'}
+                    inputMode={status.loginStep === 'code' ? 'numeric' : undefined}
+                    autoComplete={status.loginStep === 'code' ? 'one-time-code' : 'off'}
+                    value={value}
+                    onChange={(e) => setValue(e.target.value)}
+                    required
+                  />
+                )}
+              </label>
+              <p className="field-help">
+                {status.loginStep === 'phone'
+                  ? 'Use the account configured as Watchtower’s owner. Telegram sends the code to your Telegram app or phone.'
+                  : status.loginStep === 'code'
+                    ? 'Enter the code Telegram sent you. Keep this page open while connecting.'
+                    : 'Your password is used once to sign in and is never saved.'}
+              </p>
+              <div className="admin-login-actions">
+                <button className="button primary" disabled={!!busy} type="submit">
+                  {busy === 'login' && <LoaderCircle size={14} className="spin" />}
+                  {status.loginStep === 'phone' ? 'Send login code' : 'Continue'}
+                </button>
+                <button
+                  type="button"
+                  className="text-button"
+                  disabled={!!busy}
+                  onClick={() =>
+                    void action('cancel', async () => {
+                      setStatus(
+                        await api<TelegramAdminStatus>('/telegram-admin/login/cancel', {
+                          method: 'POST',
+                          body: '{}',
+                        }),
+                      );
+                      setExpanded(false);
+                      setPhone('');
+                      setValue('');
+                    })
+                  }
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          )}
+          {!!active.length && (
+            <p className="field-help" role="status">
+              {active.length} history {active.length === 1 ? 'cleanup is' : 'cleanups are'} queued
+              or running. You can leave this page; progress is saved.
+            </p>
+          )}
         </div>
-        {users.length ? (
-          <div className="table-scroll">
-            <table>
-              <thead>
-                <tr>
-                  <th>User</th>
-                  <th>Strikes</th>
-                  <th>Status</th>
-                  <th>Last seen</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {users.map((user) => {
-                  const job = jobs.find((j) => j.userId === user.user_id);
-                  const pending = job && ['queued', 'running'].includes(job.status);
-                  return (
-                    <tr key={user.user_id}>
-                      <td>
-                        <div className="user-cell">
-                          <div>
-                            <strong>{user.name}</strong>
-                            <small>{user.user_id}</small>
-                          </div>
-                        </div>
-                      </td>
-                      <td>
-                        <div className="strike-dots">
-                          {[1, 2, 3].map((i) => (
-                            <span className={user.strikes >= i ? 'filled' : ''} key={i} />
-                          ))}
-                          <span>{user.strikes} / 3</span>
-                        </div>
-                      </td>
-                      <td>
-                        <span
-                          className={`badge ${user.banned ? 'banned' : user.strikes >= 3 ? 'pending' : 'active'}`}
-                        >
-                          {user.banned ? 'banned' : user.strikes >= 3 ? 'ban queued' : 'active'}
-                        </span>
-                      </td>
-                      <td className="muted">{new Date(user.last_seen).toLocaleDateString()}</td>
-                      <td className="history-actions">
-                        <div>
-                          <button
-                            className="text-button"
-                            disabled={resetBusy || !!pending}
-                            onClick={() => onReset(user)}
-                          >
-                            Reset{user.banned ? ' & unban' : ''}
-                          </button>
-                          <button
-                            className="text-button danger"
-                            disabled={!status?.connected || !!pending || busy === user.user_id}
-                            title={
-                              !status?.connected
-                                ? 'Connect your Telegram admin account first'
-                                : undefined
-                            }
-                            onClick={() => setConfirm(user)}
-                          >
-                            {pending ? (
-                              <LoaderCircle size={14} className="spin" />
-                            ) : (
-                              <Trash2 size={14} />
-                            )}
-                            {pending
-                              ? job.status === 'running'
-                                ? 'Deleting history…'
-                                : 'Cleanup queued'
-                              : job?.status === 'failed'
-                                ? 'Retry cleanup'
-                                : 'Delete all messages'}
-                          </button>
-                        </div>
-                        {job && (
-                          <small
-                            role="status"
-                            className={job.status === 'failed' ? 'history-error' : 'subtle'}
-                          >
-                            {job.status === 'complete'
-                              ? `History deleted · ${new Date(job.updatedAt).toLocaleString()}`
-                              : job.error ||
-                                (pending ? 'Full history, including older messages' : '')}
-                          </small>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <div className="empty-state">
-            <h3>A clean slate</h3>
-            <p>No strikes have been recorded. Observation mode never awards strikes.</p>
-          </div>
-        )}
-      </section>
+      </Disclosure>
+      {error && (
+        <p className="alert" role="alert">
+          {error}
+        </p>
+      )}
+      {notice && (
+        <p role="status" className="field-help">
+          {notice}
+        </p>
+      )}
       {confirm && (
         <div
           className="modal-backdrop"
