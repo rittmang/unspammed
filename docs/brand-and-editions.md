@@ -1,6 +1,6 @@
 # Unspammed editions and pricing status
 
-**Unspammed** is the project and product name, formerly Watchtower. The official source repository is [github.com/rittmang/unspammed](https://github.com/rittmang/unspammed).
+**Unspammed** is the project and product name, formerly Watchtower. The public marketing website is [unspammed.rittmang.xyz](https://unspammed.rittmang.xyz), with a separate private marketing repository. The application source repository is [github.com/rittmang/unspammed](https://github.com/rittmang/unspammed).
 
 | Edition           | Intended use                                                                                           | Price and current status                                                                                                                                                                                            |
 | ----------------- | ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
