@@ -1,6 +1,6 @@
-# Naaradmuni self-hosted setup
+# Unspammed self-hosted setup
 
-Install Naaradmuni, the self-hosted edition of Unspammed. Bring your own Telegram bot, hosting, PostgreSQL and model-provider billing. The planned Unspammed Bot hosted edition is separate; its US$5/month price is a placeholder, with no checkout or automatic hosted provisioning here. See [editions and pricing status](brand-and-editions.md).
+Install Unspammed on your own infrastructure. Bring your own Telegram bot, hosting, PostgreSQL and model-provider billing. The planned Unspammed Bot hosted edition is separate; its US$5/month price is a placeholder, with no checkout or automatic hosted provisioning here. See [editions and pricing status](brand-and-editions.md).
 
 Do the steps in order.
 Do only the steps for your host and sign-in method.

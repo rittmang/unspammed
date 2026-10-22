@@ -4,13 +4,13 @@
 
 Unspammed is a private Telegram moderation bot with a dashboard for reviewing messages, labelling datasets, comparing models, and improving your moderation policy. Cloudflare Workers, persistent Node 22 and Vercel entry points share the same moderation, PostgreSQL storage and authentication code. Provider templates and their actual verification status are listed in the [provider evidence register](docs/provider-verification.md).
 
-**Naaradmuni** is the self-hosted edition documented in this repository: bring your own bot, infrastructure and model-provider billing. **Unspammed Bot** is the planned hosted edition associated with [@unspammedbot](https://t.me/unspammedbot). Its **US$5/month is a placeholder**, and hosted signup, checkout, billing and automatic provisioning are not implemented. Claiming the username does not establish a configured or running service. See [editions and pricing status](docs/brand-and-editions.md).
+Self-host **Unspammed** using the instructions in this repository: bring your own bot, infrastructure and model-provider billing. **Unspammed Bot** is the planned hosted edition associated with [@unspammedbot](https://t.me/unspammedbot). Its **US$5/month is a placeholder**, and hosted signup, checkout, billing and automatic provisioning are not implemented. Claiming the username does not establish a configured or running service. See [editions and pricing status](docs/brand-and-editions.md).
 
 New groups start in **Observe**: messages can be scored and reviewed, but Unspammed does not delete messages, issue strikes or ban until you explicitly choose **Enforce**. Historical imports never trigger live moderation.
 
 ## What you need
 
-For your Naaradmuni self-hosted installation, bring your own:
+For your self-hosted Unspammed installation, bring your own:
 
 - Telegram bot, numeric owner user ID, and a supergroup where both the bot and owner are administrators. The bot needs Delete messages and Ban users permissions.
 - PostgreSQL database and an application role that can use and create objects in its application schema.

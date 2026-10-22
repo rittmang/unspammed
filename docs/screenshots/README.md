@@ -1,6 +1,6 @@
 # Unspammed screenshots
 
-The Unspammed dashboard in the Naaradmuni self-hosted edition. Example data only. No real group, user, or message is shown.
+The self-hosted Unspammed dashboard. Example data only. No real group, user, or message is shown.
 Phone shots are 390 × 844 px. Desktop shots are 1440 × 900 px.
 
 Refreshed on **2026-10-22** from the built application with a read-only local API fixture. Messages, model results, counters and account statuses are synthetic; no Telegram or model-provider requests were made. All 28 Chromium captures used measured CSS viewport sizes and had no document-level horizontal overflow. These screenshots document browser layouts, not deployed-service or physical Telegram-client verification.

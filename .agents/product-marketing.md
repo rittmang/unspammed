@@ -7,6 +7,7 @@
 - **Category**: Community moderation workspace with a private owner dashboard and Telegram Mini App. Telegram is implemented today; Discord and Twitch are future connector work.
 - **Hosted edition**: Unspammed Bot, associated with the claimed [@unspammedbot](https://t.me/unspammedbot) username. **US$5/month is a placeholder**, not a launched checkout. Subscription billing, customer provisioning, payment enforcement and commercial hosted operations are not implemented. No production hosted domain or configured bot service is established by the rebrand.
 - **Self-hosted edition**: Naaradmuni. Each installation brings its own Telegram bot, owner/group IDs, PostgreSQL, host and model-provider billing. The original owner's Naaradmuni bot remains a private self-hosted installation, never a default for others.
+- **Public naming**: Use Unspammed throughout navigation, buttons, setup headings, metadata and illustrations. Primary marketing actions say Get started. Edition reference names do not become alternate public product branding.
 - **Edition contract**: [docs/brand-and-editions.md](../docs/brand-and-editions.md). Use it for names, price status and implementation boundaries.
 
 ## Audience and job to be done

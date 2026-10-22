@@ -1,9 +1,9 @@
-# Naaradmuni hosting, DNS and Telegram setup
+# Unspammed hosting, DNS and Telegram setup
 
 > New install? Use the **[setup guide](setup.md)**. It has the steps in order, with screenshots.
 > This page is the reference for limits, TLS, and provider details.
 
-This guide sets up Naaradmuni, Unspammed's self-hosted edition, from a fresh checkout. You supply and pay for your bot, infrastructure and model usage. The smallest installation is a Telegram bot, its owner and supergroup, PostgreSQL, and one public HTTPS application host with background scheduling. A model key is needed for classification/evaluation, but can be added after the site works. A custom domain and Cloudflare Access are optional. The planned Unspammed Bot hosted edition and its US$5/month placeholder are described in [editions and pricing status](brand-and-editions.md); these instructions do not provision that service.
+This guide sets up self-hosted Unspammed from a fresh checkout. You supply and pay for your bot, infrastructure and model usage. The smallest installation is a Telegram bot, its owner and supergroup, PostgreSQL, and one public HTTPS application host with background scheduling. A model key is needed for classification/evaluation, but can be added after the site works. A custom domain and Cloudflare Access are optional. The planned Unspammed Bot hosted edition and its US$5/month placeholder are described in [editions and pricing status](brand-and-editions.md); these instructions do not provision that service.
 
 The repository includes shared request handlers plus Cloudflare, persistent Node, and Vercel adapters. The [provider evidence register](provider-verification.md) separates templates, local tests, provider builds and actual test-account deployments. [Deployment operations](deployment.md) defines the verification checklist; [the original deployment archive](deployment-history.md) is historical context, not configuration to copy.
 

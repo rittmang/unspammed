@@ -2,7 +2,7 @@
 
 Unspammed's application state and renewable work leases live in PostgreSQL. Host adapters provide HTTP, assets and scheduling; they reuse the same bot authentication, group registry, moderation, evaluation, policy and export handlers. Hosting must not change the meaning of a strike, a dataset label, an owner or a group boundary.
 
-The current runtime is one owner per installation, with multiple registered groups. It powers the Naaradmuni self-hosted edition. The planned Unspammed Bot commercial edition does not establish customer tenancy, subscriptions, checkout, entitlements or automatic provisioning; those require separate implementation and authorization. See [the edition contract](brand-and-editions.md).
+The current runtime is one owner per installation, with multiple registered groups. It powers self-hosted Unspammed installations. The planned Unspammed Bot commercial edition does not establish customer tenancy, subscriptions, checkout, entitlements or automatic provisioning; those require separate implementation and authorization. See [the edition contract](brand-and-editions.md).
 
 | Component                                    | Contract                                                                                                                                |
 | -------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |

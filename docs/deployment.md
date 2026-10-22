@@ -1,6 +1,6 @@
 # Deployment operations and verification
 
-Use [the hosting guide](hosting.md) to create a Naaradmuni self-hosted installation of Unspammed with your own bot and infrastructure. This document describes the current deployment contract and how to verify it. The [planned hosted edition](brand-and-editions.md) has no implemented checkout, subscriptions or automatic provisioning. [Historical deployments](deployment-history.md) record earlier release milestones; those records do not establish the state of this branch or another provider.
+Use [the hosting guide](hosting.md) to create a self-hosted Unspammed installation with your own bot and infrastructure. This document describes the current deployment contract and how to verify it. The [planned hosted edition](brand-and-editions.md) has no implemented checkout, subscriptions or automatic provisioning. [Historical deployments](deployment-history.md) record earlier release milestones; those records do not establish the state of this branch or another provider.
 
 ## Current implementation
 

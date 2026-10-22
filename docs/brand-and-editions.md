@@ -2,6 +2,8 @@
 
 **Unspammed** is the project and product name, formerly Watchtower. The public marketing website is [unspammed.rittmang.xyz](https://unspammed.rittmang.xyz), with a separate private marketing repository. The application source repository is [github.com/rittmang/unspammed](https://github.com/rittmang/unspammed).
 
+Public navigation, calls to action, setup guides, metadata and illustrations use **Unspammed**. The marketing primary action is **Get started**. The edition names below are reference terminology, not alternate public product branding or generic bot defaults.
+
 | Edition           | Intended use                                                                                           | Price and current status                                                                                                                                                                                            |
 | ----------------- | ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Unspammed Bot** | Planned hosted service associated with the claimed [@unspammedbot](https://t.me/unspammedbot) username | **US$5/month placeholder.** No launched checkout, subscription billing, customer provisioning or payment enforcement is implemented. The claimed username alone does not establish a configured or running service. |
