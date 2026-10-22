@@ -2,7 +2,7 @@
 
 ## Product & Category
 
-- **Product**: Watchtower (`https://github.com/rittmang/spam`)
+- **Product**: Watchtower (`https://github.com/rittmang/watchtower`)
 - **Public site**: `https://watchtower.rittmang.xyz`
 - **Category**: Self-hosted Telegram moderation bot with a private owner dashboard and Telegram Mini App.
 
