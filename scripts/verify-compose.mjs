@@ -20,10 +20,10 @@ import { parseEnv } from 'node:util';
 import { dotenvLine, safeErrorMessage } from './setup-lib.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const cwd = mkdtempSync(join(tmpdir(), 'watchtower-compose-'));
+const cwd = mkdtempSync(join(tmpdir(), 'unspammed-compose-'));
 const identifier = randomBytes(6).toString('hex');
-const image = `watchtower-compose-check:${identifier}`;
-const project = `watchtower-check-${identifier}`;
+const image = `unspammed-compose-check:${identifier}`;
+const project = `unspammed-check-${identifier}`;
 const composeEnv = '.watchtower/compose.env';
 const domain = 'compose-fixture.example';
 const chat = `-100${Date.now().toString().slice(-10)}`;
@@ -36,6 +36,12 @@ for (const key of [
   'COMPOSE_FILE',
   'COMPOSE_PROFILES',
   'COMPOSE_ENV_FILES',
+  'UNSPAMMED_VM_ENV',
+  'UNSPAMMED_ENV_FILE',
+  'UNSPAMMED_DATABASE_PASSWORD',
+  'UNSPAMMED_DOMAIN',
+  'UNSPAMMED_BIND',
+  'UNSPAMMED_PORT',
   'WATCHTOWER_VM_ENV',
   'WATCHTOWER_ENV_FILE',
   'POSTGRES_PASSWORD',
@@ -190,7 +196,7 @@ try {
     TELEGRAM_API_HASH: 'a'.repeat(32),
     TELEGRAM_SESSION_KEY: randomBytes(32).toString('hex'),
     COMPOSE_PROFILES: 'bundled-db,https',
-    WATCHTOWER_DOMAIN: domain,
+    UNSPAMMED_DOMAIN: domain,
   });
   console.log(
     'Installing a disposable Compose deployment with bundled PostgreSQL and local TLS...',
@@ -224,7 +230,7 @@ try {
     method: 'POST',
     headers: {
       Origin: `https://${domain}`,
-      'X-Watchtower-Request': '1',
+      'X-Unspammed-Request': '1',
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({ token: runtime.BROWSER_AUTH_TOKEN }),
@@ -269,7 +275,7 @@ try {
     'DATABASE_URL',
     'DATABASE_ROOT_CHAT_ID',
     'POSTGRES_PASSWORD',
-    'WATCHTOWER_DATABASE_PASSWORD',
+    'UNSPAMMED_DATABASE_PASSWORD',
     'BROWSER_AUTH_TOKEN',
     'TELEGRAM_WEBHOOK_SECRET',
     'CRON_SECRET',

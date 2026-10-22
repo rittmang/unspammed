@@ -158,12 +158,19 @@ export async function authRoute(request: Request, env: Env): Promise<Response | 
   }
   return null;
 }
+// Accept older installed clients while new clients use the current product name.
+export function applicationHeader(
+  request: Request,
+  name: 'Request' | 'Group' | 'File-Name' | 'Work-Secret',
+) {
+  return request.headers.get(`X-Unspammed-${name}`) ?? request.headers.get(`X-Watchtower-${name}`);
+}
 export function verifyMutation(request: Request, requireOrigin = false) {
   if (['GET', 'HEAD', 'OPTIONS'].includes(request.method)) return;
   const origin = request.headers.get('Origin');
   if ((requireOrigin && !origin) || (origin && origin !== new URL(request.url).origin))
     throw new HttpError(403, 'Cross-origin writes are blocked.');
-  if (request.headers.get('X-Watchtower-Request') !== '1')
+  if (applicationHeader(request, 'Request') !== '1')
     throw new HttpError(403, 'Missing request protection header.');
 }
 export async function secureEqual(a: string, b: string) {

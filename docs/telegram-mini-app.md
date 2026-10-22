@@ -1,6 +1,6 @@
 # Telegram Mini App
 
-Watchtower reuses its dashboard, APIs, and saved data inside Telegram. Open the bot's private chat and choose **Open dashboard**. The server admits only `OWNER_TELEGRAM_ID`; a menu button's visibility is convenience, not authorization.
+Unspammed reuses its dashboard, APIs, and saved data inside Telegram. Open the bot's private chat and choose **Open dashboard**. The server admits only `OWNER_TELEGRAM_ID`; a menu button's visibility is convenience, not authorization.
 
 The same application supports Telegram owner authentication on every host, with optional browser-token or Cloudflare Access sign-in for normal browsers. An unsigned visit to `/mini/` shows only the configured choices. Browser links open a separate tab so they also work from Telegram Web's frame. A valid Telegram launch opens the dashboard directly. Cloudflare Access is not required.
 
@@ -10,7 +10,7 @@ By default, the Mini App uses `PUBLIC_URL/mini/` on your application host (legac
 
 Checked against Telegram's primary documentation on 2026-10-20. Availability depends on the Telegram client and API version; newer methods must be feature/version checked. The [Mini App API](https://core.telegram.org/bots/webapps), [client integration reference](https://core.telegram.org/api/bots/webapps), and [bot features](https://core.telegram.org/bots/features#mini-apps) describe these capabilities.
 
-| Capability                                                                   | Watchtower decision                                                                                                 |
+| Capability                                                                   | Unspammed decision                                                                                                  |
 | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
 | Owner-specific chat menu                                                     | Implemented using `setChatMenuButton`.                                                                              |
 | Main/profile app and `?startapp` links                                       | Available through BotFather; optional for this private dashboard.                                                   |
@@ -69,7 +69,7 @@ npm run telegram:mini-app -- --check  # Read-only verification
 npm run telegram:mini-app -- --reset  # Restore that owner's default menu
 ```
 
-The script reads credentials from the process environment, `WATCHTOWER_ENV_FILE`, `.env`, or legacy `.dev.vars`, checks bot identity and the owner's private chat, and never changes the global menu or webhook. If Telegram cannot find that chat, the owner must first open the bot and send `/start`. An optional profile-wide Launch app button can be configured in BotFather with the same `/mini/` URL; server authorization remains owner-only regardless of who sees it. This release uses the owner-specific menu and does not send BotFather commands.
+The script reads credentials from the process environment, `UNSPAMMED_ENV_FILE` (legacy `WATCHTOWER_ENV_FILE`), `.env`, or legacy `.dev.vars`, checks bot identity and the owner's private chat, and never changes the global menu or webhook. If Telegram cannot find that chat, the owner must first open the bot and send `/start`. An optional profile-wide Launch app button can be configured in BotFather with the same `/mini/` URL; server authorization remains owner-only regardless of who sees it. This release uses the owner-specific menu and does not send BotFather commands.
 
 ### Use an optional Access-protected custom domain
 

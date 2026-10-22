@@ -102,7 +102,7 @@ export async function streamExamples(
   await flush();
   if (!count)
     throw new Error(
-      'No text messages found. Export a single Telegram chat as JSON, or upload a Watchtower dataset.',
+      'No text messages found. Export a single Telegram chat as JSON, or upload an Unspammed dataset.',
     );
   return { count, chunks: sequence };
 }

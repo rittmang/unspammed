@@ -1,13 +1,19 @@
-# Working on Watchtower
+# Working on Unspammed
 
 Read [README.md](README.md), [architecture contracts](docs/architecture.md), [hosting instructions](docs/hosting.md) and [provider evidence](docs/provider-verification.md) before changing deployment, storage, authentication or scheduling. [docs/portability-plan.md](docs/portability-plan.md) records implementation scope. [docs/deployment-history.md](docs/deployment-history.md) and [docs/research.md](docs/research.md) are historical records of one installation, not current setup instructions.
+
+## Brand and editions
+
+- **Unspammed** is the project/product name; **Naaradmuni** is its self-hosted edition. **Unspammed Bot**, associated with the claimed `@unspammedbot` username, is the planned hosted edition. Its US$5/month price is a placeholder; signup, billing, checkout and automatic hosted provisioning are not implemented. Follow [the edition contract](docs/brand-and-editions.md).
+- Preserve each installed bot and its credentials. The original owner's Naaradmuni bot is one self-hosted installation, never the default bot for other users. A product rename does not authorize Telegram configuration, resource migration, secret rotation or billing changes.
+- Use `UNSPAMMED_*` configuration names for new examples; keep legacy `WATCHTOWER_*` aliases and installed storage/protocol identifiers compatible. Preserve dated historical observations under their observed names.
 
 ## Account neutrality and secrets
 
 - Every installation supplies its own bot, numeric owner ID, numeric group ID, host, PostgreSQL connection and provider account. Never infer an owner from an existing message, repository author, email, old bot username or archived config. Never reuse original account/resource/domain IDs as defaults.
 - A provider-supplied HTTPS domain is sufficient. Custom domains, Cloudflare DNS, Access, Hyperdrive and Telegram user-account login remain optional. DNS provider and application host are independent choices.
 - Keep `.env`, `.dev.vars`, custom environment files, `.watchtower/`, `wrangler.generated.jsonc`, database passwords, bot/provider tokens, browser tokens, signed Telegram launch data and encrypted-session keys out of Git, URLs, logs, screenshots and API responses. Verify ignore rules before generating credentials. Do not read or print private credential files just to inspect project structure.
-- Use process environment or the shared environment loader. `WATCHTOWER_ENV_FILE` selects a file; default setup fallback is `.env`, then legacy `.dev.vars`. Preserve existing credentials during setup/regeneration. Generated runtime outputs exclude `DATABASE_ADMIN_URL` and hosting API credentials.
+- Use process environment or the shared environment loader. `UNSPAMMED_ENV_FILE` selects a file, with legacy `WATCHTOWER_ENV_FILE` as fallback; default setup fallback is `.env`, then legacy `.dev.vars`. Preserve existing credentials during setup/regeneration. Generated runtime outputs exclude `DATABASE_ADMIN_URL` and hosting API credentials.
 - Changing `BROWSER_AUTH_TOKEN` revokes browser sessions; changing `TELEGRAM_SESSION_KEY` can make saved owner-account sessions unreadable. Preserve installed values unless rotation is part of the requested work.
 
 ## Runtime invariants

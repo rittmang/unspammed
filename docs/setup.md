@@ -1,12 +1,16 @@
-# Setup
+# Naaradmuni self-hosted setup
 
-Install Watchtower. Do the steps in order.
+Install Naaradmuni, the self-hosted edition of Unspammed. Bring your own Telegram bot, hosting, PostgreSQL and model-provider billing. The planned Unspammed Bot hosted edition is separate; its US$5/month price is a placeholder, with no checkout or automatic hosted provisioning here. See [editions and pricing status](brand-and-editions.md).
+
+Do the steps in order.
 Do only the steps for your host and sign-in method.
 
 New groups start in Observe mode. They log decisions only.
 Choose Enforce later in Settings after reviewing results. Upgrades preserve existing mode and settings.
 
 Screenshots show example data only.
+
+Use `UNSPAMMED_*` settings in new configurations. Legacy `WATCHTOWER_*` names remain supported, with the corresponding `UNSPAMMED_*` value taking priority when defined. Generated private files still use `.watchtower/`; existing database namespaces, Compose service and database volume names remain compatible.
 
 ## What you need
 
@@ -43,7 +47,7 @@ You do not need these things:
 
 ## Step 3. Get a database
 
-1. Create a PostgreSQL database reachable from your application host. Managed PostgreSQL services such as Neon, Supabase or PlanetScale Postgres are candidates; they have not all been tested with Watchtower. Use the provider's connection/TLS instructions and verify permissions, transactions and persistence on your actual endpoint. Cloudflare Hyperdrive is an optional connection layer, not a database.
+1. Create a PostgreSQL database reachable from your application host. Managed PostgreSQL services such as Neon, Supabase or PlanetScale Postgres are candidates; they have not all been tested with Unspammed. Use the provider's connection/TLS instructions and verify permissions, transactions and persistence on your actual endpoint. Cloudflare Hyperdrive is an optional connection layer, not a database.
    MySQL/MariaDB and PlanetScale's MySQL/Vitess product are unsupported.
    For PostgreSQL on the same VM, see Section 5G.
 2. Copy the connection URL. It looks like this:
@@ -52,7 +56,7 @@ You do not need these things:
 postgresql://user:password@host:5432/database
 ```
 
-3. Keep TLS on. Watchtower checks the certificate by default.
+3. Keep TLS on. Unspammed checks the certificate by default.
    Turn TLS off only for a private network or a test database on your own computer.
 
 ## Step 4. Set your private values
@@ -109,8 +113,8 @@ For Cloudflare, choose the Worker name and account's `workers.dev` subdomain fir
 You need a Cloudflare account. Add these values to `.env`:
 
 ```dotenv
-WATCHTOWER_PROVIDER=cloudflare
-WATCHTOWER_NAME=your-unique-worker-name
+UNSPAMMED_PROVIDER=cloudflare
+UNSPAMMED_NAME=your-unique-worker-name
 CLOUDFLARE_ACCOUNT_ID=your-account-id
 PUBLIC_URL=https://your-unique-worker-name.your-subdomain.workers.dev
 ```
@@ -210,7 +214,7 @@ npm run setup -- --provider vercel --force
 
 6. Import the values again. Deploy again.
 
-Vercel limits both function requests and responses to 4.5 MB, below Watchtower's larger export allowance. Large browser downloads need another host or a separately implemented download path. Optional Telegram owner-account transport also needs provider testing. See [Vercel constraints](hosting.md#vercel).
+Vercel limits both function requests and responses to 4.5 MB, below Unspammed's larger export allowance. Large browser downloads need another host or a separately implemented download path. Optional Telegram owner-account transport also needs provider testing. See [Vercel constraints](hosting.md#vercel).
 
 ### 5E. Render
 
@@ -258,8 +262,8 @@ The Compose files are intended for a Linux VM with Docker Compose v2. They have 
 
 1. Create a VM and configure SSH access. Allow public HTTP/HTTPS ports 80/443 for the proxy, keeping PostgreSQL and the app's port private.
 2. For an Ubuntu/Debian image supporting cloud-init, replace the repository placeholder in `deploy/vm/cloud-init.yaml` and use it as cloud-init user data. It prepares the checkout only. On other images, install Docker/Compose and clone your repository manually.
-3. SSH in and change to the checkout (the example uses `/opt/watchtower`). Copy `deploy/vm/app.env.example` to ignored `app.env` if needed. Set the bot/owner/group values and final `PUBLIC_URL`. Keep this file private.
-4. For external PostgreSQL, set `DATABASE_URL` and leave `COMPOSE_PROFILES` empty unless using Caddy. For bundled PostgreSQL, set `COMPOSE_PROFILES=bundled-db`, leaving `DATABASE_URL` and `DATABASE_SSL_MODE` blank on first install; setup generates separate administrator/application passwords and a restricted application role. For Caddy HTTPS, set `WATCHTOWER_DOMAIN`, point that hostname's DNS to the VM, make `PUBLIC_URL=https://your-hostname`, and add `https` to the profiles (`COMPOSE_PROFILES=bundled-db,https` for both). The bundled database uses a Docker volume: plan backups outside the VM.
+3. SSH in and change to the checkout (the example uses `/opt/unspammed`). Copy `deploy/vm/app.env.example` to ignored `app.env` if needed. Set the bot/owner/group values and final `PUBLIC_URL`. Keep this file private.
+4. For external PostgreSQL, set `DATABASE_URL` and leave `COMPOSE_PROFILES` empty unless using Caddy. For bundled PostgreSQL, set `COMPOSE_PROFILES=bundled-db`, leaving `DATABASE_URL` and `DATABASE_SSL_MODE` blank on first install; setup generates separate administrator/application passwords and a restricted application role. For Caddy HTTPS, set `UNSPAMMED_DOMAIN`, point that hostname's DNS to the VM, make `PUBLIC_URL=https://your-hostname`, and add `https` to the profiles (`COMPOSE_PROFILES=bundled-db,https` for both). The bundled database uses a Docker volume: plan backups outside the VM.
 5. Run the installer from the checkout using the commands below. It generates private runtime values, builds the image, initializes the schema and starts the selected services.
 
 ```sh
@@ -292,7 +296,7 @@ Set the values from `.watchtower/runtime.env` in the host.
 Give the app one public HTTPS address. Set it as `PUBLIC_URL`.
 Keep a process running with CPU available between requests, or implement awaited authenticated minute dispatch. Test the host separately before relying on it.
 
-Netlify has server functions, scheduled functions and PostgreSQL support, but Watchtower has no Netlify adapter. Static-only hosts cannot run this backend. MySQL/MariaDB and PlanetScale MySQL (Vitess) have no storage adapter. See the [support inventory](provider-verification.md).
+Netlify has server functions, scheduled functions and PostgreSQL support, but Unspammed has no Netlify adapter. Static-only hosts cannot run this backend. MySQL/MariaDB and PlanetScale MySQL (Vitess) have no storage adapter. See the [support inventory](provider-verification.md).
 
 ## Step 6. DNS — only if you want your own domain
 
@@ -310,7 +314,7 @@ Change DNS only at the DNS host.
 
 Do not copy IP addresses or IDs from another install.
 Wait until the host shows the domain as active and HTTPS works.
-Set `PUBLIC_URL` to the new address. Run setup again with `--force` and deploy again. For the VM path, edit `app.env` (and `WATCHTOWER_DOMAIN` for Caddy), then rerun `sudo sh deploy/vm/install.sh` instead. Do Step 7 again using that installation's credentials.
+Set `PUBLIC_URL` to the new address. Run setup again with `--force` and deploy again. For the VM path, edit `app.env` (and `UNSPAMMED_DOMAIN` for Caddy), then rerun `sudo sh deploy/vm/install.sh` instead. Do Step 7 again using that installation's credentials.
 
 ## Step 7. Connect Telegram
 
@@ -320,7 +324,7 @@ Your app must be online first. Check:
 curl https://your-app-address/health
 ```
 
-It must answer `{"ok":true,"service":"watchtower"}`.
+It must answer `{"ok":true,"service":"unspammed"}`.
 
 Then:
 
@@ -357,7 +361,7 @@ Choose one method, or more.
 The app checks the signed Telegram data and your owner ID on each request.
 No other account can sign in.
 
-![Sign-in page on a phone, light theme](screenshots/sign-in-light-390.png)
+![Unspammed Sign-in page on a phone, light theme](screenshots/sign-in-light-390.png)
 
 ### Method B. Browser token
 
@@ -411,21 +415,21 @@ Hosted setup turns this off.
 Open the dashboard. You see the Overview page.
 The group is in Observe mode. This is correct.
 
-![Overview on a phone, light theme](screenshots/overview-light-390.png)
-![Overview on a phone, dark theme](screenshots/overview-dark-390.png)
+![Unspammed Overview on a phone, light theme](screenshots/overview-light-390.png)
+![Unspammed Overview on a phone, dark theme](screenshots/overview-dark-390.png)
 
 1. Send a test message in your group.
 2. Wait one minute. Open **Messages**. The message must be there.
 
-![Messages on a phone, light theme](screenshots/messages-light-390.png)
+![Unspammed Messages on a phone, light theme](screenshots/messages-light-390.png)
 
 3. Tap a message to inspect its text. Scores and reasons require a configured model key and completed classification; installing/importing without a key does not perform inference.
 
-![Message detail on a phone, dark theme](screenshots/message-detail-dark-390.png)
+![Unspammed Message detail on a phone, dark theme](screenshots/message-detail-dark-390.png)
 
 4. Open **Settings**. Add your model key when you are ready.
 
-![Settings on a desktop, dark theme](screenshots/settings-dark-1440.png)
+![Unspammed Settings on a desktop, dark theme](screenshots/settings-dark-1440.png)
 
 5. Keep Observe on. Read some results.
    Turn on **Enforce** in Settings only when the results are right.
@@ -458,7 +462,7 @@ Use your own Telegram account, not the bot.
 5. In **Strike history**, select **Connect account**. Follow the steps on screen.
 6. Confirm each user. The app does not delete on its own.
 
-![Strike history on a phone, light theme](screenshots/strike-history-light-390.png)
+![Unspammed Strike history on a phone, light theme](screenshots/strike-history-light-390.png)
 
 ## Problems
 

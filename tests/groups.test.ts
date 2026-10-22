@@ -321,8 +321,14 @@ describe.skipIf(!env.TEST_POSTGRES_URL)('group onboarding and isolation in Postg
     await activate();
     expect((await overview(second)).settings.mode).toBe('observe');
   });
-  it('supports the owner command fallback and refuses basic groups until upgraded', async () => {
-    const command = message(second, 1, '/watchtower');
+  it.each([
+    '/unspammed',
+    '/unspammed@fixture_bot',
+    '/start unspammed',
+    '/watchtower',
+    '/start watchtower',
+  ])('supports owner command %s and refuses basic groups until upgraded', async (text) => {
+    const command = message(second, 1, text);
     command.message!.from!.id = Number(env.OWNER_TELEGRAM_ID);
     expect(await directory.discover(command)).toBeNull();
     expect((await directory.get(second))?.status).toBe('pending');

@@ -11,7 +11,7 @@ export function importExamples(data: unknown, selectedChatId?: string): Example[
   else {
     const chats = object(root.chats).list;
     if (!Array.isArray(chats))
-      throw new Error('Upload a Telegram Desktop JSON chat export or a Watchtower dataset export.');
+      throw new Error('Upload a Telegram Desktop JSON chat export or an Unspammed dataset export.');
     const chat = chats.map(object).find((c) => String(c.id) === selectedChatId);
     if (!chat || !Array.isArray(chat.messages))
       throw new Error('For a multi-chat export, select the chat ID or export a single chat.');

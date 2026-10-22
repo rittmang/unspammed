@@ -3,7 +3,7 @@
 // to deploy this unconfigured template.
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "watchtower-unconfigured",
+  "name": "unspammed-unconfigured",
   "main": "worker/index.ts",
   "compatibility_date": "2026-10-10",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],

@@ -1,5 +1,7 @@
 # Historical deployments — October 2026
 
+> Brand note, 2026-10-22: the project is now **Unspammed**, with **Naaradmuni** as its self-hosted edition. Original Watchtower names and observed resource/build identifiers below remain historical evidence; they have not been reverified under the new name.
+
 > Archive of one original installation. Hostnames, account IDs, email, bot usernames, resource IDs, old commands, old storage paths and deployment claims below are historical records, never setup defaults. Do not run these commands for a new installation. Current instructions: [README](../README.md), [hosting guide](hosting.md), [current deployment contract](deployment.md). No new provider deployment is established by this archive.
 
 # Deployment status
@@ -16,7 +18,7 @@ Worker version `c8f61f60-a2c6-46af-9552-31213a0b5730`, deployed 2026-10-21 (Paci
 
 After the owner signed into Cloudflare, Access application **Watchtower Telegram Mini App** (`00000000-0000-0000-0000-000000000001`) was created for exactly `moderation.example.com/mini` and `moderation.example.com/mini/*`. Its exclusive Bypass policy lets these requests reach the Worker's existing Telegram signature and owner checks. The whole-host **Watchtower** application's full configuration, audience and owner-email Allow policy were read back and match their saved pre-change values exactly. This completion changed only Access and bot-menu configuration; the deployed application build was reused.
 
-The setup script now accepts optional `MINI_APP_URL` for a custom-domain `/mini/` entry point, validates the URL and checks anonymous reachability before changing the owner's menu. An Access redirect stops setup before any menu change. The default remains `WORKER_URL/mini/`; reset remains usable if the site is unavailable. [Reusable hosting instructions](telegram-mini-app.md#use-the-same-custom-domain-for-both-sign-in-methods) explain the separate path-scoped Access application required to host both methods on one custom domain.
+The setup script now accepts optional `MINI_APP_URL` for a custom-domain `/mini/` entry point, validates the URL and checks anonymous reachability before changing the owner's menu. An Access redirect stops setup before any menu change. The default remains `WORKER_URL/mini/`; reset remains usable if the site is unavailable. [Reusable hosting instructions](telegram-mini-app.md#use-an-optional-access-protected-custom-domain) explain the separate path-scoped Access application required to host both methods on one custom domain.
 
 For the deployed application code, TypeScript, **265 tests**, build, formatting, deployment dry run and diff checks passed; **26 optional Postgres tests were skipped**. Browser checks covered the sign-in page at 320, 390 and 1280 pixels in both themes, with 15px button text, 48px targets, no horizontal overflow and no private API requests. Four isolated setup-script checks covered a custom-domain menu, the default Worker URL, rejection of an Access redirect, and rejection of an incorrect path; Telegram calls were mocked. This configuration-only completion added **24 live custom-domain HTTP checks**, a browser sign-in-page check, a successful Cloudflare email-login link check and actual bot-menu read-back. Device support failed to initialize during application verification, so physical Telegram behavior remains unverified.
 
@@ -179,7 +181,7 @@ All **121 tests** passed, including **22 real loopback Postgres tests**, plus Ty
 
 Two backend connection checks and two authenticated checks through the deployed Worker succeeded for direct Gemini and Jev's Gemini fallback. All four used only the built-in geometric PNG and reported 1,044 input plus 33 output tokens each, totaling 4,308 live tokens and **$0.0004704**. These verify connectivity and output mapping, not model accuracy. Cloudflare tail reported `ok` with zero exceptions for both live vision requests, plus successful cron, webhook and internal group-work invocations. Owner verification still reports **Enforce**, threshold **0.90**, and zero spam, deletions or bans. Anonymous image and connection-check requests return 401; health returns 200.
 
-Settings now includes **Image moderation** and **Check vision connection**. The connection check does not save settings or create strikes. Image previews use the authenticated dashboard endpoint, and Telegram's download token never reaches the model or browser. Photos select a bounded Telegram rendition when available; files above 512 KB enter review. Model lab remains text/caption-only, and older messages without captured file IDs are not automatically reclassified. See [Image moderation](../README.md#image-moderation).
+Settings now includes **Image moderation** and **Check vision connection**. The connection check does not save settings or create strikes. Image previews use the authenticated dashboard endpoint, and Telegram's download token never reaches the model or browser. Photos select a bounded Telegram rendition when available; files above 512 KB enter review. Model lab remains text/caption-only, and older messages without captured file IDs are not automatically reclassified. See [Image moderation](../README.md#moderation-and-review).
 
 ## Previous: aligned group setup buttons
 
@@ -201,7 +203,7 @@ Live verification confirmed Primary group remains **Enforce**, with an identical
 
 Telegram's webhook now accepts `message`, `edited_message` and `my_chat_member`, with zero pending updates and no delivery error. Anonymous group API, webhook and internal work calls return 401. Unknown group selection returns 404. The deployed trusted dispatch path made an actual HTTP call back into the deployed Worker and returned 200 from both parent and child, exercising the same helper used by multi-group cron without creating a fake group or model job. Observed scheduled ticks and live dashboard requests succeeded. An actual second Telegram group has not been added during verification; its onboarding and isolation were tested against disposable Postgres and an isolated browser fixture. No group message, paid model call, label edit or billing change was made for this feature.
 
-See [Connect another group](../README.md#connect-another-group) for the owner flow.
+See [Connect another group](../README.md#moderation-and-review) for the owner flow.
 
 ## Previous: free Worker, paged Model lab reads
 
@@ -290,7 +292,7 @@ Application ID: `00000000-0000-0000-0000-000000000002`. Team domain: `https://ex
 
 Anonymous requests to the custom dashboard redirect to Access login. Anonymous dashboard/API requests on `workers.dev` return 401. The health endpoint remains available, and webhook requests without the separate Telegram secret return 401. Telegram's registered webhook has no pending updates or delivery errors.
 
-Owner email login was verified in the live dashboard. Settings → Check Telegram succeeded, confirming the bot's administrator permissions and healthy webhook. Keep the webhook on `workers.dev` so it needs no Access bypass policy. See [the full setup guide](../README.md#4-configure-the-owner-only-dashboard).
+Owner email login was verified in the live dashboard. Settings → Check Telegram succeeded, confirming the bot's administrator permissions and healthy webhook. Keep the webhook on `workers.dev` so it needs no Access bypass policy. See [the full setup guide](hosting.md#owner-sign-in).
 
 ## Webhook DNS bootstrap
 

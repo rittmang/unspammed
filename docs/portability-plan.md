@@ -1,6 +1,8 @@
-# Portable installation plan
+# Unspammed self-hosted installation plan
 
 The original deployment worked, but its checked-in hostname, owner, group, Hyperdrive binding, database provider restriction, Access-only browser login, and Worker-only scheduling prevented a clean installation elsewhere.
+
+This plan covers Naaradmuni, the self-hosted edition of Unspammed. The planned hosted Unspammed Bot edition and US$5/month placeholder do not add customer provisioning or billing to this scope. Existing bot credentials, private paths and persistent namespace identities remain compatible across the rename; see [editions](brand-and-editions.md) and [architecture](architecture.md).
 
 ## Configuration contract
 

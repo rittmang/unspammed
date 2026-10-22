@@ -1,5 +1,5 @@
 # Local demo defaults only. npm run dev creates a separate .tmp/dev/local.vars.
-# Use WATCHTOWER_ENV_FILE explicitly to supply credentials for your own test group.
+# Use UNSPAMMED_ENV_FILE explicitly to supply credentials for your own test group.
 # Production setup uses .env.example and npm run setup.
 DEV_MODE=true
 DATABASE_BACKEND=sqlite

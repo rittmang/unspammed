@@ -34,7 +34,7 @@ try {
       'No deployment config. Run npm run setup -- --provider cloudflare, or explicitly select your preserved production config with --config wrangler.production.jsonc.',
     );
   const config = readCloudflareConfiguration(configPath);
-  if (!config.name || config.name === 'watchtower-unconfigured')
+  if (!config.name || ['unspammed-unconfigured', 'watchtower-unconfigured'].includes(config.name))
     throw new Error(
       'Refusing to deploy the unconfigured starter. Run setup for your own Cloudflare account.',
     );

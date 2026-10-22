@@ -1,5 +1,7 @@
 # Historical research and implementation decisions
 
+> Brand note, 2026-10-22: the project is now **Unspammed**, with **Naaradmuni** as its self-hosted edition. Original Watchtower names and observed resource/build identifiers below remain historical evidence; they have not been reverified under the new name.
+
 > Historical research from the original Cloudflare installation. Some design choices below were superseded by portable PostgreSQL, Node hosting, optional browser-token authentication, and the optional Telegram admin service. Use the [current architecture](architecture.md), [hosting guide](hosting.md), and [README](../README.md) for new work. Account-specific deployment history lives in [the archive](deployment-history.md).
 
 Research checked against the primary documentation on 2026-10-10. The code intentionally avoids requiring a Telegram user-account/MTProto session for basic moderation.

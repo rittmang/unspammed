@@ -23,10 +23,13 @@ it('keeps retries routed to the original group after a workspace switch', async 
   await vi.runAllTimersAsync();
   await check;
   expect(fetch).toHaveBeenCalledTimes(2);
-  expect(
-    fetch.mock.calls.map(([, init]) => new Headers(init.headers).get('X-Watchtower-Group')),
-  ).toEqual(['-100111', '-100111']);
+  for (const name of ['X-Unspammed-Group', 'X-Watchtower-Group'])
+    expect(fetch.mock.calls.map(([, init]) => new Headers(init.headers).get(name))).toEqual([
+      '-100111',
+      '-100111',
+    ]);
   await api('/messages');
+  expect(new Headers(fetch.mock.lastCall?.[1].headers).get('X-Unspammed-Group')).toBe('-100222');
   expect(new Headers(fetch.mock.lastCall?.[1].headers).get('X-Watchtower-Group')).toBe('-100222');
 });
 
@@ -38,9 +41,8 @@ it('keeps group management requests global rather than attaching the selected wo
   vi.stubGlobal('fetch', fetch);
   await api('/groups');
   await api('/groups/-100222/activate', { method: 'POST', body: '{}' });
-  expect(
-    fetch.mock.calls.every(([, init]) => !new Headers(init?.headers).has('X-Watchtower-Group')),
-  ).toBe(true);
+  for (const name of ['X-Unspammed-Group', 'X-Watchtower-Group'])
+    expect(fetch.mock.calls.every(([, init]) => !new Headers(init?.headers).has(name))).toBe(true);
 });
 
 it('keeps successive pages and mutations scoped to a workspace after it is unmounted', async () => {
@@ -53,9 +55,27 @@ it('keeps successive pages and mutations scoped to a workspace after it is unmou
   setApiGroup('-100222');
   await oldWorkspace('/export?before=20');
   await oldWorkspace.retry('/datasets/id/append', { method: 'POST', body: '{}' });
-  expect(
-    fetch.mock.calls.map(([, init]) => new Headers(init?.headers).get('X-Watchtower-Group')),
-  ).toEqual(['-100111', '-100111', '-100111']);
+  for (const name of ['X-Unspammed-Group', 'X-Watchtower-Group'])
+    expect(fetch.mock.calls.map(([, init]) => new Headers(init?.headers).get(name))).toEqual([
+      '-100111',
+      '-100111',
+      '-100111',
+    ]);
+});
+
+it('keeps explicit group routing consistent across current and legacy headers', async () => {
+  setApiGroup('-100111');
+  const fetch = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) =>
+    Response.json({ ok: true }),
+  );
+  vi.stubGlobal('fetch', fetch);
+  for (const name of ['X-Unspammed-Group', 'X-Watchtower-Group'])
+    await api('/messages', { headers: { [name]: '-100222' } });
+  for (const [, init] of fetch.mock.calls) {
+    const headers = new Headers(init?.headers);
+    expect(headers.get('X-Unspammed-Group')).toBe('-100222');
+    expect(headers.get('X-Watchtower-Group')).toBe('-100222');
+  }
 });
 
 it('recovers a transient read failure without making the caller discard loaded data', async () => {

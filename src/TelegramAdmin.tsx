@@ -414,7 +414,7 @@ export function StrikeUsers({
               </label>
               <p className="field-help">
                 {status.loginStep === 'phone'
-                  ? 'Use the account configured as Watchtower’s owner. Telegram sends the code to your Telegram app or phone.'
+                  ? 'Use the account configured as Unspammed’s owner. Telegram sends the code to your Telegram app or phone.'
                   : status.loginStep === 'code'
                     ? 'Enter the code Telegram sent you. Keep this page open while connecting.'
                     : 'Your password is used once to sign in and is never saved.'}

@@ -1,7 +1,7 @@
 import { createHash, createHmac, randomBytes } from 'node:crypto';
 import { env } from 'cloudflare:workers';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { authRoute, authorize, BROWSER_SESSION_SECONDS } from '../worker/auth';
+import { applicationHeader, authRoute, authorize, BROWSER_SESSION_SECONDS } from '../worker/auth';
 import { htmlShell } from '../worker/html-shell';
 import type { Env } from '../worker/env';
 import { exportJWK, generateKeyPair, SignJWT } from 'jose';
@@ -40,6 +40,29 @@ afterEach(() => {
 });
 
 describe('portable owner browser authentication', () => {
+  it('accepts current request headers and retains legacy sessions without allowing conflicting fallback', async () => {
+    const loginRequest = post('/api/auth/login', { token: config.BROWSER_AUTH_TOKEN });
+    loginRequest.headers.delete('X-Watchtower-Request');
+    loginRequest.headers.set('X-Unspammed-Request', '1');
+    const response = (await authRoute(loginRequest, config))!;
+    expect(response.status).toBe(200);
+    const cookie = response.headers.get('Set-Cookie')!.split(';')[0];
+    expect(await authorize(request('/api/overview', { headers: { Cookie: cookie } }), config)).toBe(
+      'browser-owner',
+    );
+    const conflicting = post('/api/auth/logout', {}, { 'X-Unspammed-Request': '' });
+    await expect(authRoute(conflicting, config)).rejects.toMatchObject({ status: 403 });
+    const grouped = request('/api/overview', {
+      headers: { 'X-Unspammed-Group': '-100222', 'X-Watchtower-Group': '-100111' },
+    });
+    expect(applicationHeader(grouped, 'Group')).toBe('-100222');
+    expect(
+      applicationHeader(
+        request('/api/overview', { headers: { 'X-Watchtower-Group': '-100111' } }),
+        'Group',
+      ),
+    ).toBe('-100111');
+  });
   it('exchanges the secret for an independent signed cookie and never echoes it', async () => {
     const { response, cookie } = await login();
     expect(response.status).toBe(200);

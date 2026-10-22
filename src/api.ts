@@ -16,7 +16,11 @@ export function setApiGroup(chatId: string) {
 export function apiForGroup(chatId: string) {
   const route = (init: RequestInit = {}): RequestInit => ({
     ...init,
-    headers: { ...Object.fromEntries(new Headers(init.headers)), 'x-watchtower-group': chatId },
+    headers: {
+      ...Object.fromEntries(new Headers(init.headers)),
+      'x-unspammed-group': chatId,
+      'x-watchtower-group': chatId,
+    },
   });
   const call = <T>(path: string, init?: RequestInit) => api<T>(path, route(init));
   return Object.assign(call, {
@@ -27,15 +31,16 @@ export function apiForGroup(chatId: string) {
 export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
   // Capture the group before starting: retries and pending writes keep their original
   // destination even if the owner switches workspaces while the request is running.
-  init = {
-    ...init,
-    headers: {
-      ...(selectedGroup && !/^\/groups(?:\/|$)/.test(path)
-        ? { 'x-watchtower-group': selectedGroup }
-        : {}),
-      ...Object.fromEntries(new Headers(init.headers)),
-    },
-  };
+  const headers = new Headers(init.headers);
+  const group =
+    headers.get('X-Unspammed-Group') ??
+    headers.get('X-Watchtower-Group') ??
+    (selectedGroup && !/^\/groups(?:\/|$)/.test(path) ? selectedGroup : null);
+  if (group !== null) {
+    headers.set('X-Unspammed-Group', group);
+    headers.set('X-Watchtower-Group', group);
+  }
+  init = { ...init, headers };
   const read = ['GET', 'HEAD'].includes((init.method || 'GET').toUpperCase());
   for (let attempt = 0; ; attempt++) {
     try {
@@ -101,7 +106,7 @@ async function requestApi<T>(path: string, init: RequestInit): Promise<T> {
 export function fetchApi(path: string, init: RequestInit = {}) {
   const prefix = `${isMiniApp ? '/mini' : ''}/api`;
   const target = `${prefix}${path}`;
-  const pathname = new URL(target, 'https://watchtower.invalid').pathname;
+  const pathname = new URL(target, 'https://unspammed.invalid').pathname;
   if (!path.startsWith('/') || !pathname.startsWith(`${prefix}/`))
     throw new Error('Invalid dashboard API path.');
   return fetch(target, {
@@ -109,6 +114,7 @@ export function fetchApi(path: string, init: RequestInit = {}) {
     ...(isMiniApp ? { credentials: 'omit', redirect: 'error' } : {}),
     headers: {
       'Content-Type': 'application/json',
+      'X-Unspammed-Request': '1',
       'X-Watchtower-Request': '1',
       ...Object.fromEntries(new Headers(init.headers)),
       ...(isMiniApp ? { 'X-Telegram-Init-Data': telegramApp?.initData || '' } : {}),
@@ -143,7 +149,7 @@ export async function downloadBlob(name: string, blob: Blob) {
       );
     await api('/telegram-export', {
       method: 'POST',
-      headers: { 'X-Watchtower-File-Name': name },
+      headers: { 'X-Unspammed-File-Name': name, 'X-Watchtower-File-Name': name },
       body: blob,
     });
     return;

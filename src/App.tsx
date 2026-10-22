@@ -174,7 +174,7 @@ export default function App() {
     return (
       <main className="group-bootstrap">
         <ShieldCheck size={32} />
-        <h1>Watchtower</h1>
+        <h1>Unspammed</h1>
         <p>{error || 'Loading your Telegram groups…'}</p>
         {error && (
           <button
@@ -382,7 +382,7 @@ function GroupWorkspace({
         media: m.media,
       }))
       .filter((m) => m.text);
-    await download(`watchtower-messages-${new Date().toISOString().slice(0, 10)}.json`, {
+    await download(`unspammed-messages-${new Date().toISOString().slice(0, 10)}.json`, {
       version: 1,
       chatId: data?.chatId,
       exportedAt: new Date().toISOString(),
@@ -413,7 +413,7 @@ function GroupWorkspace({
             <ShieldCheck size={25} strokeWidth={1.7} />
           </span>
           <span>
-            watchtower<span className="brand-period">.</span>
+            unspammed<span className="brand-period">.</span>
           </span>
         </a>
         <GroupSwitcher
@@ -1063,7 +1063,7 @@ function GroupWorkspace({
             <div className="setup-note">
               <CircleHelp size={17} />
               <p>
-                Telegram’s “Report Spam” checkbox is unavailable to bots. Watchtower records spam
+                Telegram’s “Report Spam” checkbox is unavailable to bots. Unspammed records spam
                 internally. Strike two purges tracked messages under 48 hours; strike three bans
                 with history revocation.
               </p>
@@ -1607,7 +1607,7 @@ function ModelLab({ data, act }: { data: Overview; act: Act }) {
               e.stopPropagation();
               void act(
                 () =>
-                  download(`watchtower-run-${r.id}.json`, {
+                  download(`unspammed-run-${r.id}.json`, {
                     ...r,
                     effectiveExamples: reviewedExamples(r),
                     threshold,
@@ -1694,10 +1694,7 @@ function ModelLab({ data, act }: { data: Overview; act: Act }) {
           offset = page.nextOffset;
         }
         parts.push(']}');
-        await downloadBlob(
-          'watchtower-dataset.json',
-          new Blob(parts, { type: 'application/json' }),
-        );
+        await downloadBlob('unspammed-dataset.json', new Blob(parts, { type: 'application/json' }));
       },
       isMiniApp ? 'Dataset sent to your private bot chat.' : 'Dataset exported.',
     ).finally(() => setExporting(false));

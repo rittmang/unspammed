@@ -40,7 +40,7 @@ const base = {
   TELEGRAM_CHAT_ID: '-1009876543210',
   OWNER_TELEGRAM_ID: '234567890',
   TELEGRAM_BOT_USERNAME: 'fixture_owner_bot',
-  WATCHTOWER_NAME: 'fixture-install',
+  UNSPAMMED_NAME: 'fixture-install',
   CLOUDFLARE_ACCOUNT_ID: 'b'.repeat(32),
 };
 const isolatedEnv = () =>
@@ -50,7 +50,7 @@ const isolatedEnv = () =>
       .map((key) => [key, process.env[key]]),
   );
 function temporary(t) {
-  const path = mkdtempSync(join(tmpdir(), 'watchtower-setup-'));
+  const path = mkdtempSync(join(tmpdir(), 'unspammed-setup-'));
   t.after(() => rmSync(path, { recursive: true, force: true }));
   return path;
 }
@@ -94,12 +94,12 @@ test('environment selection is explicit, process-first, and compatible with lega
   assert.equal(loaded.env.OWNER_TELEGRAM_ID, '333');
   assert.equal(loaded.path, join(cwd, '.env'));
   assert.throws(
-    () => loadEnvironment({ cwd, env: { WATCHTOWER_ENV_FILE: 'missing.env' } }),
+    () => loadEnvironment({ cwd, env: { UNSPAMMED_ENV_FILE: 'missing.env' } }),
     /does not exist/,
   );
   save(join(cwd, 'separate.env'), { OWNER_TELEGRAM_ID: '444' });
   assert.equal(
-    loadEnvironment({ cwd, env: { WATCHTOWER_ENV_FILE: 'separate.env' } }).env.OWNER_TELEGRAM_ID,
+    loadEnvironment({ cwd, env: { UNSPAMMED_ENV_FILE: 'separate.env' } }).env.OWNER_TELEGRAM_ID,
     '444',
   );
 });
@@ -120,6 +120,10 @@ test('each hosting setup path uses supplied identities and preserves generated c
     const runtimePath = join(directory, '.watchtower/runtime.env');
     const before = readFileSync(runtimePath, 'utf8');
     const generated = parseEnv(before);
+    const privateInput = parseEnv(readFileSync(join(directory, '.env'), 'utf8'));
+    assert.equal(privateInput.UNSPAMMED_PROVIDER, provider);
+    assert.equal(privateInput.UNSPAMMED_NAME, base.UNSPAMMED_NAME);
+    assert.equal(privateInput.WATCHTOWER_PROVIDER, undefined);
     assert.equal(generated.OWNER_TELEGRAM_ID, base.OWNER_TELEGRAM_ID);
     assert.equal(generated.TELEGRAM_CHAT_ID, base.TELEGRAM_CHAT_ID);
     assert.equal(generated.DATABASE_ROOT_CHAT_ID, base.TELEGRAM_CHAT_ID);
@@ -155,7 +159,7 @@ test('each hosting setup path uses supplied identities and preserves generated c
     if (provider === 'cloudflare') {
       const config = JSON.parse(readFileSync(join(directory, 'wrangler.generated.jsonc'), 'utf8'));
       assert.equal(config.account_id, base.CLOUDFLARE_ACCOUNT_ID);
-      assert.equal(config.name, base.WATCHTOWER_NAME);
+      assert.equal(config.name, base.UNSPAMMED_NAME);
       assert.equal(config.vars.OWNER_TELEGRAM_ID, base.OWNER_TELEGRAM_ID);
       assert.equal(config.workers_dev, true);
       assert(!config.hyperdrive && !config.routes);
@@ -189,7 +193,7 @@ test('setup preserves installed browser/admin/webhook secrets and pins the origi
     ...base,
     DEV_MODE: 'true',
     DATABASE_BACKEND: 'sqlite',
-    WATCHTOWER_PROVIDER: 'railway',
+    UNSPAMMED_PROVIDER: 'railway',
     BROWSER_AUTH_TOKEN: 'x'.repeat(43),
     TELEGRAM_WEBHOOK_SECRET: 'y'.repeat(43),
     CRON_SECRET: 'z'.repeat(43),
@@ -202,7 +206,7 @@ test('setup preserves installed browser/admin/webhook secrets and pins the origi
   let saved = parseEnv(readFileSync(join(cwd, '.env'), 'utf8'));
   assert.equal(saved.DEV_MODE, 'false');
   assert.equal(saved.DATABASE_BACKEND, 'postgres');
-  assert.equal(saved.WATCHTOWER_PROVIDER, 'vercel');
+  assert.equal(saved.UNSPAMMED_PROVIDER, 'vercel');
   for (const key of [
     'BROWSER_AUTH_TOKEN',
     'TELEGRAM_WEBHOOK_SECRET',
@@ -244,14 +248,14 @@ test('private paths must be untracked and ignored before setup generates credent
   save(join(cwd, 'credentials.vars'), base);
   const previous = readFileSync(join(cwd, 'credentials.vars'), 'utf8');
   fail(
-    cli(cwd, 'setup.mjs', ['--provider', 'railway'], { WATCHTOWER_ENV_FILE: 'credentials.vars' }),
+    cli(cwd, 'setup.mjs', ['--provider', 'railway'], { UNSPAMMED_ENV_FILE: 'credentials.vars' }),
     /not ignored by Git/,
   );
   assert.equal(readFileSync(join(cwd, 'credentials.vars'), 'utf8'), previous);
   assert(!existsSync(join(cwd, '.watchtower')));
   writeFileSync(join(cwd, '.gitignore'), ignored + 'credentials.vars\n');
   succeed(
-    cli(cwd, 'setup.mjs', ['--provider', 'railway'], { WATCHTOWER_ENV_FILE: 'credentials.vars' }),
+    cli(cwd, 'setup.mjs', ['--provider', 'railway'], { UNSPAMMED_ENV_FILE: 'credentials.vars' }),
   );
   succeed(spawnSync('git', ['add', '-f', 'credentials.vars'], { cwd, encoding: 'utf8' }));
   assert.throws(() => assertPrivatePaths(cwd, ['credentials.vars']), /tracked/);
@@ -377,8 +381,10 @@ test('deploy check rejects stale generated public vars and unconfigured starter 
   config.vars.OWNER_TELEGRAM_ID = '999999';
   writeFileSync(path, JSON.stringify(config));
   fail(cli(cwd, 'deploy.mjs', ['--check']), /does not match/);
-  writeFileSync(path, '{"name":"watchtower-unconfigured"}');
-  fail(cli(cwd, 'deploy.mjs', ['--check', '--config', path]), /unconfigured starter/);
+  for (const name of ['unspammed-unconfigured', 'watchtower-unconfigured']) {
+    writeFileSync(path, JSON.stringify({ name }));
+    fail(cli(cwd, 'deploy.mjs', ['--check', '--config', path]), /unconfigured starter/);
+  }
 });
 
 test('JSONC parsing preserves comment-looking and comma-looking text inside string values', (t) => {
@@ -430,7 +436,7 @@ test('local development ignores installed credentials unless an explicit test en
     assert(!result.childEnv[key]);
   assert.equal(readFileSync(join(cwd, '.env'), 'utf8'), before);
   save(join(cwd, 'test.env'), { ...base, BROWSER_AUTH_TOKEN: 'test-browser' });
-  result = prepareDevEnvironment({ cwd, env: { WATCHTOWER_ENV_FILE: 'test.env' } });
+  result = prepareDevEnvironment({ cwd, env: { UNSPAMMED_ENV_FILE: 'test.env' } });
   vars = parseEnv(readFileSync(result.path, 'utf8'));
   assert.equal(vars.TELEGRAM_BOT_TOKEN, base.TELEGRAM_BOT_TOKEN);
   assert(!vars.BROWSER_AUTH_TOKEN && !vars.DATABASE_URL);
@@ -485,6 +491,8 @@ test('custom model credentials are saved as private runtime secrets while reserv
     !safeErrorMessage(new Error(custom.MY_PROVIDER_KEY), custom).includes(custom.MY_PROVIDER_KEY),
   );
   for (const key of [
+    'UNSPAMMED_PRIVATE_CREDENTIAL',
+    'WATCHTOWER_PRIVATE_CREDENTIAL',
     'DATABASE_ADMIN_URL',
     'CLOUDFLARE_API_TOKEN',
     'TELEGRAM_SESSION_KEY',
@@ -501,4 +509,86 @@ test('custom model credentials are saved as private runtime secrets while reserv
       ),
     );
   }
+});
+
+test('legacy branded setup options remain compatible and canonical values take precedence', (t) => {
+  const cwd = temporary(t);
+  const { UNSPAMMED_NAME, ...input } = base;
+  save(join(cwd, 'legacy.env'), {
+    ...input,
+    WATCHTOWER_NAME: UNSPAMMED_NAME,
+    WATCHTOWER_PROVIDER: 'cloudflare',
+    WATCHTOWER_SCHEDULER: 'false',
+    BROWSER_AUTH_TOKEN: 'b'.repeat(43),
+    TELEGRAM_SESSION_KEY: 'c'.repeat(64),
+    TELEGRAM_API_ID: '12345',
+    TELEGRAM_API_HASH: 'a'.repeat(32),
+  });
+  succeed(cli(cwd, 'setup.mjs', [], { WATCHTOWER_ENV_FILE: 'legacy.env' }));
+  const saved = parseEnv(readFileSync(join(cwd, 'legacy.env'), 'utf8'));
+  const runtime = parseEnv(readFileSync(join(cwd, '.watchtower/runtime.env'), 'utf8'));
+  assert.equal(saved.WATCHTOWER_NAME, UNSPAMMED_NAME);
+  assert.equal(saved.UNSPAMMED_NAME, UNSPAMMED_NAME);
+  assert.equal(saved.UNSPAMMED_PROVIDER, 'cloudflare');
+  assert.equal(runtime.UNSPAMMED_SCHEDULER, 'false');
+  assert.equal(runtime.WATCHTOWER_SCHEDULER, undefined);
+  assert.equal(runtime.BROWSER_AUTH_TOKEN, 'b'.repeat(43));
+  assert.equal(runtime.TELEGRAM_SESSION_KEY, 'c'.repeat(64));
+  assert.equal(
+    JSON.parse(readFileSync(join(cwd, 'wrangler.generated.jsonc'), 'utf8')).name,
+    UNSPAMMED_NAME,
+  );
+  assert.equal(
+    canonicalEnvironment({ WATCHTOWER_NAME: 'legacy', UNSPAMMED_NAME: 'canonical' }).UNSPAMMED_NAME,
+    'canonical',
+  );
+  assert.equal(
+    canonicalEnvironment({ WATCHTOWER_SCHEDULER: 'false', UNSPAMMED_SCHEDULER: 'true' })
+      .UNSPAMMED_SCHEDULER,
+    'true',
+  );
+});
+
+test('environment aliases preserve process precedence and the canonical file selector wins', (t) => {
+  const cwd = temporary(t);
+  save(join(cwd, 'canonical.env'), {
+    OWNER_TELEGRAM_ID: '111',
+    UNSPAMMED_NAME: 'file-canonical',
+    WATCHTOWER_PROVIDER: 'fly',
+  });
+  save(join(cwd, 'legacy.env'), { OWNER_TELEGRAM_ID: '222' });
+  const loaded = loadEnvironment({
+    cwd,
+    env: {
+      UNSPAMMED_ENV_FILE: 'canonical.env',
+      WATCHTOWER_ENV_FILE: 'legacy.env',
+      WATCHTOWER_NAME: 'process-legacy',
+      UNSPAMMED_PROVIDER: 'render',
+    },
+  });
+  const env = canonicalEnvironment(loaded.env);
+  assert.equal(loaded.path, join(cwd, 'canonical.env'));
+  assert.equal(env.OWNER_TELEGRAM_ID, '111');
+  assert.equal(env.UNSPAMMED_NAME, 'process-legacy');
+  assert.equal(env.UNSPAMMED_PROVIDER, 'render');
+  assert.throws(
+    () =>
+      loadEnvironment({
+        cwd,
+        env: { UNSPAMMED_ENV_FILE: 'missing.env', WATCHTOWER_ENV_FILE: 'legacy.env' },
+      }),
+    /UNSPAMMED_ENV_FILE does not exist/,
+  );
+});
+
+test('local development accepts the legacy selector and clears both selector names in child processes', (t) => {
+  const cwd = temporary(t);
+  save(join(cwd, 'legacy.env'), { ...base });
+  const result = prepareDevEnvironment({ cwd, env: { WATCHTOWER_ENV_FILE: 'legacy.env' } });
+  assert.equal(
+    parseEnv(readFileSync(result.path, 'utf8')).TELEGRAM_BOT_TOKEN,
+    base.TELEGRAM_BOT_TOKEN,
+  );
+  assert.equal(result.childEnv.WATCHTOWER_ENV_FILE, undefined);
+  assert.equal(result.childEnv.UNSPAMMED_ENV_FILE, undefined);
 });

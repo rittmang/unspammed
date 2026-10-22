@@ -231,7 +231,7 @@ describe('Mini App routing and private data', () => {
     });
     const headers = {
       'X-Watchtower-Request': '1',
-      'X-Watchtower-File-Name': 'watchtower-dataset.json',
+      'X-Watchtower-File-Name': 'unspammed-dataset.json',
       Origin: 'https://mini.example',
     };
     const upload = (data = launch(), more = {}) =>

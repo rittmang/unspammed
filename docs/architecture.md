@@ -1,6 +1,8 @@
 # Architecture and extension contracts
 
-Watchtower's application state and renewable work leases live in PostgreSQL. Host adapters provide HTTP, assets and scheduling; they reuse the same bot authentication, group registry, moderation, evaluation, policy and export handlers. Hosting must not change the meaning of a strike, a dataset label, an owner or a group boundary.
+Unspammed's application state and renewable work leases live in PostgreSQL. Host adapters provide HTTP, assets and scheduling; they reuse the same bot authentication, group registry, moderation, evaluation, policy and export handlers. Hosting must not change the meaning of a strike, a dataset label, an owner or a group boundary.
+
+The current runtime is one owner per installation, with multiple registered groups. It powers the Naaradmuni self-hosted edition. The planned Unspammed Bot commercial edition does not establish customer tenancy, subscriptions, checkout, entitlements or automatic provisioning; those require separate implementation and authorization. See [the edition contract](brand-and-editions.md).
 
 | Component                                    | Contract                                                                                                                                |
 | -------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
@@ -26,6 +28,8 @@ A renewable lease serializes work per group. Fenced writes reject an expired wor
 `DATABASE_ROOT_CHAT_ID` fixes the schema namespace for an installation, falling back to the initial `TELEGRAM_CHAT_ID` for compatibility. Preserve the root namespace during upgrades. Additional groups use isolated prefixed tables inside that namespace. Group selection is server-validated against the owner-managed registry; a browser header is not permission to create or activate an arbitrary group.
 
 Existing `WORKER_URL`, `PLANETSCALE_DATABASE_URL` and `PLANETSCALE_ADMIN_DATABASE_URL` remain aliases for portable URL inputs. PostgreSQL TLS behavior is explicit, not selected by matching a vendor hostname. Hyperdrive is a Cloudflare-specific optional transport binding. Do not infer a provider from an email, domain, port number, account ID or previously deployed resource.
+
+New setup/runtime configuration uses `UNSPAMMED_*`, with corresponding `WATCHTOWER_*` aliases retained and the new name taking priority when defined. Request headers use `X-Unspammed-*`, with existing `X-Watchtower-*` aliases accepted for compatibility. The health response identifies the service as `unspammed`. The rebrand does not migrate `.watchtower/` private files, `watchtower_g…` database namespaces, saved browser state, cookie/signing identities, Compose service names or persistent database volumes. Treat those as compatibility contracts, not display copy; changing them needs an explicit migration and upgrade tests.
 
 ## Request and authentication boundaries
 

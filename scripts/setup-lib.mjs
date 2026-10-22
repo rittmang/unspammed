@@ -30,6 +30,7 @@ export const publicKeys = [
   'ACCESS_AUD',
   'DATABASE_SSL_MODE',
   'POLICY_DRAFT_MODEL',
+  'UNSPAMMED_SCHEDULER',
 ];
 export const secretKeys = [
   'DATABASE_URL',
@@ -46,6 +47,8 @@ export const secretKeys = [
   'TELEGRAM_SESSION_KEY',
 ];
 const localKeys = [
+  'UNSPAMMED_PROVIDER',
+  'UNSPAMMED_NAME',
   'WATCHTOWER_PROVIDER',
   'WATCHTOWER_NAME',
   'CLOUDFLARE_ACCOUNT_ID',
@@ -76,7 +79,7 @@ export function modelSecretKeys(env) {
         const builtIn = ['OPENROUTER_API_KEY', 'CUSTOM_API_KEY'].includes(key);
         const reserved =
           environmentKeys.includes(key) ||
-          /^(?:WATCHTOWER_|CLOUDFLARE_|CF_|RAILWAY_|DIGITALOCEAN_|DO_|VERCEL_|RENDER_|FLY_|DATABASE_|PLANETSCALE_|TELEGRAM_|BROWSER_|CRON_|ACCESS_|AWS_|GITHUB_|NODE_|NPM_|HOME$|PATH$)/.test(
+          /^(?:UNSPAMMED_|WATCHTOWER_|CLOUDFLARE_|CF_|RAILWAY_|DIGITALOCEAN_|DO_|VERCEL_|RENDER_|FLY_|DATABASE_|PLANETSCALE_|TELEGRAM_|BROWSER_|CRON_|ACCESS_|AWS_|GITHUB_|NODE_|NPM_|HOME$|PATH$)/.test(
             key || '',
           );
         if (!/^[A-Z][A-Z0-9_]*$/.test(key || '') || (!builtIn && reserved))
@@ -284,9 +287,9 @@ export function validateConfiguration(input, provider, { requireGeneratedSecrets
   if (provider === 'cloudflare') {
     if (!/^[a-f0-9]{32}$/i.test(env.CLOUDFLARE_ACCOUNT_ID || ''))
       errors.push('Set CLOUDFLARE_ACCOUNT_ID to your 32-character Cloudflare account ID.');
-    if (!/^[a-z0-9][a-z0-9-]{0,61}[a-z0-9]$/.test(env.WATCHTOWER_NAME || ''))
+    if (!/^[a-z0-9][a-z0-9-]{0,61}[a-z0-9]$/.test(env.UNSPAMMED_NAME || ''))
       errors.push(
-        'Set WATCHTOWER_NAME to your own Worker name (2–63 lowercase letters, digits, or hyphens).',
+        'Set UNSPAMMED_NAME to your own Worker name (2–63 lowercase letters, digits, or hyphens).',
       );
     if (env.HYPERDRIVE_ID && !/^[a-f0-9]{32}$/i.test(env.HYPERDRIVE_ID))
       errors.push('HYPERDRIVE_ID must be your 32-character Hyperdrive ID.');
@@ -305,7 +308,8 @@ export function validateConfiguration(input, provider, { requireGeneratedSecrets
 
 export function generatedEnvironment(input, provider, browserAuth = false) {
   const env = canonicalEnvironment(input);
-  env.WATCHTOWER_PROVIDER = provider;
+  env.UNSPAMMED_PROVIDER = provider;
+  if (input.WATCHTOWER_PROVIDER !== undefined) env.WATCHTOWER_PROVIDER = provider;
   env.DEV_MODE = 'false';
   env.DATABASE_BACKEND = 'postgres';
   env.DATABASE_ROOT_CHAT_ID ||= env.TELEGRAM_CHAT_ID;
@@ -443,7 +447,7 @@ export function writePrivate(path, contents, { force = false } = {}) {
 export function saveEnvironmentDefaults(path, env, { replaceKeys = [] } = {}) {
   const previous = existsSync(path)
     ? readFileSync(path, 'utf8')
-    : '# Watchtower private environment. Keep this file out of Git.\n';
+    : '# Unspammed private environment. Keep this file out of Git.\n';
   const parsed = parseEnv(previous);
   let next = previous;
   for (const key of [...new Set([...environmentKeys, ...modelSecretKeys(env)])]) {
@@ -464,7 +468,8 @@ export function saveEnvironmentDefaults(path, env, { replaceKeys = [] } = {}) {
   else chmodSync(path, 0o600);
 }
 
-export function runtimeEnvironment(env) {
+export function runtimeEnvironment(input) {
+  const env = canonicalEnvironment(input);
   return Object.fromEntries(
     [...publicKeys, ...runtimeSecretKeys(env)]
       .filter((key) => env[key])
@@ -472,10 +477,11 @@ export function runtimeEnvironment(env) {
   );
 }
 
-export function cloudflareConfiguration(env) {
+export function cloudflareConfiguration(input) {
+  const env = canonicalEnvironment(input);
   return {
     $schema: 'node_modules/wrangler/config-schema.json',
-    name: env.WATCHTOWER_NAME,
+    name: env.UNSPAMMED_NAME,
     account_id: env.CLOUDFLARE_ACCOUNT_ID,
     main: 'worker/index.ts',
     compatibility_date: '2026-10-10',
@@ -502,7 +508,8 @@ export function cloudflareConfiguration(env) {
   };
 }
 
-export function writeSetupOutputs(cwd, env, provider, { force = false } = {}) {
+export function writeSetupOutputs(cwd, input, provider, { force = false } = {}) {
+  const env = canonicalEnvironment(input);
   // Admin database URLs and hosting API tokens are deliberately absent from runtime outputs.
   const runtime = runtimeEnvironment(env);
   const outputs = [
@@ -526,7 +533,7 @@ export function writeSetupOutputs(cwd, env, provider, { force = false } = {}) {
     ],
     [
       resolve(cwd, '.watchtower/setup.json'),
-      `${JSON.stringify({ provider, name: env.WATCHTOWER_NAME || 'watchtower' }, null, 2)}\n`,
+      `${JSON.stringify({ provider, name: env.UNSPAMMED_NAME || 'unspammed' }, null, 2)}\n`,
     ],
   ];
   if (provider === 'cloudflare')

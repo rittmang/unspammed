@@ -1,5 +1,5 @@
 import { createServer } from 'node:http';
-import { loadEnvironment } from '../scripts/setup-env.mjs';
+import { loadEnvironment, canonicalEnvironment } from '../scripts/setup-env.mjs';
 import { createNodeHandler } from './http';
 import { createRuntime } from './runtime';
 
@@ -13,7 +13,8 @@ const server = createServer(createNodeHandler(runtime));
 let stopping = false;
 let running: Promise<unknown> | undefined;
 function tick() {
-  if (stopping || running || process.env.WATCHTOWER_SCHEDULER === 'false') return;
+  if (stopping || running || canonicalEnvironment(process.env).UNSPAMMED_SCHEDULER === 'false')
+    return;
   running = runtime
     .tick()
     .then((result) => {
@@ -34,7 +35,7 @@ function tick() {
 const timer = setInterval(tick, 60_000);
 timer.unref();
 server.listen(port, host, () => {
-  console.info(`Watchtower listening on ${host}:${port}`);
+  console.info(`Unspammed listening on ${host}:${port}`);
   tick();
 });
 

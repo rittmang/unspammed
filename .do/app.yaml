@@ -1,7 +1,7 @@
 # Replace repo and branch with your own repository before creating an app.
 # Import .watchtower/runtime.env as encrypted RUN_TIME variables in App Platform.
 # Keep DATABASE_ADMIN_URL and provider API tokens out of runtime variables.
-name: watchtower
+name: unspammed
 ingress:
   rules:
     - match:

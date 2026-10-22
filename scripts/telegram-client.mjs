@@ -4,7 +4,9 @@ import { canonicalEnvironment } from './setup-env.mjs';
 export async function telegram(method, body = {}, env = process.env) {
   const token = env.TELEGRAM_BOT_TOKEN;
   if (!token)
-    throw new Error('Set TELEGRAM_BOT_TOKEN in .env, WATCHTOWER_ENV_FILE, or your environment.');
+    throw new Error(
+      'Set TELEGRAM_BOT_TOKEN in .env, UNSPAMMED_ENV_FILE (legacy WATCHTOWER_ENV_FILE), or your environment.',
+    );
   let response;
   try {
     response = await fetch(`https://api.telegram.org/bot${token}/${method}`, {

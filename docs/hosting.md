@@ -1,9 +1,9 @@
-# Hosting, DNS and Telegram setup
+# Naaradmuni hosting, DNS and Telegram setup
 
 > New install? Use the **[setup guide](setup.md)**. It has the steps in order, with screenshots.
 > This page is the reference for limits, TLS, and provider details.
 
-This guide sets up your own installation from a fresh checkout. The smallest hosted setup is a Telegram bot, its owner and supergroup, PostgreSQL, and one public HTTPS application host with background scheduling. A model key is needed for classification/evaluation, but can be added after the site works. A custom domain and Cloudflare Access are optional.
+This guide sets up Naaradmuni, Unspammed's self-hosted edition, from a fresh checkout. You supply and pay for your bot, infrastructure and model usage. The smallest installation is a Telegram bot, its owner and supergroup, PostgreSQL, and one public HTTPS application host with background scheduling. A model key is needed for classification/evaluation, but can be added after the site works. A custom domain and Cloudflare Access are optional. The planned Unspammed Bot hosted edition and its US$5/month placeholder are described in [editions and pricing status](brand-and-editions.md); these instructions do not provision that service.
 
 The repository includes shared request handlers plus Cloudflare, persistent Node, and Vercel adapters. The [provider evidence register](provider-verification.md) separates templates, local tests, provider builds and actual test-account deployments. [Deployment operations](deployment.md) defines the verification checklist; [the original deployment archive](deployment-history.md) is historical context, not configuration to copy.
 
@@ -18,11 +18,11 @@ For PostgreSQL TLS, the default `DATABASE_SSL_MODE=verify-full` verifies the ser
 
 Use `DATABASE_SSL_MODE=disable` only for an intentionally private network or disposable loopback database where you have chosen plaintext transport. Do not disable verification to hide a certificate error on a public database. Keep connection passwords out of shell history and logs.
 
-Watchtower uses one schema, normally `watchtower_g` followed by the initial group ID without `-`. The initial group also supplies the stable root namespace unless `DATABASE_ROOT_CHAT_ID` is explicitly set. Preserve that namespace for an existing installation; adding groups does not require changing it. Additional group tables receive separate prefixes and their own settings, jobs and data.
+Unspammed uses one schema, normally `watchtower_g` followed by the initial group ID without `-`. The initial group also supplies the stable root namespace unless `DATABASE_ROOT_CHAT_ID` is explicitly set. Preserve that namespace for an existing installation; adding groups does not require changing it. Additional group tables receive separate prefixes and their own settings, jobs and data.
 
 `npm run database:setup` adds schema/tables without resetting saved data. Prefer running it as the runtime role so that role owns its tables and can apply later additive schema changes. If the role cannot create a schema, an administrator can create just the schema first (`CREATE SCHEMA "watchtower_g1001234567890" AUTHORIZATION "your_runtime_role";`), then run setup using the runtime connection.
 
-Alternatively, configure a **local-only** `DATABASE_ADMIN_URL` for bootstrap. If admin and runtime roles differ, explicitly grant the runtime role `USAGE, CREATE` on the Watchtower schema, existing table/sequence privileges, and appropriate default privileges for future objects. Grants alone do not confer table ownership for future `ALTER TABLE` migrations; run those upgrades through the owning role or transfer application-object ownership deliberately. The script cannot infer the correct role or silently grant it administrator privileges. For example, after replacing these identifiers with your own:
+Alternatively, configure a **local-only** `DATABASE_ADMIN_URL` for bootstrap. If admin and runtime roles differ, explicitly grant the runtime role `USAGE, CREATE` on the application schema, existing table/sequence privileges, and appropriate default privileges for future objects. Grants alone do not confer table ownership for future `ALTER TABLE` migrations; run those upgrades through the owning role or transfer application-object ownership deliberately. The script cannot infer the correct role or silently grant it administrator privileges. For example, after replacing these identifiers with your own:
 
 ```sql
 GRANT USAGE, CREATE ON SCHEMA "watchtower_g1001234567890" TO "your_runtime_role";
@@ -67,7 +67,7 @@ npm run database:setup
 
 Setup generates 32-byte webhook and cron secrets when absent. `--browser-auth` also generates a 32-byte URL-safe owner token. It fills missing values in the private input file, preserves existing credentials, and writes ignored, owner-readable `.watchtower/runtime.env`, `.watchtower/secrets.json`, and `.watchtower/setup.json`. Cloudflare additionally receives `wrangler.generated.jsonc`. No resources, databases, DNS records, webhook registrations or bot menus are changed by generation. If inputs change, review them and regenerate outputs with `--force`; the flag does not rotate existing input credentials.
 
-Process environment values take precedence. `WATCHTOWER_ENV_FILE` selects an explicit private file; otherwise setup tools use `.env`, then legacy `.dev.vars`. Use separate environment files and bots for test and production. Never paste an entire environment file into an issue or support log. Import runtime variables using the host's secret/environment settings; exclude the admin database URL and hosting API credentials.
+Process environment values take precedence. `UNSPAMMED_ENV_FILE` selects an explicit private file (legacy `WATCHTOWER_ENV_FILE` is a fallback); otherwise setup tools use `.env`, then legacy `.dev.vars`. New examples use `UNSPAMMED_*`; corresponding `WATCHTOWER_*` aliases remain supported, with the new name taking priority when defined. Private `.watchtower/` outputs, the `watchtower_g…` schema namespace and existing Compose service/volume names remain stable for upgrades. Use separate environment files and bots for test and production. Never paste an entire environment file into an issue or support log. Import runtime variables using the host's secret/environment settings; exclude the admin database URL and hosting API credentials.
 
 ## Choose your host
 
@@ -83,7 +83,7 @@ Provider facts below were checked against primary documentation on **2026-10-21*
 | Fly.io                    | Node Docker Machine; `fly.toml`                               | Keep a Machine running; supplied config disables autostop; reachable PostgreSQL                                         |
 | Linux VM                  | Compose app, optional PostgreSQL and Caddy files              | Manual server/firewall/HTTPS setup; Ubuntu/Debian cloud-init example; backups for a bundled database                    |
 
-These are implementation choices, not a claim that every row has been deployed. Consult the [evidence register](provider-verification.md) before relying on a host. Cloud Run, Azure Container Apps, ECS, Coolify, Dokku, CapRover and Heroku are candidate integrations using the same Node image; this repository has no complete provider-specific provisioning/scheduler validation for them. Netlify has Functions, PostgreSQL and scheduled functions, but no Watchtower adapter. Static-only hosting cannot run this backend.
+These are implementation choices, not a claim that every row has been deployed. Consult the [evidence register](provider-verification.md) before relying on a host. Cloud Run, Azure Container Apps, ECS, Coolify, Dokku, CapRover and Heroku are candidate integrations using the same Node image; this repository has no complete provider-specific provisioning/scheduler validation for them. Netlify has Functions, PostgreSQL and scheduled functions, but no Unspammed adapter. Static-only hosting cannot run this backend.
 
 `DATABASE_URL` accepts PostgreSQL connections. Neon, Supabase, PlanetScale Postgres and other managed PostgreSQL products are candidates, not a claim that every endpoint was tested. Check network/IP support, TLS roots, role privileges and transaction/lease behavior using the chosen connection mode. The adapter uses transaction-scoped advisory locks and qualified tables; it does not require a session-scoped lock, but that does not verify every pooler. MySQL, MariaDB and PlanetScale MySQL (Vitess) are unsupported. SQLite remains the isolated development/test adapter.
 
@@ -94,8 +94,8 @@ You can use `workers.dev` with Telegram owner authentication and no DNS changes,
 Add these private setup inputs using your account details:
 
 ```dotenv
-WATCHTOWER_PROVIDER=cloudflare
-WATCHTOWER_NAME=your-unique-worker-name
+UNSPAMMED_PROVIDER=cloudflare
+UNSPAMMED_NAME=your-unique-worker-name
 CLOUDFLARE_ACCOUNT_ID=YOUR_32_CHARACTER_ACCOUNT_ID
 PUBLIC_URL=https://your-unique-worker-name.your-subdomain.workers.dev
 ```
@@ -138,11 +138,11 @@ Render's Blueprint uses the Docker image as a web service. Supply the complete `
 
 Fly uses `fly.toml`, the same Docker image, and imported runtime secrets. Its supplied configuration disables autostop; keep a running Machine for scheduling. [Fly configuration](https://fly.io/docs/reference/configuration/).
 
-The [VM instructions](setup.md#5g-linux-vm-manual-installation) require SSH, private inputs and an HTTPS endpoint. The installer selects `WATCHTOWER_VM_ENV`, then `WATCHTOWER_ENV_FILE`, then `app.env`. The cloud-init file is an Ubuntu/Debian example, not a tested template for every cloud. Neither Compose nor cloud-init is a marketplace listing or one-click deployment.
+The [VM instructions](setup.md#5g-linux-vm-manual-installation) require SSH, private inputs and an HTTPS endpoint. The installer selects `UNSPAMMED_VM_ENV` (or legacy `WATCHTOWER_VM_ENV`), then `UNSPAMMED_ENV_FILE` (or legacy `WATCHTOWER_ENV_FILE`), then `app.env`. The cloud-init file is an Ubuntu/Debian example, not a tested template for every cloud. Neither Compose nor cloud-init is a marketplace listing or one-click deployment.
 
 ### Other container platforms
 
-Do not assume every container platform stops between requests. Cloud Run can allocate CPU between requests using instance-based billing with minimum instances; Azure Container Apps can keep minimum replicas; ECS services can keep desired tasks running. A persistent configuration can use the Node timer. A scale-to-zero/request-only CPU configuration requires external minute dispatch with `WATCHTOWER_SCHEDULER=false`, awaited `/api/cron` calls and the application cron secret. This is an integration contract, not a ready-to-deploy recipe. [Cloud Run billing/CPU](https://docs.cloud.google.com/run/docs/configuring/billing-settings), [Azure scaling](https://learn.microsoft.com/en-us/azure/container-apps/scale-app), [ECS scaling](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/service-auto-scaling.html).
+Do not assume every container platform stops between requests. Cloud Run can allocate CPU between requests using instance-based billing with minimum instances; Azure Container Apps can keep minimum replicas; ECS services can keep desired tasks running. A persistent configuration can use the Node timer. A scale-to-zero/request-only CPU configuration requires external minute dispatch with `UNSPAMMED_SCHEDULER=false`, awaited `/api/cron` calls and the application cron secret. This is an integration contract, not a ready-to-deploy recipe. [Cloud Run billing/CPU](https://docs.cloud.google.com/run/docs/configuring/billing-settings), [Azure scaling](https://learn.microsoft.com/en-us/azure/container-apps/scale-app), [ECS scaling](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/service-auto-scaling.html).
 
 The external scheduler must reach public Telegram/webhook routes, preserve separate application authentication, and wait for bounded work. Provider IAM authentication may require additional headers/integration. EventBridge Scheduler does not directly target arbitrary HTTPS URLs; an AWS relay or other integration is needed. EventBridge API Destinations have a five-second timeout, so they are not a drop-in caller for longer awaited work. Check this integration and provider/proxy timeouts before describing that platform as verified. [Scheduler targets](https://docs.aws.amazon.com/scheduler/latest/UserGuide/managing-targets-universal.html), [API Destinations](https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-api-destinations.html).
 
@@ -156,7 +156,7 @@ The supplied manifest schedules `/api/cron` every minute and sets `maxDuration: 
 
 The current function limits page lists a 300-second maximum on Hobby with Fluid Compute and up to 800 seconds on Pro/Enterprise; older non-Fluid deployments have different limits. The repository deliberately sets 300 seconds. Vercel does not automatically retry failed cron invocations; durable cursors let the next successful invocation resume. [Function limits](https://vercel.com/docs/functions/limitations), [cron management](https://vercel.com/docs/cron-jobs/manage-cron-jobs).
 
-Vercel also limits function request/response payloads to **4.5 MB**, below some Watchtower import/export limits. Keep each upload/request and browser download within the host limit; an application-level limit does not override it. Large browser exports require a persistent Node/Worker host or a separately implemented object-storage download path. Telegram document delivery happens server-to-server, but still must fit the function's memory and time budget. [Payload limits](https://vercel.com/docs/functions/limitations).
+Vercel also limits function request/response payloads to **4.5 MB**, below some Unspammed import/export limits. Keep each upload/request and browser download within the host limit; an application-level limit does not override it. Large browser exports require a persistent Node/Worker host or a separately implemented object-storage download path. Telegram document delivery happens server-to-server, but still must fit the function's memory and time budget. [Payload limits](https://vercel.com/docs/functions/limitations).
 
 Optional Telegram owner-account cleanup opens MTProto TCP connections. Node supports this transport, but connection startup, Telegram data-center redirects and cleanup must fit function lifetime and networking limits. Treat real account connection/cleanup on Vercel as requiring its own provider smoke test. A successful adapter test or successful Bot API call does not verify MTProto behavior there.
 
@@ -191,13 +191,13 @@ Bare `/mini/` without a real Telegram launch does not authenticate. Claimed user
 
 Use setup's `--browser-auth` to generate a secret from at least 32 random bytes. Keep `BROWSER_AUTH_TOKEN` in the server secret store and the owner's password manager. The owner submits it only in the HTTPS sign-in form. It must never appear in a URL, query string, HTML, API response, local/session storage, logs, analytics or committed files.
 
-The server derives an HMAC session-signing key from the token and issues a 12-hour `__Host-` cookie with `HttpOnly; Secure; SameSite=Strict; Path=/`. Requests use the cookie, not the original token. Browser-cookie mutations and login/logout require a matching Origin plus `X-Watchtower-Request: 1`. Sign out clears the current browser cookie. Replace `BROWSER_AUTH_TOKEN` and redeploy to revoke **all** existing sessions; previously copied cookies remain valid until expiry or rotation. There is no per-session server revocation database.
+The server derives an HMAC session-signing key from the token and issues a 12-hour `__Host-` cookie with `HttpOnly; Secure; SameSite=Strict; Path=/`. Requests use the cookie, not the original token. Browser-cookie mutations and login/logout require a matching Origin plus `X-Unspammed-Request: 1` (legacy `X-Watchtower-Request: 1` remains accepted). Sign out clears the current browser cookie. Replace `BROWSER_AUTH_TOKEN` and redeploy to revoke **all** existing sessions; previously copied cookies remain valid until expiry or rotation. There is no per-session server revocation database.
 
 ### Optional Cloudflare Access
 
 Configure all three values together: `ACCESS_TEAM_DOMAIN=https://your-team.cloudflareaccess.com`, `ACCESS_AUD` from your self-hosted application, and `ADMIN_EMAIL` for the one owner email. The application independently validates the signed assertion's issuer, audience, expiry, RS256 signature and exact owner email. A claimed email header is never authentication. Keep `DASHBOARD_URL` pointing at the Access-protected browser origin so the optional Cloudflare button reaches login. [Assertion validation](https://developers.cloudflare.com/cloudflare-one/access-controls/applications/http-apps/authorization-cookie/validating-json/).
 
-Access is an upstream login layer: requests blocked there never reach Watchtower. If an Access application covers the entire hostname, give required machine routes narrowly scoped policies or use a separate unprotected origin:
+Access is an upstream login layer: requests blocked there never reach Unspammed. If an Access application covers the entire hostname, give required machine routes narrowly scoped policies or use a separate unprotected origin:
 
 - `/mini` **and** `/mini/*`: reach the Mini App shell and signed owner API without an Access redirect.
 - `/telegram/webhook`: reach the bot-secret-checked webhook.
@@ -205,9 +205,9 @@ Access is an upstream login layer: requests blocked there never reach Watchtower
 - `/api/cron`: reach `CRON_SECRET`-authenticated external/Vercel cron when used.
 - `/health`: permit anonymous health checks if needed by your host/check script.
 
-Do not bypass the entire browser `/api/*` path just to make one machine endpoint work. Create separate more-specific Access applications for those exact paths and Bypass → Include → Everyone, while keeping the browser application's owner-only Allow policy. Cloudflare gives the more-specific application precedence. Watchtower still checks each route's own credential after the bypass. Include `/mini` separately from its wildcard child path. [Path precedence](https://developers.cloudflare.com/cloudflare-one/access-controls/policies/app-paths/).
+Do not bypass the entire browser `/api/*` path just to make one machine endpoint work. Create separate more-specific Access applications for those exact paths and Bypass → Include → Everyone, while keeping the browser application's owner-only Allow policy. Cloudflare gives the more-specific application precedence. Unspammed still checks each route's own credential after the bypass. Include `/mini` separately from its wildcard child path. [Path precedence](https://developers.cloudflare.com/cloudflare-one/access-controls/policies/app-paths/).
 
-To keep a public root sign-in shell while using Access, the simplest layout is a public app origin plus an optional Access-protected browser hostname. Both must route to the same deployment; register the browser hostname as `DASHBOARD_URL`. If instead Access protects the whole hostname, its login screen will precede Watchtower's public shell and may also block token sign-in there. Decide that intentionally.
+To keep a public root sign-in shell while using Access, the simplest layout is a public app origin plus an optional Access-protected browser hostname. Both must route to the same deployment; register the browser hostname as `DASHBOARD_URL`. If instead Access protects the whole hostname, its login screen will precede Unspammed's public shell and may also block token sign-in there. Decide that intentionally.
 
 ## Register Telegram after deployment
 

@@ -54,6 +54,9 @@ it('sends launch authentication only to the Mini App API and preserves selected 
   expect(init.credentials).toBe('omit');
   expect(init.redirect).toBe('error');
   expect(new Headers(init.headers).get('X-Telegram-Init-Data')).toBe('signed-launch-data');
+  expect(new Headers(init.headers).get('X-Unspammed-Request')).toBe('1');
+  expect(new Headers(init.headers).get('X-Watchtower-Request')).toBe('1');
+  expect(new Headers(init.headers).get('X-Unspammed-Group')).toBe('-100111');
   expect(new Headers(init.headers).get('X-Watchtower-Group')).toBe('-100111');
   await api.fetchApi('/messages/1/image?group=-100111');
   expect(fetch.mock.calls.at(-1)?.[0]).toBe('/mini/api/messages/1/image?group=-100111');
@@ -68,12 +71,13 @@ it('uploads exports once and reports expired launch authentication without retry
   );
   vi.stubGlobal('fetch', fetch);
   const file = new Blob(['{"examples":[]}']);
-  await api.downloadBlob('watchtower-dataset.json', file);
+  await api.downloadBlob('unspammed-dataset.json', file);
   expect(fetch).toHaveBeenCalledOnce();
   const [url, init] = fetch.mock.calls[0] as unknown as [string, RequestInit];
   expect(url).toBe('/mini/api/telegram-export');
   expect(init.body).toBe(file);
-  expect(new Headers(init.headers).get('X-Watchtower-File-Name')).toBe('watchtower-dataset.json');
+  expect(new Headers(init.headers).get('X-Unspammed-File-Name')).toBe('unspammed-dataset.json');
+  expect(new Headers(init.headers).get('X-Watchtower-File-Name')).toBe('unspammed-dataset.json');
   fetch.mockResolvedValueOnce(Response.json({ error: 'Expired' }, { status: 401 }));
   await expect(api.api('/groups')).rejects.toMatchObject({
     status: 401,
@@ -93,6 +97,8 @@ it('keeps the normal browser API independent of Telegram identity', async () => 
   await api.api('/groups');
   const [url, init] = fetch.mock.calls[0] as unknown as [string, RequestInit];
   expect(url).toBe('/api/groups');
+  expect(new Headers(init.headers).get('X-Unspammed-Request')).toBe('1');
+  expect(new Headers(init.headers).get('X-Watchtower-Request')).toBe('1');
   expect(new Headers(init.headers).has('X-Telegram-Init-Data')).toBe(false);
   expect(init.credentials).toBeUndefined();
 });

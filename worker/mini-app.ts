@@ -1,4 +1,5 @@
 import type { Env } from './env';
+import { applicationHeader } from './auth';
 import { HttpError, json, readBody } from './http';
 import { htmlShell, publicAssetPath } from './html-shell';
 
@@ -81,7 +82,7 @@ export async function miniAppAsset(request: Request, env: Env) {
 
 export async function exportToTelegram(request: Request, env: Env) {
   if (request.method !== 'POST') throw new HttpError(405, 'POST only.');
-  const name = request.headers.get('X-Watchtower-File-Name') || '';
+  const name = applicationHeader(request, 'File-Name') || '';
   if (!/^[a-zA-Z0-9._-]{1,100}\.json$/.test(name))
     throw new HttpError(400, 'Invalid export filename.');
   const bytes = await readBody(request, 20_000_000);

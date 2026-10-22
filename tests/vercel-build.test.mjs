@@ -4,12 +4,14 @@ import { readdirSync } from 'node:fs';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
+const functionDirectory =
+  process.env.UNSPAMMED_VERCEL_FUNCTION_DIR ?? process.env.WATCHTOWER_VERCEL_FUNCTION_DIR;
+
 test('built Vercel entry boots in plain Node with protected routes and packaged dashboard assets', () => {
-  if (!process.env.WATCHTOWER_VERCEL_FUNCTION_DIR)
+  if (!functionDirectory)
     assert.deepEqual(readdirSync(new URL('../.vercel-static/', import.meta.url)), ['favicon.svg']);
   const result = spawnSync(process.execPath, ['--input-type=module', '-'], {
-    cwd:
-      process.env.WATCHTOWER_VERCEL_FUNCTION_DIR || fileURLToPath(new URL('..', import.meta.url)),
+    cwd: functionDirectory || fileURLToPath(new URL('..', import.meta.url)),
     env: {
       PUBLIC_URL: 'https://build-fixture.example',
       BROWSER_AUTH_TOKEN: 'b'.repeat(43),
@@ -37,7 +39,7 @@ test('built Vercel entry boots in plain Node with protected routes and packaged 
       assert.equal((await request('/telegram/webhook', {method:'POST',body:'{}'})).status, 401);
       const login = await request('/api/auth/login', {
         method:'POST',
-        headers:{Origin:process.env.PUBLIC_URL,'X-Watchtower-Request':'1','Content-Type':'application/json'},
+        headers:{Origin:process.env.PUBLIC_URL,'X-Unspammed-Request':'1','Content-Type':'application/json'},
         body:JSON.stringify({token:process.env.BROWSER_AUTH_TOKEN}),
       });
       assert.equal(login.status, 200);

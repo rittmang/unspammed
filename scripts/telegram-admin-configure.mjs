@@ -2,7 +2,7 @@ import { existsSync } from 'node:fs';
 import { randomBytes } from 'node:crypto';
 import { spawn } from 'node:child_process';
 import { resolve } from 'node:path';
-import { loadEnvironment } from './setup-env.mjs';
+import { loadEnvironment, canonicalEnvironment } from './setup-env.mjs';
 import {
   saveEnvironmentDefaults,
   writePrivate,
@@ -49,7 +49,9 @@ try {
       'Usage: npm run telegram:admin:configure -- [--provider NAME] [--new-session-key] [--upload --config YOUR_CONFIG]',
   });
   const loaded = loadEnvironment();
-  const provider = options['--provider'] ? options['--provider'] : process.env.WATCHTOWER_PROVIDER;
+  const provider = options['--provider']
+    ? options['--provider']
+    : canonicalEnvironment(process.env).UNSPAMMED_PROVIDER;
   if (provider && !providers.includes(provider)) throw new Error(`Choose ${providers.join(', ')}.`);
   const upload = args.includes('--upload');
   const config = options['--config'];
@@ -60,7 +62,9 @@ try {
   if (
     upload &&
     (!readCloudflareConfiguration(config).name ||
-      readCloudflareConfiguration(config).name === 'watchtower-unconfigured')
+      ['unspammed-unconfigured', 'watchtower-unconfigured'].includes(
+        readCloudflareConfiguration(config).name,
+      ))
   )
     throw new Error(
       'Run setup and select your generated config, or explicitly select your preserved production config.',

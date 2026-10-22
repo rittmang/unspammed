@@ -164,7 +164,7 @@ export function GroupManager({
     }
   }
   const link = directory.botUsername
-    ? `https://t.me/${encodeURIComponent(directory.botUsername)}?startgroup=watchtower&admin=delete_messages+restrict_members`
+    ? `https://t.me/${encodeURIComponent(directory.botUsername)}?startgroup=unspammed&admin=delete_messages+restrict_members`
     : '';
   return (
     <div className="modal-backdrop" onClick={onClose}>
@@ -283,7 +283,7 @@ export function GroupManager({
             below, ready for you to activate.
           </p>
           <p className="field-help">
-            Already added it? Send <code>/watchtower</code> from your owner Telegram account in that
+            Already added it? Send <code>/unspammed</code> from your owner Telegram account in that
             group, then refresh. Full three-strike moderation requires a supergroup.
           </p>
           <label className="group-template">

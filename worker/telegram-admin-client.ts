@@ -31,8 +31,8 @@ export const createAdminClient: AdminClientFactory = async (saved, apiId, apiHas
   const session = new StringSession(saved);
   const client = new TelegramClient(session, apiId, apiHash, {
     baseLogger: new Logger(LogLevel.NONE),
-    deviceModel: 'Watchtower admin',
-    systemVersion: 'Watchtower',
+    deviceModel: 'Unspammed admin',
+    systemVersion: 'Unspammed',
     appVersion: '1.0',
     connectionRetries: 1,
     reconnectRetries: 0,

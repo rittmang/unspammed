@@ -37,7 +37,7 @@ function environment(extra = {}) {
   };
 }
 function temporary(t) {
-  const cwd = mkdtempSync(join(tmpdir(), 'watchtower-deployment-'));
+  const cwd = mkdtempSync(join(tmpdir(), 'unspammed-deployment-'));
   t.after(() => rmSync(cwd, { recursive: true, force: true }));
   return cwd;
 }
@@ -53,7 +53,7 @@ function save(path, env) {
 function configure(cwd, extra = {}) {
   return spawnSync(process.execPath, [join(root, 'deploy/vm/configure.mjs')], {
     cwd,
-    env: environment({ WATCHTOWER_ENV_FILE: join(cwd, 'app.env'), ...extra }),
+    env: environment({ UNSPAMMED_ENV_FILE: join(cwd, 'app.env'), ...extra }),
     encoding: 'utf8',
     timeout: 30000,
   });
@@ -69,7 +69,7 @@ test('VM setup generates restricted database inputs and preserves credentials wh
     ...base,
     DATABASE_URL: '',
     COMPOSE_PROFILES: 'bundled-db,https',
-    WATCHTOWER_DOMAIN: 'fixture.example',
+    UNSPAMMED_DOMAIN: 'fixture.example',
     TELEGRAM_API_ID: '12345',
     TELEGRAM_API_HASH: 'a'.repeat(32),
     TELEGRAM_SESSION_KEY: 'b'.repeat(64),
@@ -83,14 +83,14 @@ test('VM setup generates restricted database inputs and preserves credentials wh
   const connection = new URL(runtime.DATABASE_URL);
   assert.equal(connection.hostname, 'db');
   assert.equal(connection.username, 'watchtower');
-  assert.equal(decodeURIComponent(connection.password), input.WATCHTOWER_DATABASE_PASSWORD);
-  assert.notEqual(input.POSTGRES_PASSWORD, input.WATCHTOWER_DATABASE_PASSWORD);
+  assert.equal(decodeURIComponent(connection.password), input.UNSPAMMED_DATABASE_PASSWORD);
+  assert.notEqual(input.POSTGRES_PASSWORD, input.UNSPAMMED_DATABASE_PASSWORD);
   assert.equal(runtime.DATABASE_SSL_MODE, 'disable');
   assert.equal(runtime.DATABASE_ROOT_CHAT_ID, base.TELEGRAM_CHAT_ID);
   assert.equal(compose.COMPOSE_PROFILES, 'bundled-db,https');
   assert.equal(compose.POSTGRES_PASSWORD, input.POSTGRES_PASSWORD);
   assert.equal(runtime.POSTGRES_PASSWORD, undefined);
-  assert.equal(runtime.WATCHTOWER_DATABASE_PASSWORD, undefined);
+  assert.equal(runtime.UNSPAMMED_DATABASE_PASSWORD, undefined);
   for (const secret of [input.POSTGRES_PASSWORD, connection.password, runtime.BROWSER_AUTH_TOKEN])
     assert.ok(!`${first.stdout}${first.stderr}`.includes(secret));
   for (const output of [path, runtimePath, join(cwd, '.watchtower/compose.env')])
@@ -98,7 +98,7 @@ test('VM setup generates restricted database inputs and preserves credentials wh
   save(path, {
     ...input,
     PUBLIC_URL: 'https://updated.example',
-    WATCHTOWER_DOMAIN: 'updated.example',
+    UNSPAMMED_DOMAIN: 'updated.example',
   });
   succeed(configure(cwd));
   const updatedInput = parseEnv(readFileSync(path, 'utf8'));
@@ -114,7 +114,7 @@ test('VM setup generates restricted database inputs and preserves credentials wh
   ])
     assert.equal(updated[key], runtime[key]);
   assert.equal(updatedInput.POSTGRES_PASSWORD, input.POSTGRES_PASSWORD);
-  assert.equal(updatedInput.WATCHTOWER_DATABASE_PASSWORD, input.WATCHTOWER_DATABASE_PASSWORD);
+  assert.equal(updatedInput.UNSPAMMED_DATABASE_PASSWORD, input.UNSPAMMED_DATABASE_PASSWORD);
 });
 
 test('VM setup refuses unsafe profile combinations before writing deployment outputs', (t) => {
@@ -129,7 +129,7 @@ test('VM setup refuses unsafe profile combinations before writing deployment out
       { COMPOSE_PROFILES: 'bundled-db', DATABASE_URL: '', DATABASE_ADMIN_URL: base.DATABASE_URL },
       /Remove DATABASE_ADMIN_URL/,
     ],
-    [{ COMPOSE_PROFILES: 'https', WATCHTOWER_DOMAIN: 'different.example' }, /PUBLIC_URL=https/],
+    [{ COMPOSE_PROFILES: 'https', UNSPAMMED_DOMAIN: 'different.example' }, /PUBLIC_URL=https/],
     [{ COMPOSE_PROFILES: 'unexpected' }, /COMPOSE_PROFILES/],
   ];
   for (const [input, pattern] of cases) {
@@ -154,8 +154,8 @@ test(
         ...base,
         ...(profiles.includes('bundled-db') ? { DATABASE_URL: '' } : {}),
         COMPOSE_PROFILES: profiles,
-        ...(bind ? { WATCHTOWER_BIND: bind } : {}),
-        ...(profiles.includes('https') ? { WATCHTOWER_DOMAIN: 'fixture.example' } : {}),
+        ...(bind ? { UNSPAMMED_BIND: bind } : {}),
+        ...(profiles.includes('https') ? { UNSPAMMED_DOMAIN: 'fixture.example' } : {}),
       });
       succeed(configure(cwd));
       const result = spawnSync(
@@ -197,13 +197,13 @@ const cp = require('node:child_process');
 const args = process.argv.slice(2);
 fs.appendFileSync(process.env.MOCK_DOCKER_LOG, JSON.stringify(args) + '\\n');
 if (args[0] === 'run') {
-  const envFile = args.find(a => a.startsWith('WATCHTOWER_ENV_FILE=')).slice('WATCHTOWER_ENV_FILE='.length);
+  const envFile = args.find(a => a.startsWith('UNSPAMMED_ENV_FILE=')).slice('UNSPAMMED_ENV_FILE='.length);
   // Real docker run forwards only the explicitly selected environment file.
-  const result = cp.spawnSync(process.execPath, [${JSON.stringify(join(root, 'deploy/vm/configure.mjs'))}], { stdio: 'inherit', env: { PATH: process.env.PATH, HOME: process.env.HOME, WATCHTOWER_ENV_FILE: envFile } });
+  const result = cp.spawnSync(process.execPath, [${JSON.stringify(join(root, 'deploy/vm/configure.mjs'))}], { stdio: 'inherit', env: { PATH: process.env.PATH, HOME: process.env.HOME, UNSPAMMED_ENV_FILE: envFile } });
   process.exit(result.status);
 }
 if (args[0] === 'compose' && args.includes('--env-file') && process.env.MOCK_COMPOSE_PROBE) {
-  const overrides = ['COMPOSE_FILE', 'COMPOSE_ENV_FILES', 'COMPOSE_PROFILES', 'POSTGRES_PASSWORD', 'WATCHTOWER_DATABASE_PASSWORD', 'WATCHTOWER_BIND', 'WATCHTOWER_PORT', 'WATCHTOWER_DOMAIN'].filter(key => process.env[key] !== undefined);
+  const overrides = ['WATCHTOWER_DATABASE_PASSWORD', 'WATCHTOWER_BIND', 'WATCHTOWER_PORT', 'WATCHTOWER_DOMAIN', 'COMPOSE_FILE', 'COMPOSE_ENV_FILES', 'COMPOSE_PROFILES', 'POSTGRES_PASSWORD', 'UNSPAMMED_DATABASE_PASSWORD', 'UNSPAMMED_BIND', 'UNSPAMMED_PORT', 'UNSPAMMED_DOMAIN'].filter(key => process.env[key] !== undefined);
   fs.writeFileSync(process.env.MOCK_COMPOSE_PROBE, JSON.stringify({ overrides, project: process.env.COMPOSE_PROJECT_NAME, dockerHost: process.env.DOCKER_HOST, dockerConfig: process.env.DOCKER_CONFIG }));
   if (args.includes('--quiet') && process.env.MOCK_REAL_DOCKER) {
     const result = cp.spawnSync(process.env.MOCK_REAL_DOCKER, [...args.filter(arg => arg !== '--quiet'), '--format', 'json'], { encoding: 'utf8', env: process.env });
@@ -271,8 +271,8 @@ test('VM installer honors the shared environment selector and its explicit VM ov
     save(selected, { ...base, TELEGRAM_CHAT_ID: '-1005555555555' });
     succeed(
       install(cwd, {
-        WATCHTOWER_ENV_FILE: override ? 'missing-unused-input.env' : selected,
-        ...(override ? { WATCHTOWER_VM_ENV: selected } : {}),
+        UNSPAMMED_ENV_FILE: override ? 'missing-unused-input.env' : selected,
+        ...(override ? { UNSPAMMED_VM_ENV: selected } : {}),
       }),
     );
     const runtime = parseEnv(readFileSync(join(cwd, '.watchtower/runtime.env'), 'utf8'));
@@ -301,10 +301,14 @@ test('VM installer deploys private inputs despite conflicting shell exports and 
       COMPOSE_ENV_FILES: 'some-other-input.env',
       COMPOSE_PROFILES: 'https',
       POSTGRES_PASSWORD: 'conflicting-admin-password',
-      WATCHTOWER_DATABASE_PASSWORD: 'conflicting-runtime-password',
+      UNSPAMMED_DATABASE_PASSWORD: 'conflicting-runtime-password',
+      UNSPAMMED_BIND: '0.0.0.0',
+      UNSPAMMED_PORT: '9999',
+      UNSPAMMED_DOMAIN: 'conflicting.example',
+      WATCHTOWER_DATABASE_PASSWORD: 'legacy-conflicting-password',
       WATCHTOWER_BIND: '0.0.0.0',
-      WATCHTOWER_PORT: '9999',
-      WATCHTOWER_DOMAIN: 'conflicting.example',
+      WATCHTOWER_PORT: '9998',
+      WATCHTOWER_DOMAIN: 'legacy-conflicting.example',
       COMPOSE_PROJECT_NAME: 'fixture-isolated-project',
       DOCKER_HOST: dockerHost,
       DOCKER_CONFIG: dockerConfig,
@@ -322,8 +326,8 @@ test('VM installer deploys private inputs despite conflicting shell exports and 
     const checked = JSON.parse(readFileSync(`${probe}.config`, 'utf8'));
     assert.equal(checked.services.db.environment.POSTGRES_PASSWORD, input.POSTGRES_PASSWORD);
     assert.equal(
-      checked.services.db.environment.WATCHTOWER_DATABASE_PASSWORD,
-      input.WATCHTOWER_DATABASE_PASSWORD,
+      checked.services.db.environment.UNSPAMMED_DATABASE_PASSWORD,
+      input.UNSPAMMED_DATABASE_PASSWORD,
     );
     assert.equal(checked.services.watchtower.ports[0].host_ip, '127.0.0.1');
     assert.equal(checked.services.watchtower.ports[0].published, '3000');
@@ -335,8 +339,50 @@ test('VM installer refuses an unignored custom input before invoking Docker', (t
   succeed(spawnSync('git', ['init', '-q'], { cwd, encoding: 'utf8' }));
   copyFileSync(join(root, '.gitignore'), join(cwd, '.gitignore'));
   save(join(cwd, 'unignored-input'), base);
-  const result = install(cwd, { WATCHTOWER_VM_ENV: 'unignored-input' });
+  const result = install(cwd, { UNSPAMMED_VM_ENV: 'unignored-input' });
   assert.equal(result.status, 1);
   assert.match(result.stderr, /not ignored by Git/);
   assert.equal(existsSync(log), false);
+});
+
+test('VM upgrades accept legacy options without rotating credentials or storage identities', (t) => {
+  const cwd = temporary(t);
+  save(join(cwd, 'app.env'), {
+    ...base,
+    DATABASE_URL: 'postgresql://watchtower:legacy-fixture-password@db:5432/watchtower',
+    DATABASE_SSL_MODE: 'disable',
+    COMPOSE_PROFILES: 'bundled-db,https',
+    WATCHTOWER_DATABASE_PASSWORD: 'legacy-fixture-password',
+    POSTGRES_PASSWORD: 'legacy-admin-password',
+    WATCHTOWER_DOMAIN: 'fixture.example',
+    WATCHTOWER_BIND: '127.0.0.1',
+    WATCHTOWER_PORT: '3100',
+  });
+  succeed(
+    configure(cwd, { WATCHTOWER_ENV_FILE: join(cwd, 'app.env'), UNSPAMMED_ENV_FILE: undefined }),
+  );
+  const input = parseEnv(readFileSync(join(cwd, 'app.env'), 'utf8'));
+  const compose = parseEnv(readFileSync(join(cwd, '.watchtower/compose.env'), 'utf8'));
+  assert.equal(input.WATCHTOWER_DATABASE_PASSWORD, 'legacy-fixture-password');
+  assert.equal(input.UNSPAMMED_DATABASE_PASSWORD, 'legacy-fixture-password');
+  assert.equal(input.POSTGRES_PASSWORD, 'legacy-admin-password');
+  assert.equal(compose.UNSPAMMED_DATABASE_PASSWORD, 'legacy-fixture-password');
+  assert.equal(compose.UNSPAMMED_DOMAIN, 'fixture.example');
+  assert.equal(compose.UNSPAMMED_BIND, '127.0.0.1');
+  assert.equal(compose.UNSPAMMED_PORT, '3100');
+  assert.equal(
+    parseEnv(readFileSync(join(cwd, '.watchtower/runtime.env'), 'utf8')).DATABASE_URL,
+    input.DATABASE_URL,
+  );
+});
+
+test('VM installer still honors legacy environment selectors', (t) => {
+  const { cwd } = installerFixture(t);
+  const selected = join(cwd, 'legacy-input.env');
+  save(selected, { ...base, TELEGRAM_CHAT_ID: '-1005555555555' });
+  succeed(install(cwd, { WATCHTOWER_ENV_FILE: 'unused.env', WATCHTOWER_VM_ENV: selected }));
+  assert.equal(
+    parseEnv(readFileSync(join(cwd, '.watchtower/runtime.env'), 'utf8')).TELEGRAM_CHAT_ID,
+    '-1005555555555',
+  );
 });

@@ -25,7 +25,9 @@ export async function main(args = process.argv.slice(2)) {
     console.log(
       'Usage: npm run setup -- --provider cloudflare|railway|digitalocean|vercel|render|fly [--browser-auth] [--force]',
     );
-    console.log('Set inputs in .env or WATCHTOWER_ENV_FILE. Legacy .dev.vars is a fallback.');
+    console.log(
+      'Set inputs in .env or UNSPAMMED_ENV_FILE (legacy WATCHTOWER_ENV_FILE also works). Legacy .dev.vars is a fallback.',
+    );
     console.log(
       '--doctor validates locally; --check also checks Telegram permissions and the public /health endpoint. Both are read-only.',
     );
@@ -44,11 +46,15 @@ export async function main(args = process.argv.slice(2)) {
   } catch {
     /* Fresh checkout. */
   }
-  const provider = options['--provider'] || process.env.WATCHTOWER_PROVIDER || savedProvider;
+  const provider =
+    options['--provider'] || canonicalEnvironment(process.env).UNSPAMMED_PROVIDER || savedProvider;
   if (!providers.includes(provider)) throw new Error(`Choose --provider ${providers.join('|')}.`);
   const check = args.includes('--check');
   const doctor = args.includes('--doctor') || check;
-  const envPath = process.env.WATCHTOWER_ENV_FILE ? loaded.path : resolve(cwd, '.env');
+  const envPath =
+    (process.env.UNSPAMMED_ENV_FILE ?? process.env.WATCHTOWER_ENV_FILE)
+      ? loaded.path
+      : resolve(cwd, '.env');
   if (!doctor)
     assertPrivatePaths(cwd, [
       envPath,
@@ -62,7 +68,7 @@ export async function main(args = process.argv.slice(2)) {
     : generatedEnvironment(process.env, provider, args.includes('--browser-auth'));
   if (!doctor)
     saveEnvironmentDefaults(envPath, env, {
-      replaceKeys: ['DEV_MODE', 'DATABASE_BACKEND', 'WATCHTOWER_PROVIDER'],
+      replaceKeys: ['DEV_MODE', 'DATABASE_BACKEND', 'UNSPAMMED_PROVIDER', 'WATCHTOWER_PROVIDER'],
     });
   const { errors } = validateConfiguration(env, provider);
   if (env.DEV_MODE !== 'false') errors.push('Set DEV_MODE=false before a production deployment.');
@@ -72,7 +78,7 @@ export async function main(args = process.argv.slice(2)) {
     for (const error of errors) console.error(`- ${error}`);
     if (!doctor)
       console.error(
-        'Private setup inputs were saved without replacing existing credentials. Fill the missing values in .env (or WATCHTOWER_ENV_FILE), then rerun setup.',
+        'Private setup inputs were saved without replacing existing credentials. Fill the missing values in .env or your UNSPAMMED_ENV_FILE, then rerun setup.',
       );
     process.exitCode = 1;
     return;

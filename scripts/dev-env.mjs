@@ -10,12 +10,12 @@ import {
 } from './setup-lib.mjs';
 
 export function prepareDevEnvironment({ cwd = process.cwd(), env = process.env } = {}) {
-  const explicit = env.WATCHTOWER_ENV_FILE;
+  const selector =
+    env.UNSPAMMED_ENV_FILE !== undefined ? 'UNSPAMMED_ENV_FILE' : 'WATCHTOWER_ENV_FILE';
+  const explicit = env[selector];
   const source = explicit ? resolve(cwd, explicit) : resolve(cwd, '.dev.vars.example');
   if (!existsSync(source))
-    throw new Error(
-      explicit ? 'WATCHTOWER_ENV_FILE does not exist.' : 'Missing .dev.vars.example.',
-    );
+    throw new Error(explicit ? `${selector} does not exist.` : 'Missing .dev.vars.example.');
   assertPrivatePaths(cwd, ['.tmp/dev/local.vars']);
   const vars = parseEnv(readFileSync(source, 'utf8'));
   vars.DEV_MODE = 'true';
@@ -50,6 +50,7 @@ export function prepareDevEnvironment({ cwd = process.cwd(), env = process.env }
     'WORKER_URL',
     'PLANETSCALE_DATABASE_URL',
     'PLANETSCALE_ADMIN_DATABASE_URL',
+    'UNSPAMMED_ENV_FILE',
     'WATCHTOWER_ENV_FILE',
   ])
     delete childEnv[key];

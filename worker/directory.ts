@@ -139,7 +139,9 @@ export class GroupDirectory implements Directory {
     let current = await this.get(chatId);
     const ownerCommand =
       message?.from?.id === Number(this.env.OWNER_TELEGRAM_ID) &&
-      /^(?:\/watchtower(?:@\w+)?\s*$|\/start(?:@\w+)?\s+watchtower\s*$)/i.test(message.text || '');
+      /^(?:\/(?:unspammed|watchtower)(?:@\w+)?\s*$|\/start(?:@\w+)?\s+(?:unspammed|watchtower)\s*$)/i.test(
+        message.text || '',
+      );
     if (!current && !event && !ownerCommand) return null;
     if (
       !current &&
@@ -209,7 +211,7 @@ export class GroupDirectory implements Directory {
     if (!existing)
       throw new HttpError(
         404,
-        'This group has not been detected yet. Add the bot or send /watchtower as the owner.',
+        'This group has not been detected yet. Add the bot or send /unspammed as the owner.',
       );
     const me = await telegram<{ id: number; username: string }>(this.env, 'getMe');
     const chat = await telegram<{ id: number; title: string; type: string }>(this.env, 'getChat', {

@@ -1,4 +1,4 @@
-# Fly.io configuration for Watchtower.
+# Fly.io configuration for Unspammed.
 # Replace the app name with your own Fly app name (fly apps create <name>).
 # Set secrets from your private setup output, for example:
 #   npm run setup -- --provider fly
@@ -6,7 +6,7 @@
 # Then deploy with: fly deploy
 # Keep at least one machine running: scheduling uses the in-process
 # Node scheduler, so the app must not scale to zero.
-app = "your-watchtower-app"
+app = "your-unspammed-app"
 primary_region = "iad"
 
 [build]

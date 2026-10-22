@@ -172,7 +172,7 @@ export function postgresConfig(
         : { rejectUnauthorized: true, ...(options.sslCa ? { ca: options.sslCa } : {}) },
     connectionTimeoutMillis: 10_000,
     query_timeout: 30_000,
-    application_name: 'watchtower',
+    application_name: 'unspammed',
     types: {
       getTypeParser(oid, format) {
         if (format !== 'binary' && [20, 1700].includes(oid))

@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "watchtower-local",
+  "name": "unspammed-local",
   "main": "worker/local.ts",
   "compatibility_date": "2026-10-10",
   "compatibility_flags": ["nodejs_compat"],

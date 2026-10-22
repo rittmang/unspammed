@@ -1,20 +1,13 @@
 import assert from 'node:assert/strict';
 import { spawn, spawnSync } from 'node:child_process';
 import { createHmac, randomBytes } from 'node:crypto';
-import {
-  copyFileSync,
-  existsSync,
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { createServer } from 'node:net';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseEnv } from 'node:util';
 import pg from 'pg';
+import { copyVerificationSource } from './verification-source.mjs';
 
 // Reproduce a new checkout without inheriting deployment files, tokens, or shell credentials.
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -59,18 +52,7 @@ try {
     { cwd: root, encoding: 'utf8' },
   );
   assert.equal(listing.status, 0, 'Run this check from the source checkout.');
-  for (const file of new Set(listing.stdout.split('\0').filter(Boolean))) {
-    if (
-      /^(?:\.git\/|\.tmp\/|\.watchtower\/|\.wrangler\/|\.vercel\/|node_modules\/|dist\/|coverage\/|wrangler\.(?:production|generated)\.jsonc$)/.test(
-        file,
-      )
-    )
-      continue;
-    if (/^(?:\.env|\.dev.vars)(?:$|\.)/.test(file) && !file.endsWith('.example')) continue;
-    if (!existsSync(join(root, file))) continue;
-    mkdirSync(dirname(join(clean, file)), { recursive: true });
-    copyFileSync(join(root, file), join(clean, file));
-  }
+  copyVerificationSource(root, clean, listing.stdout.split('\0').filter(Boolean));
   assert(!existsSync(join(clean, '.env')) && !existsSync(join(clean, '.dev.vars')));
   console.log('Clean source copy contains no deployment credentials. Installing from lockfile…');
   run('npm', ['ci', '--no-audit', '--no-fund']);
@@ -88,7 +70,7 @@ try {
     OWNER_TELEGRAM_ID: '135791357',
     TELEGRAM_BOT_USERNAME: 'fresh_install_bot',
     CLOUDFLARE_ACCOUNT_ID: 'a'.repeat(32),
-    WATCHTOWER_NAME: 'fresh-install-fixture',
+    UNSPAMMED_NAME: 'fresh-install-fixture',
   };
   const save = (path, values) =>
     writeFileSync(
@@ -162,7 +144,7 @@ try {
     Object.assign(runtime, {
       DATABASE_URL: runtimeDatabase.href,
       DATABASE_SSL_MODE: 'disable',
-      WATCHTOWER_SCHEDULER: 'false',
+      UNSPAMMED_SCHEDULER: 'false',
     });
     const probe = createServer();
     await new Promise((resolve) => probe.listen(0, '127.0.0.1', resolve));
@@ -216,7 +198,7 @@ try {
       headers: {
         Origin: runtime.PUBLIC_URL,
         'Content-Type': 'application/json',
-        'X-Watchtower-Request': '1',
+        'X-Unspammed-Request': '1',
       },
       body: JSON.stringify({ token: runtime.BROWSER_AUTH_TOKEN }),
     });
@@ -263,7 +245,7 @@ try {
           headers: {
             Cookie: cookie,
             Origin: 'https://attacker.example',
-            'X-Watchtower-Request': '1',
+            'X-Unspammed-Request': '1',
           },
         })
       ).status,

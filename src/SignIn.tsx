@@ -60,7 +60,11 @@ export function AuthGate({ children }: { children: ReactNode }) {
         method: 'POST',
         credentials: 'same-origin',
         redirect: 'error',
-        headers: { 'Content-Type': 'application/json', 'X-Watchtower-Request': '1' },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Unspammed-Request': '1',
+          'X-Watchtower-Request': '1',
+        },
         body: JSON.stringify({ token }),
       });
       if (!response.ok)
@@ -79,7 +83,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
   if (miniAuthenticated || status?.authenticated) return children;
   return (
     <main className="group-bootstrap sign-in">
-      <h1>Sign in to Watchtower</h1>
+      <h1>Sign in to Unspammed</h1>
       <p>
         {status
           ? 'Choose an owner sign-in method configured for this installation.'
@@ -153,7 +157,7 @@ export async function signOutBrowser() {
     method: 'POST',
     credentials: 'same-origin',
     redirect: 'error',
-    headers: { 'X-Watchtower-Request': '1' },
+    headers: { 'X-Unspammed-Request': '1', 'X-Watchtower-Request': '1' },
   });
   if (!response.ok) throw new Error('Could not sign out. Try again.');
   window.dispatchEvent(new Event('watchtower:unauthorized'));

@@ -5,6 +5,7 @@ import assert from 'node:assert/strict';
 import { createHmac } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { parseEnv } from 'node:util';
+import { canonicalEnvironment } from './setup-env.mjs';
 import { parseOptions, validatePublicOrigin } from './setup-lib.mjs';
 
 async function main() {
@@ -12,11 +13,11 @@ async function main() {
     flags: ['--database', '--cron'],
     values: ['--url'],
     usage:
-      'WATCHTOWER_ENV_FILE=private-test.env node scripts/verify-hosted.mjs --url https://test.example [--database] [--cron]',
+      'UNSPAMMED_ENV_FILE=private-test.env node scripts/verify-hosted.mjs --url https://test.example [--database] [--cron]',
   });
-  const file = process.env.WATCHTOWER_ENV_FILE;
+  const file = process.env.UNSPAMMED_ENV_FILE ?? process.env.WATCHTOWER_ENV_FILE;
   if (!file)
-    throw new Error('Select an explicit private test environment with WATCHTOWER_ENV_FILE.');
+    throw new Error('Select an explicit private test environment with UNSPAMMED_ENV_FILE.');
   const source = readFileSync(file, 'utf8');
   let env;
   try {
@@ -24,9 +25,10 @@ async function main() {
   } catch {
     throw new Error('The explicit private test environment could not be parsed.');
   }
-  if (options['--cron'] && env.WATCHTOWER_TEST_FIXTURE !== 'true')
+  env = canonicalEnvironment(env);
+  if (options['--cron'] && env.UNSPAMMED_TEST_FIXTURE !== 'true')
     throw new Error(
-      'Cron checks require WATCHTOWER_TEST_FIXTURE=true in an empty disposable test environment; pending background work may execute.',
+      'Cron checks require UNSPAMMED_TEST_FIXTURE=true in an empty disposable test environment; pending background work may execute.',
     );
   const origin = validatePublicOrigin(options['--url'] || env.PUBLIC_URL);
   const expectedOrigin = validatePublicOrigin(env.PUBLIC_URL || origin);
@@ -54,7 +56,7 @@ async function main() {
     await response.body?.cancel();
   };
   const health = await request('public health', '/health', 200);
-  assert.equal((await health.json()).service, 'watchtower');
+  assert.equal((await health.json()).service, 'unspammed');
   const root = await request('public browser shell', '/', 200);
   assert.equal(root.headers.get('X-Frame-Options'), 'DENY');
   assert.equal(root.headers.get('Cache-Control'), 'no-store');
@@ -106,7 +108,7 @@ async function main() {
   const headers = {
     Origin: expectedOrigin,
     'Content-Type': 'application/json',
-    'X-Watchtower-Request': '1',
+    'X-Unspammed-Request': '1',
   };
   await cancel(
     await request('wrong browser token denied', '/api/auth/login', 401, {

@@ -6,7 +6,7 @@ set -eu
 cd -P "$(dirname "$0")/../.."
 
 # Validate the selected input before installing anything or invoking Docker.
-ENV_FILE="${WATCHTOWER_VM_ENV:-${WATCHTOWER_ENV_FILE:-app.env}}"
+ENV_FILE="${UNSPAMMED_VM_ENV:-${WATCHTOWER_VM_ENV:-${UNSPAMMED_ENV_FILE:-${WATCHTOWER_ENV_FILE:-app.env}}}}"
 if [ ! -f "$ENV_FILE" ] || [ -L "$ENV_FILE" ]; then
   echo "Missing regular private input file. Copy deploy/vm/app.env.example to app.env and set your values." >&2
   exit 1
@@ -49,20 +49,21 @@ docker info >/dev/null
 
 echo "Preparing private runtime configuration..."
 docker run --rm -v "$PWD:/app" -v "$ENV_FILE:$ENV_FILE" -w /app \
-  -e "WATCHTOWER_ENV_FILE=$ENV_FILE" node:22-bookworm-slim node deploy/vm/configure.mjs
+  -e "UNSPAMMED_ENV_FILE=$ENV_FILE" node:22-bookworm-slim node deploy/vm/configure.mjs
 
 # Compose gives exported shell values precedence over --env-file. Use the same
 # selected private inputs for generation and deployment, regardless of an older
 # shell's profile/password/port settings. Keep the Docker connection and explicit
 # project namespace available to operators and isolated verification projects.
 unset COMPOSE_FILE COMPOSE_ENV_FILES COMPOSE_PROFILES POSTGRES_PASSWORD \
+  UNSPAMMED_DATABASE_PASSWORD UNSPAMMED_BIND UNSPAMMED_PORT UNSPAMMED_DOMAIN \
   WATCHTOWER_DATABASE_PASSWORD WATCHTOWER_BIND WATCHTOWER_PORT WATCHTOWER_DOMAIN
 
 compose() {
   docker compose --env-file .watchtower/compose.env "$@"
 }
 compose config --quiet
-echo "Building Watchtower..."
+echo "Building Unspammed..."
 compose build watchtower
 if compose config --services | grep -qx db; then
   echo "Starting the private database..."
@@ -75,9 +76,9 @@ echo "Initializing the application schema without replacing existing data..."
 # The host file is root-owned 0600 on a fresh VM; only this bootstrap process
 # runs as root inside its container so the normal unprivileged app need not read it.
 compose run --rm --no-deps --user 0:0 -v "$ENV_FILE:/run/watchtower-bootstrap.env:ro" \
-  -e WATCHTOWER_ENV_FILE=/run/watchtower-bootstrap.env watchtower \
+  -e UNSPAMMED_ENV_FILE=/run/watchtower-bootstrap.env watchtower \
   node --import tsx scripts/database-setup.ts
-echo "Starting Watchtower..."
+echo "Starting Unspammed..."
 compose up -d --wait
 echo "Done. Check: docker compose --env-file .watchtower/compose.env ps"
 echo "Verify your public HTTPS /health, then run the documented Telegram checks inside the app container."

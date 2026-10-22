@@ -310,7 +310,7 @@ export async function classify(
         headers: {
           Authorization: `Bearer ${env[provider.apiKeyEnv]}`,
           'Content-Type': 'application/json',
-          'X-Title': 'Watchtower Telegram moderation',
+          'X-Title': 'Unspammed Telegram moderation',
         },
         body: JSON.stringify(requestPayload(provider, model, policy, examples, thresholds)),
         signal: AbortSignal.timeout(25000),

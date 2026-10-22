@@ -1,15 +1,17 @@
-# Watchtower
+# Unspammed
 
-Watchtower is a private Telegram moderation bot with a dashboard for reviewing messages, labelling datasets, comparing models, and improving your moderation policy. Cloudflare Workers, persistent Node 22 and Vercel entry points share the same moderation, PostgreSQL storage and authentication code. Provider templates and their actual verification status are listed in the [provider evidence register](docs/provider-verification.md).
+Unspammed is a private Telegram moderation bot with a dashboard for reviewing messages, labelling datasets, comparing models, and improving your moderation policy. Cloudflare Workers, persistent Node 22 and Vercel entry points share the same moderation, PostgreSQL storage and authentication code. Provider templates and their actual verification status are listed in the [provider evidence register](docs/provider-verification.md).
 
-New groups start in **Observe**: messages can be scored and reviewed, but Watchtower does not delete messages, issue strikes or ban until you explicitly choose **Enforce**. Historical imports never trigger live moderation.
+**Naaradmuni** is the self-hosted edition documented in this repository: bring your own bot, infrastructure and model-provider billing. **Unspammed Bot** is the planned hosted edition associated with [@unspammedbot](https://t.me/unspammedbot). Its **US$5/month is a placeholder**, and hosted signup, checkout, billing and automatic provisioning are not implemented. Claiming the username does not establish a configured or running service. See [editions and pricing status](docs/brand-and-editions.md).
+
+New groups start in **Observe**: messages can be scored and reviewed, but Unspammed does not delete messages, issue strikes or ban until you explicitly choose **Enforce**. Historical imports never trigger live moderation.
 
 ## What you need
 
-For a hosted installation, bring your own:
+For your Naaradmuni self-hosted installation, bring your own:
 
 - Telegram bot, numeric owner user ID, and a supergroup where both the bot and owner are administrators. The bot needs Delete messages and Ban users permissions.
-- PostgreSQL database and an application role that can use and create objects in its Watchtower schema.
+- PostgreSQL database and an application role that can use and create objects in its application schema.
 - Public HTTPS application host and a scheduler that keeps processing persisted work. Your host's supplied domain is sufficient.
 - Model-provider key when you are ready to classify messages or run evaluations. A key is optional for installation, importing, labelling and reviewing saved data.
 
@@ -26,7 +28,7 @@ npm ci
 npm run dev
 ```
 
-Open **http://127.0.0.1:5173**. The local development script uses Wrangler on port 8787, Vite on 5173, and isolated SQLite state under `.tmp/dev/state`. Its default credentials are deliberately fake and isolated in ignored `.tmp/dev/local.vars`; it never reads or edits your hosted credential files. Set `WATCHTOWER_ENV_FILE` explicitly only when you intend to use a separate test bot. The local owner bypass requires both `DEV_MODE=true` and a loopback request URL. Hosted setup requires `DEV_MODE=false`.
+Open **http://127.0.0.1:5173**. The local development script uses Wrangler on port 8787, Vite on 5173, and isolated SQLite state under `.tmp/dev/state`. Its default credentials are deliberately fake and isolated in ignored `.tmp/dev/local.vars`; it never reads or edits your hosted credential files. Set `UNSPAMMED_ENV_FILE` explicitly only when you intend to use a separate test bot. The local owner bypass requires both `DEV_MODE=true` and a loopback request URL. Hosted setup requires `DEV_MODE=false`.
 
 Without credentials you can inspect the UI and import, label and export evaluation datasets. Provider calls require a real key. Use a separate bot and disposable test supergroup for development with Telegram credentials. Local SQLite is a development adapter for one group; production and multi-group operation use PostgreSQL.
 
@@ -48,7 +50,7 @@ npm run telegram:setup
 npm run telegram:mini-app
 ```
 
-Setup creates no hosted resources and does not register Telegram endpoints; `database:setup` writes only to your database, and `telegram:setup` is the first step that changes Telegram. `.env` is private and ignored by Git. Setup tools read process environment first, then `WATCHTOWER_ENV_FILE`, otherwise `.env`, otherwise legacy `.dev.vars`.
+Setup creates no hosted resources and does not register Telegram endpoints; `database:setup` writes only to your database, and `telegram:setup` is the first step that changes Telegram. `.env` is private and ignored by Git. Setup tools read process environment first, then `UNSPAMMED_ENV_FILE` (legacy `WATCHTOWER_ENV_FILE` remains supported), otherwise `.env`, otherwise legacy `.dev.vars`. Existing private `.watchtower/` outputs and database namespaces remain stable across the rebrand.
 
 ## Moderation and review
 
@@ -58,7 +60,7 @@ The dashboard includes Overview, Messages, Strike history, Model lab, Policy imp
 - Second strike also queues deletion of that person's tracked messages still inside Telegram's deletion window.
 - Third strike permanently bans the person and queues eligible tracked-message deletion.
 
-The Bot API generally limits deletion to messages less than 48 hours old. A successful ban does not prove every historical message disappeared. Watchtower records spam internally; the Bot API provides no native Report Spam or arbitrary group-history export endpoint. Optional owner-account cleanup uses Telegram's client API and requires a separate connection and per-user confirmation. [Telegram deletion](https://core.telegram.org/bots/api#deletemessage), [banChatMember](https://core.telegram.org/bots/api#banchatmember), [client history deletion](https://core.telegram.org/method/channels.deleteParticipantHistory).
+The Bot API generally limits deletion to messages less than 48 hours old. A successful ban does not prove every historical message disappeared. Unspammed records spam internally; the Bot API provides no native Report Spam or arbitrary group-history export endpoint. Optional owner-account cleanup uses Telegram's client API and requires a separate connection and per-user confirmation. [Telegram deletion](https://core.telegram.org/bots/api#deletemessage), [banChatMember](https://core.telegram.org/bots/api#banchatmember), [client history deletion](https://core.telegram.org/method/channels.deleteParticipantHistory).
 
 Text, captions, polls and hidden links are classified. Enabled image processing supports photos and JPEG/PNG/WebP image documents with configurable vision routing; unsupported/unavailable media goes to review without a strike. Video and audio are not analysed. The owner, known administrators, bots, anonymous admins and channel senders are exempt; a failed administrator lookup prevents enforcement.
 
@@ -78,7 +80,7 @@ npm run format:check
 Optional PostgreSQL integration tests require a **disposable loopback database**. They clear test namespaces and must never target a live installation:
 
 ```sh
-TEST_POSTGRES_URL=postgresql://test_user@127.0.0.1:5432/watchtower_test npm run check
+TEST_POSTGRES_URL=postgresql://test_user@127.0.0.1:5432/unspammed_test npm run check
 ```
 
 `npm run test:fresh` copies the source without private deployment files, installs from the lockfile, and checks all six provider setup choices. Supply `TEST_POSTGRES_URL` to additionally initialize a new schema and exercise the production-only Node dependencies with browser and Telegram owner authentication. This clean-install check needs a disposable local database administrator able to create a temporary restricted role; it removes that role and schema afterward. Without the variable, database/runtime verification is explicitly skipped.

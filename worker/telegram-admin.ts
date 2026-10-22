@@ -180,7 +180,7 @@ export class TelegramAdminService {
       await this.clearLogin();
       throw new HttpError(
         403,
-        'Connect the Telegram account configured as Watchtower’s owner. The other account was signed out.',
+        'Connect the Telegram account configured as Unspammed’s owner. The other account was signed out.',
       );
     }
     await this.seal('vault', { session: client.save(), account } satisfies Vault);

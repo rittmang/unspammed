@@ -1,5 +1,12 @@
 import { z } from 'zod';
-import { authorize, authRoute, isLocal, secureEqual, verifyMutation } from './auth';
+import {
+  applicationHeader,
+  authorize,
+  authRoute,
+  isLocal,
+  secureEqual,
+  verifyMutation,
+} from './auth';
 import type { Env } from './env';
 import { GroupService } from './group';
 import { PostgresDatabase } from './database';
@@ -45,6 +52,7 @@ async function dispatchGroupWork(env: Env, chatId: string, cleanup: boolean) {
     headers: {
       'Content-Type': 'application/json',
       'X-Watchtower-Work-Secret': env.TELEGRAM_WEBHOOK_SECRET,
+      'X-Unspammed-Work-Secret': env.TELEGRAM_WEBHOOK_SECRET,
     },
     // Omit dispatch so a child can never recursively dispatch itself.
     body: JSON.stringify({ chatId, cleanup }),
@@ -87,13 +95,13 @@ export function createWorker(
           request = new Request(url, request);
         }
         if (url.pathname === '/health' && request.method === 'GET')
-          return json({ ok: true, service: 'watchtower' });
+          return json({ ok: true, service: 'unspammed' });
         if (url.pathname === '/internal/work') {
           if (
             request.method !== 'POST' ||
             !env.TELEGRAM_WEBHOOK_SECRET ||
             !(await secureEqual(
-              request.headers.get('X-Watchtower-Work-Secret') || '',
+              applicationHeader(request, 'Work-Secret') || '',
               env.TELEGRAM_WEBHOOK_SECRET,
             ))
           )
@@ -189,7 +197,7 @@ export function createWorker(
           return securityHeaders(await resolveDirectory(env).fetch(request));
         if (url.pathname.startsWith('/api/')) {
           const chatId =
-            request.headers.get('X-Watchtower-Group') ||
+            applicationHeader(request, 'Group') ||
             (/^\/api\/messages\/\d+\/image$/.test(url.pathname)
               ? url.searchParams.get('group')
               : null) ||
@@ -205,7 +213,7 @@ export function createWorker(
             if (chatId !== env.TELEGRAM_CHAT_ID || liveWrite) {
               const selected = await directory.get(chatId);
               if (!selected?.provisioned)
-                throw new HttpError(404, 'Activate this group in Watchtower first.');
+                throw new HttpError(404, 'Activate this group in Unspammed first.');
               if (liveWrite && selected.status !== 'active')
                 throw new HttpError(409, 'Reconnect this group before changing live moderation.');
             }

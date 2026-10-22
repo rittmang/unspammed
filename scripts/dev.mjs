@@ -28,7 +28,7 @@ const args = [
   'DATABASE_BACKEND:sqlite',
 ];
 console.log(
-  `Watchtower: http://127.0.0.1:5173 (local owner access). ${explicit ? 'Explicit test credentials copied into isolated local configuration.' : 'Demo data only; existing .env and .dev.vars are untouched.'}`,
+  `Unspammed: http://127.0.0.1:5173 (local owner access). ${explicit ? 'Explicit test credentials copied into isolated local configuration.' : 'Demo data only; existing .env and .dev.vars are untouched.'}`,
 );
 // Assets must exist for Wrangler, even though Vite serves the UI in development.
 if (!existsSync('dist/index.html')) {

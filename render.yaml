@@ -1,4 +1,4 @@
-# Render Blueprint for Watchtower.
+# Render Blueprint for Unspammed.
 # Connect your own repository and account; no account or resource IDs are stored here.
 # Before deploying, run: npm run setup -- --provider render
 # Then import the values from .watchtower/runtime.env into this service's
@@ -11,20 +11,20 @@
 # DATABASE_URL from it, for example:
 #
 # databases:
-#   - name: watchtower-db
+#   - name: unspammed-db
 #     plan: basic-256mb
 #
 # and replace the DATABASE_URL entry under envVars with:
 #
 #       - key: DATABASE_URL
 #         fromDatabase:
-#           name: watchtower-db
+#           name: unspammed-db
 #           property: connectionString
 #
 # Do not set both a prompted DATABASE_URL and a fromDatabase DATABASE_URL.
 services:
   - type: web
-    name: watchtower
+    name: unspammed
     runtime: docker
     plan: starter
     dockerfilePath: ./Dockerfile

@@ -1,6 +1,6 @@
 # Deployment operations and verification
 
-Use [the hosting guide](hosting.md) to create a new installation. This document describes the current deployment contract and how to verify it. [Historical deployments](deployment-history.md) record earlier release milestones; those records do not establish the state of this branch or another provider.
+Use [the hosting guide](hosting.md) to create a Naaradmuni self-hosted installation of Unspammed with your own bot and infrastructure. This document describes the current deployment contract and how to verify it. The [planned hosted edition](brand-and-editions.md) has no implemented checkout, subscriptions or automatic provisioning. [Historical deployments](deployment-history.md) record earlier release milestones; those records do not establish the state of this branch or another provider.
 
 ## Current implementation
 
@@ -16,7 +16,7 @@ Use ignored `.env` and `npm run setup -- --provider PROVIDER`; add `--browser-au
 
 `PUBLIC_URL` is the canonical application HTTPS origin. `WORKER_URL` remains a legacy alias. `DATABASE_URL` is portable PostgreSQL; old PlanetScale names remain aliases. Preserve `DATABASE_ROOT_CHAT_ID`/the initial schema namespace when switching default workspaces. `DATABASE_ADMIN_URL` is bootstrap-only and must not be a runtime secret. Keep runtime-role grants and verified TLS correct when moving hosts.
 
-The Node service listens on `PORT` (default 3000) and `HOST` (default `0.0.0.0`). Its scheduler runs at startup and each minute; `WATCHTOWER_SCHEDULER=false` disables automatic ticks for isolated checks. Durable PostgreSQL cursors resume work and retention after a process restart. A process timer cannot run while a host sleeps or scales to zero. Multiple replicas still coordinate through database leases; preserve scheduler time budgets and avoid unnecessary parallel external calls.
+The Node service listens on `PORT` (default 3000) and `HOST` (default `0.0.0.0`). Its scheduler runs at startup and each minute; `UNSPAMMED_SCHEDULER=false` (legacy `WATCHTOWER_SCHEDULER=false`) disables automatic ticks for isolated checks. Durable PostgreSQL cursors resume work and retention after a process restart. A process timer cannot run while a host sleeps or scales to zero. Multiple replicas still coordinate through database leases; preserve scheduler time budgets and avoid unnecessary parallel external calls.
 
 Vercel cannot use that timer. Its manifest schedules `/api/cron` each minute, requires `Authorization: Bearer CRON_SECRET`, and sets 300 seconds maximum function duration. Built-in minute cron requires an appropriate plan. The adapter processes bounded work and persists the rest for later ticks; a terminated invocation is recovered through leases/cursors rather than memory. See [provider constraints](hosting.md#vercel).
 

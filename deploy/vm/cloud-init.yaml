@@ -10,8 +10,8 @@ runcmd:
   - [
       sh,
       -ec,
-      'test -d /opt/watchtower/.git || git clone YOUR_FORK_OR_CLONE_URL /opt/watchtower;
+      'test -d /opt/unspammed/.git || git clone YOUR_FORK_OR_CLONE_URL /opt/unspammed;
       umask 077;
-      test -e /opt/watchtower/app.env || cp /opt/watchtower/deploy/vm/app.env.example /opt/watchtower/app.env;
-      echo "SSH in, edit /opt/watchtower/app.env, then run: sudo sh /opt/watchtower/deploy/vm/install.sh"',
+      test -e /opt/unspammed/app.env || cp /opt/unspammed/deploy/vm/app.env.example /opt/unspammed/app.env;
+      echo "SSH in, edit /opt/unspammed/app.env, then run: sudo sh /opt/unspammed/deploy/vm/install.sh"',
     ]
