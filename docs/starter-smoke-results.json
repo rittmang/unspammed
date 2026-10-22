@@ -1,5 +1,5 @@
 {
-  "note": "Illustrative starter examples only. These results verify provider integration and do not establish performance on the MIT-WPU group.",
+  "note": "Illustrative starter examples only. These results verify provider integration and do not establish performance on a live community group.",
   "threshold": 0.9,
   "runs": [
     {

@@ -12,17 +12,17 @@ Local verification before deployment: `npm run check` (274 passed, 26 skipped), 
 
 ## Previous: Telegram and Cloudflare sign-in on the same domain
 
-Worker version `c8f61f60-a2c6-46af-9552-31213a0b5730`, deployed 2026-10-21 (Pacific), serves `/assets/index-Cts54xNG.js` and `/assets/index-BCL-tIak.css`. The owner's **Open dashboard** menu on `@naaradmunibot` now opens `https://watchtower.rittmang.xyz/mini/`. Signed Telegram launches open the dashboard directly; unsigned visitors see **Open Telegram** and **Sign in with Cloudflare**. The Cloudflare option opens `https://watchtower.rittmang.xyz` in a new tab, where the existing owner-email Access policy applies. The original `workers.dev/mini/` URL remains available. Both hosts use the same Worker and database.
+Worker version `c8f61f60-a2c6-46af-9552-31213a0b5730`, deployed 2026-10-21 (Pacific), serves `/assets/index-Cts54xNG.js` and `/assets/index-BCL-tIak.css`. The owner's **Open dashboard** menu on `@example_bot` now opens `https://moderation.example.com/mini/`. Signed Telegram launches open the dashboard directly; unsigned visitors see **Open Telegram** and **Sign in with Cloudflare**. The Cloudflare option opens `https://moderation.example.com` in a new tab, where the existing owner-email Access policy applies. The original `workers.dev/mini/` URL remains available. Both hosts use the same Worker and database.
 
-After the owner signed into Cloudflare, Access application **Watchtower Telegram Mini App** (`90a7f872-65d4-4d51-b20f-2e3f646e209e`) was created for exactly `watchtower.rittmang.xyz/mini` and `watchtower.rittmang.xyz/mini/*`. Its exclusive Bypass policy lets these requests reach the Worker's existing Telegram signature and owner checks. The whole-host **Watchtower** application's full configuration, audience and owner-email Allow policy were read back and match their saved pre-change values exactly. This completion changed only Access and bot-menu configuration; the deployed application build was reused.
+After the owner signed into Cloudflare, Access application **Watchtower Telegram Mini App** (`00000000-0000-0000-0000-000000000001`) was created for exactly `moderation.example.com/mini` and `moderation.example.com/mini/*`. Its exclusive Bypass policy lets these requests reach the Worker's existing Telegram signature and owner checks. The whole-host **Watchtower** application's full configuration, audience and owner-email Allow policy were read back and match their saved pre-change values exactly. This completion changed only Access and bot-menu configuration; the deployed application build was reused.
 
 The setup script now accepts optional `MINI_APP_URL` for a custom-domain `/mini/` entry point, validates the URL and checks anonymous reachability before changing the owner's menu. An Access redirect stops setup before any menu change. The default remains `WORKER_URL/mini/`; reset remains usable if the site is unavailable. [Reusable hosting instructions](telegram-mini-app.md#use-the-same-custom-domain-for-both-sign-in-methods) explain the separate path-scoped Access application required to host both methods on one custom domain.
 
 For the deployed application code, TypeScript, **265 tests**, build, formatting, deployment dry run and diff checks passed; **26 optional Postgres tests were skipped**. Browser checks covered the sign-in page at 320, 390 and 1280 pixels in both themes, with 15px button text, 48px targets, no horizontal overflow and no private API requests. Four isolated setup-script checks covered a custom-domain menu, the default Worker URL, rejection of an Access redirect, and rejection of an incorrect path; Telegram calls were mocked. This configuration-only completion added **24 live custom-domain HTTP checks**, a browser sign-in-page check, a successful Cloudflare email-login link check and actual bot-menu read-back. Device support failed to initialize during application verification, so physical Telegram behavior remains unverified.
 
-Live verification on `watchtower.rittmang.xyz` confirmed exact JS/CSS matches to the tested build, signed owner reads returning 200, anonymous/forged Mini App requests returning 401, a signed non-owner returning 403, unprovisioned groups returning 404, and public source maps/unknown Mini App assets returning 404. `/mini` redirects to `/mini/`. Root dashboard/API/assets and neighboring paths such as `/mini-other` and `/minified` still redirect to Cloudflare Access, including a browser API request carrying only Telegram credentials. The unsigned page loaded both choices without fetching private data; a Cloudflare-injected analytics beacon is blocked by the existing CSP, while the application assets and sign-in links work. Two groups and 4,947 dataset examples remain readable; Enforce mode and the saved policy hash are unchanged. No production data writes, model calls or Telegram document deliveries were made for verification.
+Live verification on `moderation.example.com` confirmed exact JS/CSS matches to the tested build, signed owner reads returning 200, anonymous/forged Mini App requests returning 401, a signed non-owner returning 403, unprovisioned groups returning 404, and public source maps/unknown Mini App assets returning 404. `/mini` redirects to `/mini/`. Root dashboard/API/assets and neighboring paths such as `/mini-other` and `/minified` still redirect to Cloudflare Access, including a browser API request carrying only Telegram credentials. The unsigned page loaded both choices without fetching private data; a Cloudflare-injected analytics beacon is blocked by the existing CSP, while the application assets and sign-in links work. Two groups and 4,947 dataset examples remain readable; Enforce mode and the saved policy hash are unchanged. No production data writes, model calls or Telegram document deliveries were made for verification.
 
-The owner's menu was changed only after the custom-domain checks passed, then read back twice with the expected URL. `MINI_APP_URL=https://watchtower.rittmang.xyz/mini/` is saved in ignored `.dev.vars` for repeatable setup and `--check`. The global bot menu and webhook URL match their saved originals; webhook and scheduled dispatch remain on `workers.dev`. No additional Worker or database was created.
+The owner's menu was changed only after the custom-domain checks passed, then read back twice with the expected URL. `MINI_APP_URL=https://moderation.example.com/mini/` is saved in ignored `.dev.vars` for repeatable setup and `--check`. The global bot menu and webhook URL match their saved originals; webhook and scheduled dispatch remain on `workers.dev`. No additional Worker or database was created.
 
 ## Previous: consistent mobile summaries across every page
 
@@ -48,7 +48,7 @@ Live verification returned 200 for health, the Mini App shell/new assets, and si
 
 ## Previous: owner-only Telegram Mini App
 
-Worker version `5db1ad32-0936-437d-a2b9-76e4ea328744`, deployed 2026-10-20 (Pacific), serves `/assets/index-RMrN3Bhy.js` and `/assets/index-rEVzSoGH.css`. The owner-specific **Open dashboard** menu on `@naaradmunibot` opens `https://watchtower-telegram.godmod.workers.dev/mini/`. The menu was configured and read back through the Bot API; the global commands menu and webhook URL remain unchanged.
+Worker version `5db1ad32-0936-437d-a2b9-76e4ea328744`, deployed 2026-10-20 (Pacific), serves `/assets/index-RMrN3Bhy.js` and `/assets/index-rEVzSoGH.css`. The owner-specific **Open dashboard** menu on `@example_bot` opens `https://watchtower-example.workers.dev/mini/`. The menu was configured and read back through the Bot API; the global commands menu and webhook URL remain unchanged.
 
 The existing dashboard is now available through `/mini/` on the Worker host. Telegram-signed launch data is validated on every Mini App API request and restricted to the configured owner. The same groups, data, policies and controls are reused. Telegram themes, safe areas, native Back/navigation, authenticated images, activation-aware polling and private bot-chat JSON exports are integrated. The normal browser dashboard keeps Cloudflare Access. See [platform research, setup and security](telegram-mini-app.md).
 
@@ -58,7 +58,7 @@ Live health, the public Mini App shell/assets, and signed owner group/overview/d
 
 ## Previous: mobile layouts and color themes
 
-Worker version `bfbb9e3d-3e59-4954-827a-ef15aa9cbe5e`, deployed 2026-10-20 (Pacific), serves `/assets/index-CS51lMtu.js`, `/assets/index-DpjXv2Zt.css`, and `/theme.js` at `https://watchtower.rittmang.xyz`.
+Worker version `bfbb9e3d-3e59-4954-827a-ef15aa9cbe5e`, deployed 2026-10-20 (Pacific), serves `/assets/index-CS51lMtu.js`, `/assets/index-DpjXv2Zt.css`, and `/theme.js` at `https://moderation.example.com`.
 
 The dashboard now supports phone browsers across all six pages, using wrapping controls and text, and viewport-sized dialogs. The later mobile usability redesign replaces the original labelled message cards and horizontally scrolling tables; see the current entry above. Mobile navigation supports backdrop/close/Escape dismissal, focus containment, and short-screen scrolling. System/Light/Dark choices use the existing olive/lime/terracotta palette and persist per browser. The preference loads through a same-origin script before paint, preserving the existing Content Security Policy. See [mobile layout and themes](mobile-and-themes.md).
 
@@ -149,7 +149,7 @@ TypeScript, all 218 tests (including real Postgres), build and formatting passed
 
 ## Previous: free-plan moderation queue recovery
 
-Worker version `ea01a1e8-05ba-46fc-956b-548fd0372e90`, deployed 2026-10-17 (Pacific), retains the existing frontend assets and Workers Free plan. Production now connects to the existing PlanetScale database through Hyperdrive `d74a48e0812e4f688808ffd793950206`. Query caching is disabled; origin port 5432 uses `verify-full` and the ISRG Root X1 CA (`ced58039-9c37-4891-9c6c-2dd2a4567d1d`, expires June 4, 2035). Hyperdrive is capped at five origin connections and its free allowance is 100,000 SQL statements/day. Direct local tooling retains verified TLS through `PLANETSCALE_DATABASE_URL`.
+Worker version `ea01a1e8-05ba-46fc-956b-548fd0372e90`, deployed 2026-10-17 (Pacific), retains the existing frontend assets and Workers Free plan. Production now connects to the existing PlanetScale database through Hyperdrive `00000000000000000000000000000000`. Query caching is disabled; origin port 5432 uses `verify-full` and the ISRG Root X1 CA (`ced58039-9c37-4891-9c6c-2dd2a4567d1d`, expires June 4, 2035). Hyperdrive is capped at five origin connections and its free allowance is 100,000 SQL statements/day. Direct local tooling retains verified TLS through `PLANETSCALE_DATABASE_URL`.
 
 The previous worker repeatedly exceeded its CPU limit before reaching the action queue. Ten ban rows for four users had zero attempts. Existing actions now run before model classification, with bans first. Each production invocation performs one bounded batch: up to two actions or two live messages. Subsequent cron invocations resume pending work. Duplicate outstanding bans are prevented, legacy duplicates complete with the successful ban, and a reset permits a fresh ban. Successful ban state, revoked message history, audit entry and duplicate completion commit in one transaction, reducing lease-renewal overhead.
 
@@ -163,7 +163,7 @@ Worker version `53aca4cf-6299-4150-9752-2b70ad94bcfb`, deployed 2026-10-12, serv
 
 Three fresh reasoned correction families for the same cause queue a draft on the minute schedule. Ordinary labels alone and confirmations do not. Owner policy clarification can queue a draft immediately. Original classification snapshots are captured for new predictions; legacy feedback without the original prediction/decision thresholds is held. Existing labels are not retroactively converted into triggers. Image feedback is held because replay datasets do not retain visual pixels.
 
-The additive migration provisioned the new tables/columns in both existing groups. Saved settings and lab row counts were unchanged: MIT-WPU has 4,947 dataset examples, 150 review labels, six saved runs and 1,200 predictions; the second group's lab remains empty. No production feedback or draft fixture was created. Both groups still use the same Gemini Flash Lite policy in **Enforce**, with the original policy SHA-256 `c120c0767153c2ab43524f25b437ece9e58b7ad6b89c82f737480b3b38ec7f38`. No policy was approved during deployment, no existing labels were changed, and no Telegram test messages or effects were issued.
+The additive migration provisioned the new tables/columns in both existing groups. Saved settings and lab row counts were unchanged: Primary group has 4,947 dataset examples, 150 review labels, six saved runs and 1,200 predictions; the second group's lab remains empty. No production feedback or draft fixture was created. Both groups still use the same Gemini Flash Lite policy in **Enforce**, with the original policy SHA-256 `c120c0767153c2ab43524f25b437ece9e58b7ad6b89c82f737480b3b38ec7f38`. No policy was approved during deployment, no existing labels were changed, and no Telegram test messages or effects were issued.
 
 TypeScript, **212 tests**, the production build, formatting and dry-run deployment passed. Real disposable loopback Postgres tests exercised paired replay, publication in Observe and rollback. Isolated browser checks at 1,280 and 390 pixels verified draft text/diff layout and independent reasoned feedback saves, with empty local provider/bot keys. Production Access-authenticated improvement, overview, saved-run index and full saved-run reads returned 200; the page loaded without an alert. Anonymous API and unverified webhook requests returned 401, the Access hostname redirected anonymous visitors to login, and health returned 200. Observed minute ticks completed successfully without exceptions. Sealed-test visibility is checked in SQL to avoid decoding every historical policy payload in the Worker.
 
@@ -197,7 +197,7 @@ The initial PlanetScale schema now contains a small group registry. Existing app
 
 Validation: all **94 tests** passed, including twenty real loopback Postgres tests. The final scheduler changes passed all twenty backend tests again, plus TypeScript and formatting; the production build passed. Tests cover metadata-only discovery, unauthorized activation, missing permissions, policy copying, idempotent activation, overlapping message/user IDs, independent strikes and Telegram effects, lab accounting and pagination, retention, removal, stale membership events, command fallback, basic-group rejection and authenticated dispatch. Browser checks covered activation, group switching, copied Observe settings, keyboard focus, Escape and a 390-pixel mobile layout.
 
-Live verification confirmed MIT-WPU remains **Enforce**, with an identical settings hash and unchanged 4,947 imported examples, 150 human labels and six complete 200/200 runs. Each run's exported message snapshot, scores, labels and policy has the same SHA-256 hash as before deployment. There is still one protected live message, no spam, strikes or actions, and no additional model usage. Registry initialization preserved every existing application table's row count and fingerprint. Checking current Telegram permissions updated only the registry title and permission metadata.
+Live verification confirmed Primary group remains **Enforce**, with an identical settings hash and unchanged 4,947 imported examples, 150 human labels and six complete 200/200 runs. Each run's exported message snapshot, scores, labels and policy has the same SHA-256 hash as before deployment. There is still one protected live message, no spam, strikes or actions, and no additional model usage. Registry initialization preserved every existing application table's row count and fingerprint. Checking current Telegram permissions updated only the registry title and permission metadata.
 
 Telegram's webhook now accepts `message`, `edited_message` and `my_chat_member`, with zero pending updates and no delivery error. Anonymous group API, webhook and internal work calls return 401. Unknown group selection returns 404. The deployed trusted dispatch path made an actual HTTP call back into the deployed Worker and returned 200 from both parent and child, exercising the same helper used by multi-group cron without creating a fake group or model job. Observed scheduled ticks and live dashboard requests succeeded. An actual second Telegram group has not been added during verification; its onboarding and isolation were tested against disposable Postgres and an isolated browser fixture. No group message, paid model call, label edit or billing change was made for this feature.
 
@@ -217,7 +217,7 @@ All **85 tests**, including fourteen real loopback Postgres tests, TypeScript, p
 
 Worker version `fc7cf5d9-3df9-4dee-b299-4c5fb1ee98b9`, deployed 2026-10-11. Cloudflare API verification confirms migration tag `v3`, no remaining Watchtower Durable Object namespaces, and both minute and daily schedules. The current frontend asset is `/assets/index-B5vLZcmD.js`.
 
-At the owner's explicit request, the legacy Cloudflare history copy was cancelled before any rows had copied. Both `GroupModerator` and `PlanetScaleModerator` production namespaces were retired with migration `v3`; the Worker has no Durable Object bindings or class exports. Its application data and renewable work lease live in PlanetScale schema `watchtower_g1001255868451`, on the existing `rittmang-xyz` main branch, using pooled port 6432 and verified TLS.
+At the owner's explicit request, the legacy Cloudflare history copy was cancelled before any rows had copied. Both `GroupModerator` and `PlanetScaleModerator` production namespaces were retired with migration `v3`; the Worker has no Durable Object bindings or class exports. Its application data and renewable work lease live in PlanetScale schema `watchtower_g1001234567890`, on the existing `watchtower-db` main branch, using pooled port 6432 and verified TLS.
 
 The minute cron processes persisted message batches, actions and lab jobs. A Postgres lease excludes overlapping ticks, renews before provider/effect work, fences writes from expired invocations, and cannot be released by an obsolete owner. There is a separate daily retention cron. Pending work survives crashes and resumes from stored cursors; model calls and Telegram effects remain outside transactions. The first live scheduled tick completed at **2026-10-11 05:01:05 UTC** and released its lease; Cloudflare tail reported successful minute cron events with no exceptions. Cloudflare documents that new cron schedules can take up to 15 minutes to propagate. [Cron Triggers](https://developers.cloudflare.com/workers/configuration/cron-triggers/).
 
@@ -239,9 +239,9 @@ TypeScript, 65 tests, formatting, and the production build passed. The nine opti
 
 ## Current storage: PlanetScale Postgres
 
-Worker version `6daf54be-6df6-4711-9c4a-740b8a8e7bc7` serves the owner dashboard from PlanetScale Postgres. The target is the owner's existing `rittmang-xyz` database, `main` branch, AWS us-east-1, PS-5 single-node plan. Its application connection is pooled on port 6432 with verified TLS. `PLANETSCALE_DATABASE_URL` is stored in ignored `.dev.vars` (0600) and as a Worker secret. No Workers billing upgrade was made.
+Worker version `6daf54be-6df6-4711-9c4a-740b8a8e7bc7` serves the owner dashboard from PlanetScale Postgres. The target is the owner's existing `watchtower-db` database, `main` branch, AWS us-east-1, PS-5 single-node plan. Its application connection is pooled on port 6432 with verified TLS. `PLANETSCALE_DATABASE_URL` is stored in ignored `.dev.vars` (0600) and as a Worker secret. No Workers billing upgrade was made.
 
-Schema `watchtower_g1001255868451` is initialized. The application role has its original data read/write roles plus `USAGE, CREATE` only on the Watchtower schema; it owns the application tables. Initial schema creation used the signed-in PlanetScale web console. The production console access setting was restored to disabled afterward. No default-role credential was saved or deployed.
+Schema `watchtower_g1001234567890` is initialized. The application role has its original data read/write roles plus `USAGE, CREATE` only on the Watchtower schema; it owns the application tables. Initial schema creation used the signed-in PlanetScale web console. The production console access setting was restored to disabled afterward. No default-role credential was saved or deployed.
 
 Live owner verification returned HTTP 200, `storage.backend=planetscale`, `dev=false`, and the configured owner email. Health returns 200; anonymous API and unverified webhook requests return 401. Telegram reported zero pending updates and no delivery error. All **69 tests**, including nine real Postgres tests in the Workers runtime against a disposable local database, pass; TypeScript, formatting, and the production build pass.
 
@@ -257,14 +257,14 @@ The following notes describe earlier deployments and validation.
 
 The Worker is deployed to the existing Cloudflare account. Its public health endpoint responds successfully. Telegram's webhook is registered and its pending updates drained successfully.
 
-| Setting                 | Value                                            |
-| ----------------------- | ------------------------------------------------ |
-| Dashboard               | `https://watchtower.rittmang.xyz`                |
-| Worker / webhook host   | `https://watchtower-telegram.godmod.workers.dev` |
-| Supergroup              | MIT-WPU, `-1001255868451`                        |
-| Telegram owner          | `869529747`                                      |
-| Dashboard owner email   | `rightonrittman@gmail.com`                       |
-| Initial moderation mode | Observe                                          |
+| Setting                 | Value                                    |
+| ----------------------- | ---------------------------------------- |
+| Dashboard               | `https://moderation.example.com`         |
+| Worker / webhook host   | `https://watchtower-example.workers.dev` |
+| Supergroup              | Primary group, `-1001234567890`          |
+| Telegram owner          | `123456789`                              |
+| Dashboard owner email   | `owner@example.com`                      |
+| Initial moderation mode | Observe                                  |
 
 The bot has both Delete messages and Ban users permissions. `TELEGRAM_BOT_TOKEN`, `TELEGRAM_WEBHOOK_SECRET`, and `OPENROUTER_API_KEY` are stored as Worker secrets and in ignored local `.dev.vars`. The OpenRouter key was validated successfully. No credentials belong in tracked files.
 
@@ -284,9 +284,9 @@ Large file imports stream and upload automatically into one dataset, without the
 
 ## Cloudflare Access
 
-The self-hosted **Watchtower** application protects `watchtower.rittmang.xyz`. Its sole Allow policy includes exactly `rightonrittman@gmail.com`, with email one-time PIN login. The application's audience and team domain are configured in `wrangler.jsonc` and deployed. The Worker independently verifies signed Access JWTs and the owner's email, including on the raw `workers.dev` host.
+The self-hosted **Watchtower** application protects `moderation.example.com`. Its sole Allow policy includes exactly `owner@example.com`, with email one-time PIN login. The application's audience and team domain are configured in `wrangler.jsonc` and deployed. The Worker independently verifies signed Access JWTs and the owner's email, including on the raw `workers.dev` host.
 
-Application ID: `01862f55-dac8-4270-bf39-b530ed2c56cc`. Team domain: `https://rightonrittman.cloudflareaccess.com`.
+Application ID: `00000000-0000-0000-0000-000000000002`. Team domain: `https://example-team.cloudflareaccess.com`.
 
 Anonymous requests to the custom dashboard redirect to Access login. Anonymous dashboard/API requests on `workers.dev` return 401. The health endpoint remains available, and webhook requests without the separate Telegram secret return 401. Telegram's registered webhook has no pending updates or delivery errors.
 
@@ -299,7 +299,7 @@ Telegram initially could not resolve the newly deployed `workers.dev` hostname, 
 After DNS propagation, registration without the override also succeeded. **Delivery now uses normal DNS resolution.** The regular registration command is:
 
 ```sh
-WORKER_URL=https://watchtower-telegram.godmod.workers.dev npm run telegram:setup
+WORKER_URL=https://watchtower-example.workers.dev npm run telegram:setup
 ```
 
 After signing in, use Settings → Check Telegram, then capture and label actual group messages in Model lab. The starter dataset is illustrative; it does not establish which model is best for this group. Choose Enforce after validating the policy and threshold.

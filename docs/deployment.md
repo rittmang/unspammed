@@ -1,28 +1,6 @@
 # Deployment operations and verification
 
-Use [the hosting guide](hosting.md) to create a new installation. This document describes the current deployment contract and how to verify it. [Historical deployments](deployment-history.md) preserve one original account's versions and checks; those records do not establish the state of this branch or another provider.
-
-## Public website and personal deployment: 2026-10-22
-
-**https://watchtower.rittmang.xyz** now serves the public Astro content website from the separate private `rittmang/watchtower.rittmang.xyz` repository and `watchtower-marketing` Worker. The personal Naarad Muni dashboard and owner Mini App are at **https://naaradmuni.rittmang.xyz** and **https://naaradmuni.rittmang.xyz/mini/** on the existing `watchtower-telegram` Worker. Its database and moderation configuration were preserved; this is a hostname separation, not a second moderation installation.
-
-The public hostname's existing custom-domain binding was reassigned to the marketing Worker after new-host verification. The owner Access application retains its audience and exact owner policy, with its primary domain and only destination now on the personal hostname. The old public-host Mini App bypass was retired; the new personal-host Mini App/machine exceptions remain narrowly scoped. The preserved private application deployment config now lists only the personal hostname, so a later application deploy cannot reclaim the marketing hostname. The webhook and internal dispatch retain their working workers.dev origin. Legacy public `/mini` and `/login` entry points redirect to the personal deployment; the marketing site does not proxy private APIs.
-
-The marketing build passed Astro checks, static link/asset checks, a Wrangler dry run and deployed HTTPS browser checks in Chromium and WebKit. Its story and all illustrative data are separate from saved group data. See the marketing repository's deployment and verification documents for its own build evidence. These installation-specific names are operational records, never setup defaults.
-
-## Personal deployment URL cutover: 2026-10-22 Pacific
-
-The personal Naarad Muni deployment now uses **https://naaradmuni.rittmang.xyz** for browser sign-in and **https://naaradmuni.rittmang.xyz/mini/** for the owner's Telegram menu. The same `watchtower-telegram` Worker was deployed as version `3b1c008d-d11a-473e-a941-11b7a2bd3799`. Its runtime configuration changed only `DASHBOARD_URL`; the preserved private production config retains both custom-domain routes. The existing workers.dev origin remains the webhook and internal-work origin. The owner-only menu was configured and independently checked; the global menu and webhook registration were unchanged.
-
-At `2026-10-22T07:54:25Z`, 51 deployed HTTP checks passed, covering trusted HTTPS, Access redirects, browser/Mini App link origins, exact local JS/CSS bytes, CSP/private-file restrictions, signed owner reads, invalid/expired/wrong-bot/non-owner rejection and unknown-group rejection. Both provisioned groups' settings and dataset metadata matched the pre-cutover fingerprints; the existing mode, policy, group registry and 4,947 dataset examples were preserved. Worker bindings, Access audience/owner variables, namespace, native schedules and both custom domains matched the exact change whitelist. Browser rendering also confirmed the new Cloudflare sign-in link. Interactive owner Access login, physical Telegram-client behavior and actual cron/restart recovery were not exercised during this cutover.
-
-At this phase's verification time, both custom domains still served the protected personal dashboard. The later public-host transfer is recorded above; its old Access destinations and private deployment route have since been retired. This installation's domains are operational evidence, never defaults for another installation.
-
-## Verified update: 2026-10-21 Pacific
-
-Worker version `b4c25f08-a822-41f3-a237-1a50d1de4d41` served the build verified in this earlier update. Live checks at `2026-10-22T00:51:14Z` matched both origins' JS/CSS to local build bytes and confirmed owner reads, denied invalid/non-owner requests, group boundaries and the normal Access redirect. The existing mode, policy fingerprint, two groups and 4,947 dataset examples matched the pre-deployment baseline. Deployment did not register Telegram endpoints, send exports, change thresholds, approve a policy or connect an owner account.
-
-The portability verification also exercised disposable Cloudflare, Vercel and DigitalOcean VM installations, with separate Render/Fly email accounts. See [the evidence register](provider-verification.md) for exact scope, actual cron/restart results, account/plan blockers and cleanup status. Provider results do not inherit this installation's permissions or original account settings.
+Use [the hosting guide](hosting.md) to create a new installation. This document describes the current deployment contract and how to verify it. [Historical deployments](deployment-history.md) record earlier release milestones; those records do not establish the state of this branch or another provider.
 
 ## Current implementation
 
