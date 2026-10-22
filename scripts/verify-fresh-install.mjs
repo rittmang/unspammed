@@ -75,8 +75,10 @@ try {
   console.log('Clean source copy contains no deployment credentials. Installing from lockfile…');
   run('npm', ['ci', '--no-audit', '--no-fund']);
   run('npm', ['run', 'typecheck']);
-  run('npm', ['run', 'build']);
-  console.log('Clean npm ci, typecheck, and production build passed.');
+  run('npm', ['run', 'test:vercel']);
+  console.log(
+    'Clean npm ci, typecheck, frontend/Vercel builds, and plain Node function boot passed.',
+  );
   const fixture = {
     DEV_MODE: 'false',
     PUBLIC_URL: 'https://fresh-install.example',

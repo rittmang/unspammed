@@ -1,6 +1,6 @@
 # Working on Watchtower
 
-Read [README.md](README.md), [architecture contracts](docs/architecture.md) and [hosting instructions](docs/hosting.md) before changing deployment, storage, authentication or scheduling. [docs/portability-plan.md](docs/portability-plan.md) records implementation scope. [docs/deployment-history.md](docs/deployment-history.md) and [docs/research.md](docs/research.md) are historical records of one installation, not current setup instructions.
+Read [README.md](README.md), [architecture contracts](docs/architecture.md), [hosting instructions](docs/hosting.md) and [provider evidence](docs/provider-verification.md) before changing deployment, storage, authentication or scheduling. [docs/portability-plan.md](docs/portability-plan.md) records implementation scope. [docs/deployment-history.md](docs/deployment-history.md) and [docs/research.md](docs/research.md) are historical records of one installation, not current setup instructions.
 
 ## Account neutrality and secrets
 
@@ -23,7 +23,7 @@ Read [README.md](README.md), [architecture contracts](docs/architecture.md) and 
 
 ## Validation and reporting
 
-Use Node 22+. Start with relevant focused tests, then the required checks for the final change:
+Use Node 22.x. Start with relevant focused tests, then the required checks for the final change:
 
 ```sh
 npm run check
@@ -34,8 +34,10 @@ npm run format:check
 
 Use `TEST_POSTGRES_URL` only with a disposable loopback database; the suite clears its test schemas. Do not aim test code at production or repurpose a real group for a destructive test. Mock model and Telegram effects by default. Do not perform real message deletion, ban, full-history cleanup, owner-account login or paid model inference merely to verify an implementation. User authorization for actual external effects must be grounded in the task, not inferred from available credentials.
 
-For Cloudflare configuration changes, run an appropriate Wrangler deployment dry run against a generated test config. For other hosts, validate their manifest and adapter, and explain plan-specific minute cron, function-duration, TCP, TLS and proxy limits. Use current official documentation for provider claims.
+For Cloudflare configuration changes, run an appropriate Wrangler deployment dry run against a generated test config. For Vercel adapter/build changes, run `npm run test:vercel` and validate the actual provider-builder artifact when available. For other hosts, validate their manifest and adapter, and explain plan-specific minute cron, function-duration, TCP, TLS and proxy limits. Use current official documentation for provider claims.
 
 Keep verification levels explicit: unit/integration tests, local adapter execution, provider build validation, actual deployed HTTP checks, actual cron/restart recovery, and physical Telegram-client checks are different evidence. Do not claim Railway/DigitalOcean/Vercel deployment from a local Node test, or physical-device compatibility from SDK event simulation. Do not copy a historical test count or deployment version into a current claim.
+
+Keep the provider evidence register current. A Docker image or generic Node adapter establishes a possible integration, not verified support for every container host, managed PostgreSQL endpoint or marketplace. Do not call an SSH/DNS/bot-configuration guide one-click deployment. Verify comparisons with other projects against current primary sources.
 
 Preserve unrelated dirty work and the existing responsive Mini App experience. Inspect `git status`/diff before edits and review the final diff for secrets, account assumptions and accidental live-mode changes. Update operational docs and extension contracts when behavior changes.

@@ -1,11 +1,13 @@
 # Watchtower on any Docker host: a VM, Coolify, or your own server.
 # External PostgreSQL is the default. Add --profile bundled-db for a
 # PostgreSQL container on the same host, and --profile https for
-# automatic HTTPS with Caddy. See docs/setup.md, section 5G.
+# automatic HTTPS with Caddy. The VM installer writes .watchtower/compose.env;
+# pass --env-file .watchtower/compose.env for subsequent Compose commands.
 services:
   watchtower:
     build: .
     restart: unless-stopped
+    init: true
     env_file:
       - .watchtower/runtime.env
     environment:
@@ -13,21 +15,32 @@ services:
       PORT: '3000'
       HOST: '0.0.0.0'
     ports:
-      - '${WATCHTOWER_PORT:-3000}:3000'
-    depends_on: []
+      - '${WATCHTOWER_BIND:-127.0.0.1}:${WATCHTOWER_PORT:-3000}:3000'
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:3000/health').then(r => process.exit(r.status === 200 ? 0 : 1)).catch(() => process.exit(1))"
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
 
   db:
     profiles: ['bundled-db']
     image: postgres:17-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_USER: watchtower
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in your shell or .env}
+      POSTGRES_USER: watchtower_admin
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-}
       POSTGRES_DB: watchtower
+      WATCHTOWER_DATABASE_PASSWORD: ${WATCHTOWER_DATABASE_PASSWORD:-}
     volumes:
       - watchtower-db:/var/lib/postgresql/data
+      - ./deploy/vm/init-db.sh:/docker-entrypoint-initdb.d/10-watchtower.sh:ro
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U watchtower']
+      test: ['CMD-SHELL', 'pg_isready -U watchtower_admin -d watchtower']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -37,14 +50,14 @@ services:
     image: caddy:2-alpine
     restart: unless-stopped
     environment:
-      WATCHTOWER_DOMAIN: ${WATCHTOWER_DOMAIN:?Set WATCHTOWER_DOMAIN to your domain}
+      WATCHTOWER_DOMAIN: ${WATCHTOWER_DOMAIN:-}
     ports:
       - '80:80'
       - '443:443'
     volumes:
       - caddy-data:/data
       - caddy-config:/config
-    command: caddy reverse-proxy --from {$WATCHTOWER_DOMAIN} --to watchtower:3000
+      - ./deploy/vm/Caddyfile:/etc/caddy/Caddyfile:ro
     depends_on:
       - watchtower
 

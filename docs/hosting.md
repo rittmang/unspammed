@@ -5,7 +5,7 @@
 
 This guide sets up your own installation from a fresh checkout. The smallest hosted setup is a Telegram bot, its owner and supergroup, PostgreSQL, and one public HTTPS application host with background scheduling. A model key is needed for classification/evaluation, but can be added after the site works. A custom domain and Cloudflare Access are optional.
 
-The repository includes shared request handlers plus Cloudflare, persistent Node, and Vercel adapters. Local verification of an adapter is separate from a real deployment to your account. [Deployment operations](deployment.md) records that distinction; [the original deployment archive](deployment-history.md) is historical context, not configuration to copy.
+The repository includes shared request handlers plus Cloudflare, persistent Node, and Vercel adapters. The [provider evidence register](provider-verification.md) separates templates, local tests, provider builds and actual test-account deployments. [Deployment operations](deployment.md) defines the verification checklist; [the original deployment archive](deployment-history.md) is historical context, not configuration to copy.
 
 ## Prepare Telegram and PostgreSQL
 
@@ -14,7 +14,9 @@ The repository includes shared request handlers plus Cloudflare, persistent Node
 3. Obtain your numeric Telegram user ID and numeric supergroup ID beginning `-100`. Before registering the webhook, put the bot token in ignored `.env`, send a group message, and run `npm run telegram:discover`. Check that the selected owner really is your account. Usernames are not durable authentication identities. Discovery preserves pending updates and does not establish ownership for you.
 4. Provision PostgreSQL on a host you choose. Use the provider's connection URL and certificate instructions. The application requires direct TCP PostgreSQL access or Cloudflare Hyperdrive. It does not require PlanetScale, a specific region, or a specific pooled port.
 
-For PostgreSQL TLS, the default `DATABASE_SSL_MODE=verify-full` verifies the server certificate. `DATABASE_SSL_CA` accepts an optional PEM root certificate. Use `DATABASE_SSL_MODE=disable` only for an intentionally private network or disposable loopback database where you have chosen plaintext transport. Do not disable verification to hide a certificate error on a public database. Keep connection passwords out of shell history and logs.
+For PostgreSQL TLS, the default `DATABASE_SSL_MODE=verify-full` verifies the server certificate. Node hosts accept an optional PEM root through `DATABASE_SSL_CA`. Direct Cloudflare connections use the driver's Workers socket transport, which cannot install that custom CA; setup rejects this combination. Use a publicly trusted database certificate, or configure custom trust at Hyperdrive's origin connection instead. A hosted test confirmed that the private-CA endpoint failed in Workers while Node accepted it; the same Workers connection passed after switching to a publicly trusted certificate. [Workers socket TLS surface](https://github.com/cloudflare/workerd/blob/main/src/cloudflare/internal/sockets.d.ts).
+
+Use `DATABASE_SSL_MODE=disable` only for an intentionally private network or disposable loopback database where you have chosen plaintext transport. Do not disable verification to hide a certificate error on a public database. Keep connection passwords out of shell history and logs.
 
 Watchtower uses one schema, normally `watchtower_g` followed by the initial group ID without `-`. The initial group also supplies the stable root namespace unless `DATABASE_ROOT_CHAT_ID` is explicitly set. Preserve that namespace for an existing installation; adding groups does not require changing it. Additional group tables receive separate prefixes and their own settings, jobs and data.
 
@@ -30,11 +32,11 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA "watchtower_g1001234567890" GRANT SELECT, INS
 ALTER DEFAULT PRIVILEGES IN SCHEMA "watchtower_g1001234567890" GRANT USAGE, SELECT, UPDATE ON SEQUENCES TO "your_runtime_role";
 ```
 
-Run default-privilege grants as the role that creates future objects, or use `FOR ROLE` explicitly. Run application checks with the runtime connection afterward. Never deploy the admin connection. Existing PlanetScale PostgreSQL URLs remain supported through legacy aliases; only PlanetScale host administration has its provider-specific direct-port adjustment. Database outages are not a reason to discard history.
+Run default-privilege grants as the role that creates future objects, or use `FOR ROLE` explicitly. Run application checks with the runtime connection afterward. Never deploy the admin connection. Existing PlanetScale PostgreSQL URLs remain supported through legacy aliases. Use the provider's explicit direct/DDL endpoint for `DATABASE_ADMIN_URL` when bootstrap needs one; setup must not infer a different port from a vendor hostname. Database outages are not a reason to discard history.
 
 ## Generate private configuration
 
-Install Node 22+ and dependencies, then create your local private input file:
+Install Node 22.x and dependencies, then create your local private input file:
 
 ```sh
 npm ci
@@ -57,7 +59,7 @@ These are placeholders, not usable account defaults. Reserve or deploy a basic s
 
 ```sh
 npm run setup -- --provider cloudflare
-# Alternatives: --provider railway, digitalocean, or vercel
+# Alternatives: --provider railway, digitalocean, vercel, render, or fly
 # Add --browser-auth if you want token-based browser sign-in.
 npm run setup:doctor
 npm run database:setup
@@ -71,19 +73,19 @@ Process environment values take precedence. `WATCHTOWER_ENV_FILE` selects an exp
 
 Provider facts below were checked against primary documentation on **2026-10-21**. Limits, prices and plan features can change; verify the linked documentation before selecting a plan. Build artifacts and local tests do not prove deployment in another provider's environment.
 
-| Host                                   | Runtime and scheduler                                                  | Additional requirements                                                                                                                              |
-| -------------------------------------- | ---------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Cloudflare Workers                     | Shared Worker; minute Cron Trigger plus daily cleanup trigger          | Your own account/Worker name, public PostgreSQL connection or optional Hyperdrive; optional Durable Object for owner-account cleanup                 |
-| Railway                                | Docker/Node web service with the built-in minute scheduler             | Persistent running service, PostgreSQL reachability, generated HTTPS domain; no separate Railway cron service                                        |
-| DigitalOcean App Platform              | Docker/Node web service with the built-in minute scheduler             | A routable service, PostgreSQL reachability, provider domain; a static-site or Function-only deployment is insufficient                              |
-| Vercel                                 | Node function, protected minute cron route, bounded persisted work     | Plan supporting minute cron, 300-second function setting, TCP-capable Node runtime, PostgreSQL; no in-process timer                                  |
-| Render (`render.yaml`)                 | Docker web service with the built-in minute scheduler                  | Service must not sleep; any PostgreSQL URL, or the optional Render Postgres block in `render.yaml`                                                   |
-| Fly.io (`fly.toml`)                    | Docker machine with the built-in minute scheduler                      | At least one always-running machine (`min_machines_running = 1`); any PostgreSQL URL                                                                 |
-| Any VM (`docker-compose.yml`)          | Docker Compose on one Linux VM; built-in minute scheduler              | DO Droplet, Google Compute Engine, Azure VM, AWS Lightsail/EC2, Hetzner, Linode, Vultr, Oracle; optional bundled PostgreSQL and Caddy HTTPS profiles |
-| Cloud Run / Azure Container Apps / AWS | Docker image; no in-process timer                                      | External scheduler (Cloud Scheduler, Logic Apps, EventBridge) calling `GET /api/cron` with `CRON_SECRET` every minute                                |
-| Coolify / Dokku / CapRover / Heroku    | Self-host PaaS using `docker-compose.yml`, `Dockerfile`, or `Procfile` | Values from `.watchtower/runtime.env`; keep the service always on                                                                                    |
+| Included target           | Runtime and scheduler                                         | Requirements                                                                                                            |
+| ------------------------- | ------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| Cloudflare Workers        | Shared Worker; minute Cron Trigger plus daily cleanup trigger | Your own account/Worker, reachable PostgreSQL or optional Hyperdrive; optional Durable Object for owner-account cleanup |
+| Railway                   | Docker/Node web service; built-in minute timer                | Running service, reachable PostgreSQL, supplied HTTPS domain; no separate Railway cron                                  |
+| DigitalOcean App Platform | Docker/Node web service; built-in minute timer                | Routable persistent web service; the supplied spec is not a Functions or static-site adapter                            |
+| Vercel                    | Node function; authenticated minute cron                      | Appropriate cron plan, 300-second configuration, PostgreSQL TCP, 4.5 MB request/response ceiling                        |
+| Render                    | Node Docker service; `render.yaml`                            | Non-sleeping service, reachable PostgreSQL; import all generated runtime values                                         |
+| Fly.io                    | Node Docker Machine; `fly.toml`                               | Keep a Machine running; supplied config disables autostop; reachable PostgreSQL                                         |
+| Linux VM                  | Compose app, optional PostgreSQL and Caddy files              | Manual server/firewall/HTTPS setup; Ubuntu/Debian cloud-init example; backups for a bundled database                    |
 
-Databases: every PostgreSQL-compatible service works through `DATABASE_URL` — Neon, Supabase (use the pooler host on IPv4-only hosts), PlanetScale Postgres, Aiven, Render Postgres, Railway Postgres, DigitalOcean Managed PostgreSQL, Amazon RDS/Aurora PostgreSQL, Google Cloud SQL, Azure Database for PostgreSQL, Crunchy Bridge, Xata, self-hosted PostgreSQL on a VM, or the bundled Compose database. Transaction-mode poolers (PgBouncer/Supavisor) can break session-level features; prefer a direct or session-mode connection. MySQL, MariaDB, and PlanetScale MySQL (Vitess) are not supported: the storage layer uses PostgreSQL SQL (`pg`, schemas, `ON CONFLICT`, advisory leases). SQLite remains the local development adapter only.
+These are implementation choices, not a claim that every row has been deployed. Consult the [evidence register](provider-verification.md) before relying on a host. Cloud Run, Azure Container Apps, ECS, Coolify, Dokku, CapRover and Heroku are candidate integrations using the same Node image; this repository has no complete provider-specific provisioning/scheduler validation for them. Netlify has Functions, PostgreSQL and scheduled functions, but no Watchtower adapter. Static-only hosting cannot run this backend.
+
+`DATABASE_URL` accepts PostgreSQL connections. Neon, Supabase, PlanetScale Postgres and other managed PostgreSQL products are candidates, not a claim that every endpoint was tested. Check network/IP support, TLS roots, role privileges and transaction/lease behavior using the chosen connection mode. The adapter uses transaction-scoped advisory locks and qualified tables; it does not require a session-scoped lock, but that does not verify every pooler. MySQL, MariaDB and PlanetScale MySQL (Vitess) are unsupported. SQLite remains the isolated development/test adapter.
 
 ### Cloudflare: minimum setup
 
@@ -130,9 +132,23 @@ The persistent Node service runs the minute scheduler. App Platform now also off
 
 A Droplet/container host is another deployment of the same Node adapter: supervise `npm start`, terminate HTTPS at a reverse proxy, pass a trusted canonical `PUBLIC_URL`, and keep the process running. This repository's App Platform manifest does not provision or secure a Droplet for you.
 
+### Render, Fly.io and Linux VMs
+
+Render's Blueprint uses the Docker image as a web service. Supply the complete `.watchtower/runtime.env`, including generated webhook/cron values and existing browser/session keys. Render Free spins down after 15 idle minutes, stopping the timer; select a non-sleeping instance. The Blueprint does not create a database unless you deliberately configure its documented database block. [Render Free limits](https://render.com/docs/free).
+
+Fly uses `fly.toml`, the same Docker image, and imported runtime secrets. Its supplied configuration disables autostop; keep a running Machine for scheduling. [Fly configuration](https://fly.io/docs/reference/configuration/).
+
+The [VM instructions](setup.md#5g-linux-vm-manual-installation) require SSH, private inputs and an HTTPS endpoint. The installer selects `WATCHTOWER_VM_ENV`, then `WATCHTOWER_ENV_FILE`, then `app.env`. The cloud-init file is an Ubuntu/Debian example, not a tested template for every cloud. Neither Compose nor cloud-init is a marketplace listing or one-click deployment.
+
+### Other container platforms
+
+Do not assume every container platform stops between requests. Cloud Run can allocate CPU between requests using instance-based billing with minimum instances; Azure Container Apps can keep minimum replicas; ECS services can keep desired tasks running. A persistent configuration can use the Node timer. A scale-to-zero/request-only CPU configuration requires external minute dispatch with `WATCHTOWER_SCHEDULER=false`, awaited `/api/cron` calls and the application cron secret. This is an integration contract, not a ready-to-deploy recipe. [Cloud Run billing/CPU](https://docs.cloud.google.com/run/docs/configuring/billing-settings), [Azure scaling](https://learn.microsoft.com/en-us/azure/container-apps/scale-app), [ECS scaling](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/service-auto-scaling.html).
+
+The external scheduler must reach public Telegram/webhook routes, preserve separate application authentication, and wait for bounded work. Provider IAM authentication may require additional headers/integration. EventBridge Scheduler does not directly target arbitrary HTTPS URLs; an AWS relay or other integration is needed. EventBridge API Destinations have a five-second timeout, so they are not a drop-in caller for longer awaited work. Check this integration and provider/proxy timeouts before describing that platform as verified. [Scheduler targets](https://docs.aws.amazon.com/scheduler/latest/UserGuide/managing-targets-universal.html), [API Destinations](https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-api-destinations.html).
+
 ### Vercel
 
-Choose `--provider vercel`. Import the repository and `.watchtower/runtime.env` into **Production** environment settings, use Node 22, and retain the supplied `vercel.json`. The build bundles `dist/` inside the Node function. All application requests are routed through that function so the authentication and Mini App headers run before asset responses. Do not publish the dashboard as an unauthenticated static `dist/` deployment.
+Choose `--provider vercel`. Import the repository and `.watchtower/runtime.env` into **Production** environment settings, use Node 22, and retain the supplied `vercel.json`. `npm run build:vercel` builds the frontend plus a bundled server handler for the `api/index.mjs` bridge, and includes `dist/` inside the Node function. The static output contains only the already-public favicon. Application requests route through the function so authentication and Mini App headers run before responses. Do not publish the dashboard as an unauthenticated static `dist/` deployment.
 
 Use the production deployment's stable HTTPS domain as `PUBLIC_URL`; previews must not register the production bot webhook or run production jobs. Database access uses the **Node runtime** and PostgreSQL TCP, not Vercel Edge. Bound database connections, provider calls, MTProto calls and work chunks must fit the configured function lifetime. The adapter persists work/session/alarm state in PostgreSQL; it cannot depend on a process remaining alive after a request. [Node runtime](https://vercel.com/docs/functions/runtimes/node-js).
 

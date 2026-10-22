@@ -4,17 +4,18 @@
   "private": true,
   "type": "module",
   "engines": {
-    "node": ">=22.0.0"
+    "node": "22.x"
   },
   "scripts": {
     "dev": "node scripts/dev.mjs",
     "dev:ui": "vite --host 127.0.0.1",
     "build": "vite build",
+    "build:vercel": "npm run build && node scripts/build-vercel.mjs",
     "typecheck": "tsc --noEmit",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "vitest run",
-    "check": "npm run typecheck && npm test && npm run test:setup && npm run test:runtime && npm run build",
+    "check": "npm run typecheck && npm test && npm run test:setup && npm run test:runtime && npm run test:vercel",
     "deploy": "node scripts/deploy.mjs",
     "telegram:setup": "node scripts/telegram-setup.mjs",
     "telegram:discover": "node scripts/telegram-discover.mjs",
@@ -25,9 +26,11 @@
     "setup": "node scripts/setup.mjs",
     "setup:doctor": "node scripts/setup.mjs --doctor",
     "setup:check": "node scripts/setup.mjs --check",
-    "test:setup": "node --test tests/setup*.test.mjs",
+    "test:setup": "node --test tests/setup*.test.mjs tests/deployment.test.mjs",
     "test:runtime": "node --import tsx --test tests/portable-runtime.test.mjs",
-    "test:fresh": "node scripts/verify-fresh-install.mjs"
+    "test:vercel": "npm run build:vercel && node --test tests/vercel-build.test.mjs",
+    "test:fresh": "node scripts/verify-fresh-install.mjs",
+    "test:compose": "node scripts/verify-compose.mjs"
   },
   "dependencies": {
     "@streamparser/json": "^0.0.26",

@@ -41,12 +41,7 @@ import type { Env } from './env';
 import { HttpError, json, readJson, databaseQuotaResponse } from './http';
 import { importExamples } from './import';
 import { IMPORT_BATCH_MESSAGES, validateExamples } from '../shared/import';
-import {
-  feedbackSchema,
-  routed,
-  type CorrectionSnapshot,
-  type FeedbackInput,
-} from '../shared/improvement';
+import { feedbackSchema, type CorrectionSnapshot, type FeedbackInput } from '../shared/improvement';
 import { ImprovementService } from './improvement';
 import {
   mediaType,
@@ -71,7 +66,6 @@ interface MessageRow extends StoredMessage {
   attempts: number;
   next_at: number;
 }
-const labelSchema = z.enum(['spam', 'ham', 'review']).nullable();
 const safeError = (e: unknown) => (e instanceof Error ? e.message.slice(0, 300) : 'Unknown error');
 class BudgetError extends Error {
   constructor() {

@@ -29,4 +29,4 @@ The original deployment worked, but its checked-in hostname, owner, group, Hyper
 | Hosting        | Templates and commands validated locally; provider prerequisites and paid-plan limits stated; distinguish local checks from actual deployments |
 | Upgrade        | Existing production configuration saved locally; legacy environment names and migrations retained; no production-data resets                   |
 
-Live accounts on additional providers are not provisioned as part of local verification. Provider guides must identify any remaining account-side steps and must not claim deployments that were not performed.
+Live accounts on additional providers are not provisioned as part of local verification. Provider guides must identify any remaining account-side steps and must not claim deployments that were not performed. The [provider evidence register](provider-verification.md) separates implemented templates from local checks, provider builds and actual test-account deployments; generic container and managed PostgreSQL candidates remain unverified until tested individually.

@@ -18,23 +18,18 @@ describe('database connection transport', () => {
     expect(config.types!.getTypeParser(20, 'text')('42')).toBe(42);
     expect(() => config.types!.getTypeParser(20, 'text')('9007199254740992')).toThrow();
   });
-  it('supports explicit private networking and trusted certificate authorities', () => {
+  it('supports explicit private networking and rejects unavailable Workers CA overrides', () => {
     expect(
       postgresConfig('postgresql://u:p@postgres.railway.internal/db', false, false, {
         sslMode: 'disable',
       }).ssl,
     ).toBe(false);
-    const verified = postgresConfig(
-      'postgresql://u:p@db.example/db?sslmode=no-verify&ssl=false',
-      false,
-      false,
-      {
+    expect(() =>
+      postgresConfig('postgresql://u:p@db.example/db?sslmode=no-verify&ssl=false', false, false, {
         sslMode: 'verify-full',
         sslCa: 'trusted-ca',
-      },
-    );
-    expect(verified.ssl).toEqual({ rejectUnauthorized: true, ca: 'trusted-ca' });
-    expect(verified.connectionString).not.toContain('ssl=');
+      }),
+    ).toThrow('publicly trusted certificate');
     expect(() =>
       postgresConfig('postgres://localhost/db', false, false, {
         sslMode: 'disable',

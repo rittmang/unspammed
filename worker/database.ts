@@ -153,6 +153,13 @@ export function postgresConfig(
     throw new HttpError(503, 'DATABASE_SSL_MODE must be verify-full or disable.');
   if (options.sslCa && (options.sslMode === 'disable' || hyperdrive))
     throw new HttpError(503, 'Configure the CA on the TLS connection, not a plaintext connection.');
+  // pg uses cloudflare:sockets in Workers; its TLS upgrade cannot install a CA.
+  // Reject this explicitly instead of silently ignoring a configured trust root.
+  if (options.sslCa && globalThis.navigator?.userAgent === 'Cloudflare-Workers')
+    throw new HttpError(
+      503,
+      'Direct Cloudflare PostgreSQL requires a publicly trusted certificate. Configure custom CA trust on Hyperdrive, or use the Node runtime.',
+    );
   // Do not let URL options silently disable TLS or replace the verified SSL configuration.
   for (const key of ['ssl', 'sslmode', 'sslrootcert', 'sslcert', 'sslkey', 'sslnegotiation'])
     url.searchParams.delete(key);

@@ -1,11 +1,9 @@
-import { requestUrl } from '../server/http';
-import { createRuntime, type Runtime } from '../server/runtime';
+import { requestUrl } from './http';
+import { createRuntime, type Runtime } from './runtime';
 
 // Native Web handlers run on Vercel's Node runtime and preserve the request body
 // without legacy IncomingMessage helpers parsing and reconstructing its stream.
 // The plan must support a 300-second invocation and a per-minute cron schedule.
-export const maxDuration = 300;
-
 export function createVercelHandler(
   resolveRuntime: () => Runtime = () =>
     createRuntime(process.env, { allowDevelopment: false, schedulerGroups: 1 }),

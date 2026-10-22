@@ -9,15 +9,47 @@ import pg from 'pg';
 import { createAssets } from '../server/assets.ts';
 import { createNodeHandler, requestUrl } from '../server/http.ts';
 import { createRuntime, publicOrigin } from '../server/runtime.ts';
-import { createVercelHandler } from '../api/index.ts';
+import { createVercelHandler } from '../server/vercel.ts';
 import { createWorker } from '../worker/index.ts';
-import { databaseSchema, postgresEnvironmentConfig } from '../worker/database.ts';
+import { databaseSchema, postgresConfig, postgresEnvironmentConfig } from '../worker/database.ts';
 import { PostgresRuntimeStore } from '../server/postgres-store.ts';
 import { createPortableAdmin } from '../server/admin.ts';
 import { HttpError, readBody } from '../worker/http.ts';
 import { TelegramAdminService } from '../worker/telegram-admin.ts';
+import { databaseSetupEnvironment } from '../scripts/database-setup.ts';
 
 const source = { PUBLIC_URL: 'https://watchtower.example', CRON_SECRET: 's'.repeat(32) };
+
+test('Node PostgreSQL preserves explicit custom CA trust and cannot downgrade URL TLS', () => {
+  const config = postgresConfig(
+    'postgres://app:fixture@database.example/db?sslmode=disable',
+    false,
+    false,
+    { sslCa: 'fixture-ca' },
+  );
+  assert.deepEqual(config.ssl, { rejectUnauthorized: true, ca: 'fixture-ca' });
+  assert(!config.connectionString.includes('sslmode'));
+});
+
+test('database setup preserves explicit provider endpoints, TLS, and the installed namespace', () => {
+  const configured = {
+    TELEGRAM_CHAT_ID: '-1001111111111',
+    DATABASE_ROOT_CHAT_ID: '-1002222222222',
+    DATABASE_URL: 'postgresql://runtime:fixture@cluster.psdb.cloud:6432/runtime',
+    DATABASE_ADMIN_URL: 'postgresql://setup:fixture@admin.psdb.cloud:5433/setup',
+    DATABASE_SSL_MODE: 'verify-full',
+    DATABASE_SSL_CA: 'fixture-ca',
+  };
+  const admin = databaseSetupEnvironment(configured);
+  assert.equal(admin.DATABASE_URL, configured.DATABASE_ADMIN_URL);
+  assert.equal(admin.TELEGRAM_CHAT_ID, configured.DATABASE_ROOT_CHAT_ID);
+  assert.equal(admin.DATABASE_SSL_MODE, configured.DATABASE_SSL_MODE);
+  assert.equal(admin.DATABASE_SSL_CA, configured.DATABASE_SSL_CA);
+  assert.equal(
+    databaseSetupEnvironment({ ...configured, DATABASE_ADMIN_URL: '' }).DATABASE_URL,
+    configured.DATABASE_URL,
+  );
+});
 
 if (process.env.TEST_POSTGRES_URL) {
   const database = new URL(process.env.TEST_POSTGRES_URL);

@@ -1,12 +1,17 @@
 #cloud-config
-# Paste as user data when you create a VM (DigitalOcean, Google Cloud,
-# Azure, AWS, Hetzner, Linode, Vultr, Oracle). Then SSH in, set your
-# values in app.env, and run deploy/vm/install.sh.
+# Template for a fresh Ubuntu/Debian VM that supports cloud-init user data.
+# Replace the repository URL first. Never put application secrets in user data.
+# This prepares the checkout; installation starts after you SSH in and edit app.env.
+package_update: true
 packages:
   - git
   - curl
 runcmd:
-  - curl -fsSL https://get.docker.com | sh
-  - git clone YOUR_FORK_OR_CLONE_URL /opt/watchtower
-  - cp /opt/watchtower/deploy/vm/app.env.example /opt/watchtower/app.env
-  - echo "SSH in, edit /opt/watchtower/app.env, then run: sh /opt/watchtower/deploy/vm/install.sh"
+  - [
+      sh,
+      -ec,
+      'test -d /opt/watchtower/.git || git clone YOUR_FORK_OR_CLONE_URL /opt/watchtower;
+      umask 077;
+      test -e /opt/watchtower/app.env || cp /opt/watchtower/deploy/vm/app.env.example /opt/watchtower/app.env;
+      echo "SSH in, edit /opt/watchtower/app.env, then run: sudo sh /opt/watchtower/deploy/vm/install.sh"',
+    ]

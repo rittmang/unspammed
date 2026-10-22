@@ -61,7 +61,7 @@ Set the existing bot token and owner ID, plus these public variables:
 }
 ```
 
-Deploy first, then run with Node 22+:
+Deploy first, then run with Node 22.x:
 
 ```sh
 npm run telegram:mini-app             # Set and read back only the owner's private-chat menu

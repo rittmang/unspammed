@@ -26,7 +26,6 @@ import {
   type FeedbackInput,
   type ImprovementOverview,
   type PolicyDraft,
-  type PolicyGate,
   type PolicyOptimization,
   type PolicyRevision,
 } from '../shared/improvement';

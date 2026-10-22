@@ -27,7 +27,7 @@ Both modes use the existing olive, lime and terracotta palette. Semantic variabl
 
 ## Verification
 
-Use Node 22+:
+Use Node 22.x:
 
 ```sh
 npm run check

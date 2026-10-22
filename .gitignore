@@ -7,11 +7,15 @@ dist/
 .env
 .env.*
 !.env.example
+app.env
+app.env.*
+!deploy/vm/app.env.example
 wrangler.generated.jsonc
 wrangler.production.jsonc
 .watchtower/
 .vercel/
 .vercel-static/
+.vercel-runtime/
 .do/app.generated.yaml
 coverage/
 *.log

@@ -252,6 +252,10 @@ export function validateConfiguration(input, provider, { requireGeneratedSecrets
   }
   if (env.DATABASE_SSL_CA && (env.DATABASE_SSL_MODE === 'disable' || env.HYPERDRIVE_ID))
     errors.push('Configure DATABASE_SSL_CA only for a direct, verified TLS connection.');
+  if (provider === 'cloudflare' && env.DATABASE_SSL_CA)
+    errors.push(
+      'Direct Cloudflare PostgreSQL cannot use DATABASE_SSL_CA. Use a publicly trusted database certificate, configure CA trust on Hyperdrive, or select a Node host.',
+    );
   const adminKeys = ['TELEGRAM_API_ID', 'TELEGRAM_API_HASH', 'TELEGRAM_SESSION_KEY'];
   if (adminKeys.some((key) => env[key])) {
     if (

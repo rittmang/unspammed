@@ -315,6 +315,7 @@ test('hosted configuration rejects malformed identities, weak secrets, partial A
     { DATABASE_SSL_MODE: 'require' },
     { DATABASE_URL: 'postgres://app@127.0.0.1/db' },
     { DATABASE_SSL_MODE: 'disable', DATABASE_SSL_CA: 'certificate' },
+    { DATABASE_SSL_CA: 'custom-private-ca' },
     { ACCESS_AUD: 'incomplete' },
     { TELEGRAM_API_ID: '12345' },
     { CLOUDFLARE_ACCOUNT_ID: '' },

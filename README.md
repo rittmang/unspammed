@@ -1,6 +1,6 @@
 # Watchtower
 
-Watchtower is a private Telegram moderation bot with a dashboard for reviewing messages, labelling datasets, comparing models, and improving your moderation policy. It runs on Cloudflare Workers or Node 22 with PostgreSQL. Railway, DigitalOcean App Platform and Vercel adapters share the same moderation, storage and authentication code.
+Watchtower is a private Telegram moderation bot with a dashboard for reviewing messages, labelling datasets, comparing models, and improving your moderation policy. Cloudflare Workers, persistent Node 22 and Vercel entry points share the same moderation, PostgreSQL storage and authentication code. Provider templates and their actual verification status are listed in the [provider evidence register](docs/provider-verification.md).
 
 New groups start in **Observe**: messages can be scored and reviewed, but Watchtower does not delete messages, issue strikes or ban until you explicitly choose **Enforce**. Historical imports never trigger live moderation.
 
@@ -13,13 +13,13 @@ For a hosted installation, bring your own:
 - Public HTTPS application host and a scheduler that keeps processing persisted work. Your host's supplied domain is sufficient.
 - Model-provider key when you are ready to classify messages or run evaluations. A key is optional for installation, importing, labelling and reviewing saved data.
 
-A custom domain, Cloudflare DNS, Cloudflare Access, Hyperdrive, and a Telegram user-account session are optional. Telegram Mini App owner authentication works with the bot token and numeric owner ID on every supported host. For normal browser sign-in, setup can generate a private owner token; Cloudflare Access is another optional method.
+A custom domain, Cloudflare DNS, Cloudflare Access, Hyperdrive, and a Telegram user-account session are optional. The shared Mini App handler authenticates the owner using the bot token and numeric owner ID. For normal browser sign-in, setup can generate a private owner token; Cloudflare Access is another optional method.
 
-Follow [the complete hosting, DNS and Telegram guide](docs/hosting.md). It explains the minimum Cloudflare path and the Railway, DigitalOcean and Vercel differences. [Deployment operations](docs/deployment.md) separates locally verified behavior from actual provider deployments. Original account details are retained only in [historical deployment records](docs/deployment-history.md).
+Follow [the hosting, DNS and Telegram guide](docs/hosting.md). It explains the Cloudflare, persistent Node and Vercel requirements. [Deployment operations](docs/deployment.md) separates local tests from actual provider deployments. Original account details are retained only in [historical deployment records](docs/deployment-history.md).
 
 ## Run locally
 
-Requires Node **22+**.
+Requires Node **22.x**.
 
 ```sh
 npm ci
@@ -32,7 +32,7 @@ Without credentials you can inspect the UI and import, label and export evaluati
 
 ## Prepare your deployment
 
-Follow the **[setup guide](docs/setup.md)**. It covers, in order: BotFather, the group, PostgreSQL, the `.env` file, each host (Cloudflare, Railway, DigitalOcean, Vercel, or any Docker/Node host), DNS for each DNS provider, Telegram registration, and every sign-in method (Telegram, browser token, Cloudflare Access), with screenshots.
+Follow the **[setup guide](docs/setup.md)**. It covers BotFather, the group, PostgreSQL, private configuration, the included provider templates, a manual Linux VM path, DNS and Telegram registration, and Telegram/browser-token/Access sign-in. An included template is not a completed test-account deployment; consult the [evidence register](docs/provider-verification.md).
 
 Short version:
 
@@ -81,8 +81,10 @@ Optional PostgreSQL integration tests require a **disposable loopback database**
 TEST_POSTGRES_URL=postgresql://test_user@127.0.0.1:5432/watchtower_test npm run check
 ```
 
-`npm run test:fresh` copies the source without private deployment files, installs from the lockfile, and checks setup for all four hosts. Supply `TEST_POSTGRES_URL` to additionally initialize a new schema and exercise the production-only Node dependencies with browser and Telegram owner authentication. This clean-install check needs a disposable local database administrator able to create a temporary restricted role; it removes that role and schema afterward. Without the variable, database/runtime verification is explicitly skipped.
+`npm run test:fresh` copies the source without private deployment files, installs from the lockfile, and checks all six provider setup choices. Supply `TEST_POSTGRES_URL` to additionally initialize a new schema and exercise the production-only Node dependencies with browser and Telegram owner authentication. This clean-install check needs a disposable local database administrator able to create a temporary restricted role; it removes that role and schema afterward. Without the variable, database/runtime verification is explicitly skipped.
 
 For Cloudflare, also run `npx wrangler deploy --dry-run --config wrangler.generated.jsonc` after setup. A dry run and local adapter checks establish build compatibility; they do not establish deployment, DNS, TLS, cron execution, device behavior or account permissions. Follow the [verification checklist](docs/deployment.md#verification-checklist) before enabling Enforce.
+
+For Vercel adapter changes, run `npm run test:vercel` to build and execute the bundled Node handler locally. Provider-builder validation and actual hosted checks remain separate evidence.
 
 See [architecture and extension contracts](docs/architecture.md), [portability implementation plan](docs/portability-plan.md), and [agent instructions](AGENTS.md) for future work.

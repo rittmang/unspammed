@@ -273,7 +273,6 @@ export function StrikeUsers({
                 <tbody>
                   {visibleUsers.map((user) => {
                     const job = jobs.find((j) => j.userId === user.user_id);
-                    const pending = job && ['queued', 'running'].includes(job.status);
                     return (
                       <tr key={user.user_id}>
                         <td>

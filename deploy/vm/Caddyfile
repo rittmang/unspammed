@@ -1,0 +1,3 @@
+{$WATCHTOWER_DOMAIN} {
+	reverse_proxy watchtower:3000
+}

@@ -3,8 +3,8 @@
 Install Watchtower. Do the steps in order.
 Do only the steps for your host and sign-in method.
 
-After install, Watchtower is in Observe mode. It logs decisions only.
-Turn on Enforce later in Settings.
+New groups start in Observe mode. They log decisions only.
+Choose Enforce later in Settings after reviewing results. Upgrades preserve existing mode and settings.
 
 Screenshots show example data only.
 
@@ -13,13 +13,14 @@ Screenshots show example data only.
 - A Telegram account. This account is the owner.
 - A Telegram supergroup. You own this group.
 - A PostgreSQL database.
-- One host: Cloudflare, Railway, DigitalOcean, Vercel, Render, or Fly.io.
-  Any VM or host that runs a Docker image or Node 22 also works (Section 5G).
-- Node 22 or newer on your computer.
+- One host with an included template: Cloudflare, Railway, DigitalOcean App Platform, Vercel, Render, or Fly.io; or a Linux VM for a manual Compose install (Section 5G).
+- Node 22.x on your computer.
+
+Templates are not proof of deployment in each provider's test account. Check the [provider evidence register](provider-verification.md) for current validation and missing hosted checks. Other Docker/Node platforms need their own networking, scheduler and deployment verification.
 
 You do not need these things:
 
-- A custom domain. The host gives a free HTTPS address.
+- A custom domain on the six managed hosts above. Use their supplied HTTPS address. A VM needs a working HTTPS hostname or a separately configured HTTPS proxy.
 - A model key. Add it later.
 - Cloudflare Access. It is one sign-in option only.
 
@@ -42,10 +43,9 @@ You do not need these things:
 
 ## Step 3. Get a database
 
-1. Create a PostgreSQL database at any provider you like.
-   All of these work with the same URL format: Neon, Supabase, PlanetScale Postgres, Aiven, Render Postgres, Railway Postgres, DigitalOcean Managed PostgreSQL, Amazon RDS, Google Cloud SQL, Azure Database for PostgreSQL, Crunchy Bridge, Xata, or Cloudflare Hyperdrive with your own PostgreSQL.
-   PlanetScale also sells a MySQL product. That product does not work. Watchtower uses PostgreSQL SQL. Use PlanetScale Postgres, not PlanetScale MySQL.
-   No database on a server yet? Section 5G runs PostgreSQL next to the app on one VM.
+1. Create a PostgreSQL database reachable from your application host. Managed PostgreSQL services such as Neon, Supabase or PlanetScale Postgres are candidates; they have not all been tested with Watchtower. Use the provider's connection/TLS instructions and verify permissions, transactions and persistence on your actual endpoint. Cloudflare Hyperdrive is an optional connection layer, not a database.
+   MySQL/MariaDB and PlanetScale's MySQL/Vitess product are unsupported.
+   For PostgreSQL on the same VM, see Section 5G.
 2. Copy the connection URL. It looks like this:
 
 ```text
@@ -94,7 +94,7 @@ Do not use a username as an ID.
 
 Do the steps for one host only.
 
-Railway, DigitalOcean, and Vercel give the address only after the first deploy. Deploy two times:
+If you do not know the host's assigned address until creating/deploying the service, deploy in two stages:
 
 1. Put `PUBLIC_URL=https://example.com` in `.env` for now. Deploy once. Do not connect Telegram yet.
 2. Copy the real HTTPS address from the host.
@@ -102,7 +102,7 @@ Railway, DigitalOcean, and Vercel give the address only after the first deploy. 
 4. Run the setup command again with `--force`.
 5. Import the new values. Deploy again.
 
-Cloudflare: skip this. The address is known before deploy.
+For Cloudflare, choose the Worker name and account's `workers.dev` subdomain first. For Fly, reserve your own app name first. Do not register Telegram against the temporary placeholder.
 
 ### 5A. Cloudflare Workers
 
@@ -210,7 +210,7 @@ npm run setup -- --provider vercel --force
 
 6. Import the values again. Deploy again.
 
-Note: Vercel stops requests larger than 4.5 MB. Very large exports need another host.
+Vercel limits both function requests and responses to 4.5 MB, below Watchtower's larger export allowance. Large browser downloads need another host or a separately implemented download path. Optional Telegram owner-account transport also needs provider testing. See [Vercel constraints](hosting.md#vercel).
 
 ### 5E. Render
 
@@ -223,10 +223,10 @@ npm run database:setup
 ```
 
 2. In Render: make a new Blueprint from your repository. It uses `render.yaml`.
-3. Set the values Render asks for. Or import `.watchtower/runtime.env`.
+3. Copy the requested values from `.watchtower/runtime.env`, including the generated webhook and cron secrets. Import the complete runtime file as service variables so optional browser/session/TLS settings are retained too.
 4. Deploy. Copy the `onrender.com` address. Set it as `PUBLIC_URL`.
    Run setup again with `--force`. Import the values again. Deploy again.
-5. Keep the service on a plan that does not sleep.
+5. Keep the service on a plan that does not sleep for continuous minute processing. Render Free passed hosted function/database/restart checks, but its 15-minute idle spin-down interrupts the in-process scheduler. See the [evidence register](provider-verification.md).
 
 ### 5F. Fly.io
 
@@ -250,55 +250,37 @@ fly deploy
 
 5. Copy the `fly.dev` address. Set it as `PUBLIC_URL`.
    Run setup again with `--force`. Import the secrets again. Deploy again.
-6. Keep at least one machine running. `fly.toml` already sets this.
+6. Keep at least one machine running. `fly.toml` already sets this. Account verification may require a credit card: the verified test account could not create any Machine without one. The documented trial's five-minute forced stop also prevents demonstrating continuous scheduling; see the [evidence register](provider-verification.md).
 
-### 5G. One VM on any cloud — 1-click style
+### 5G. Linux VM: manual installation
 
-Use this for a DigitalOcean Droplet, Google Compute Engine, Azure VM, AWS Lightsail or EC2, Hetzner, Linode, Vultr, or Oracle VM. The steps are the same on all of them. This is the pattern Discourse, Ghost, and n8n use: one Docker Compose file, not one image per cloud.
+The Compose files are intended for a Linux VM with Docker Compose v2. They have not been deployed to every VM provider. Cloud firewalls, VM images, SSH and user-data support differ by provider.
 
-1. Make a Linux VM. Open ports 80 and 443 in its firewall.
-2. Paste `deploy/vm/cloud-init.yaml` as the VM user data. Set your fork URL in it first.
-   No user data field? Skip this. Do step 3 by hand.
-3. SSH into the VM. Edit `/opt/watchtower/app.env`. Set the values from Step 4.
-4. For a database on the same VM: set `POSTGRES_PASSWORD` and the bundled `DATABASE_URL` as shown in `deploy/vm/app.env.example`.
-   For a hosted database: set the normal `DATABASE_URL`.
-5. Run:
+1. Create a VM and configure SSH access. Allow public HTTP/HTTPS ports 80/443 for the proxy, keeping PostgreSQL and the app's port private.
+2. For an Ubuntu/Debian image supporting cloud-init, replace the repository placeholder in `deploy/vm/cloud-init.yaml` and use it as cloud-init user data. It prepares the checkout only. On other images, install Docker/Compose and clone your repository manually.
+3. SSH in and change to the checkout (the example uses `/opt/watchtower`). Copy `deploy/vm/app.env.example` to ignored `app.env` if needed. Set the bot/owner/group values and final `PUBLIC_URL`. Keep this file private.
+4. For external PostgreSQL, set `DATABASE_URL` and leave `COMPOSE_PROFILES` empty unless using Caddy. For bundled PostgreSQL, set `COMPOSE_PROFILES=bundled-db`, leaving `DATABASE_URL` and `DATABASE_SSL_MODE` blank on first install; setup generates separate administrator/application passwords and a restricted application role. For Caddy HTTPS, set `WATCHTOWER_DOMAIN`, point that hostname's DNS to the VM, make `PUBLIC_URL=https://your-hostname`, and add `https` to the profiles (`COMPOSE_PROFILES=bundled-db,https` for both). The bundled database uses a Docker volume: plan backups outside the VM.
+5. Run the installer from the checkout using the commands below. It generates private runtime values, builds the image, initializes the schema and starts the selected services.
 
 ```sh
-sh deploy/vm/install.sh
+sudo sh deploy/vm/install.sh
 ```
 
-6. For automatic HTTPS: set your domain DNS to the VM (Step 6), then run:
+After changing `PUBLIC_URL` or other private inputs, rerun the installer so derived runtime values are regenerated before restarting. Preserve existing browser/session keys. Follow its health-check output, then continue to Step 7 after public HTTPS works. No local Node installation is needed on the VM; the installer uses a Node container.
 
-```sh
-WATCHTOWER_DOMAIN=your-domain docker compose --profile https up -d
-```
+For later status/log/stop commands, pass the generated private Compose file: `docker compose --env-file .watchtower/compose.env ps`. Changing a password in `app.env` does not rotate the password inside an existing database volume.
 
-Add `--profile bundled-db` too if you use the VM database. 7. Set `PUBLIC_URL` to the final HTTPS address. Generate the values again and restart:
+This is a scripted manual install. It is not a cloud marketplace listing or one-click provisioning. Coolify, Dokku and CapRover are candidate image/Compose integrations and require their own validation.
 
-```sh
-docker compose up -d --build
-```
+### 5H. Other container services
 
-No Node is needed on the VM. The install script uses a Node container to make the private values.
-Cloud marketplaces (DigitalOcean Marketplace, Google Cloud Marketplace, Azure Marketplace, AWS Marketplace) need a vendor review before a listing. This repository gives you the same result now, without a listing.
+Cloud Run, Azure Container Apps and AWS ECS can run containers, but this repository does not include a complete tested deployment for them. They can keep instances running with the right CPU/scaling settings. A sleeping configuration needs a separate scheduler integration; merely building the image does not supply one.
 
-The same `docker-compose.yml` also works in **Coolify** (add it as a Docker Compose resource). **Dokku** and **CapRover** use the `Dockerfile` and `Procfile` instead; give them the values from `.watchtower/runtime.env`.
-
-### 5H. Container services: Cloud Run, Azure Container Apps, AWS
-
-These hosts run the Docker image but stop it between requests. The minute timer does not run.
-
-1. Build and push the `Dockerfile` image with your cloud's tool.
-2. Run it as a service. Set the values from `.watchtower/runtime.env`. Set the port to 3000. Allow at least one always-on instance if the host offers it.
-3. Make a scheduler in the same cloud: Google Cloud Scheduler, Azure Logic Apps, or Amazon EventBridge Scheduler.
-   Every minute, send a `GET` request to `https://your-address/api/cron` with header `Authorization: Bearer YOUR_CRON_SECRET`.
-   Use the `CRON_SECRET` from `.watchtower/runtime.env`.
-4. Copy the service HTTPS address. Set it as `PUBLIC_URL`. Import the values again. Deploy again.
+Use the [container extension requirements](hosting.md#other-container-platforms) to evaluate networking, public webhooks, TLS, CPU, minute dispatch and request lifetime. Do not treat EventBridge Scheduler as an arbitrary authenticated HTTP caller. Choose an included template above if you need the existing setup steps.
 
 ### 5I. Any other host
 
-Run setup once to make the value files. Use one of the six provider names as a stand-in; the value files are the same:
+For an experienced operator integrating a different persistent Node host, setup can generate the runtime values using an existing Node target:
 
 ```sh
 npm run setup -- --provider railway
@@ -308,10 +290,9 @@ Run the `Dockerfile` in this repository.
 Or run Node 22: `npm ci`, `npm run build`, then `npm start`.
 Set the values from `.watchtower/runtime.env` in the host.
 Give the app one public HTTPS address. Set it as `PUBLIC_URL`.
-Keep the process running at all times.
+Keep a process running with CPU available between requests, or implement awaited authenticated minute dispatch. Test the host separately before relying on it.
 
-Not supported: Netlify and static-only hosts. They cannot run the timer or the database connection.
-MySQL and PlanetScale MySQL (Vitess) are also not supported. The app stores data with PostgreSQL SQL. Every PostgreSQL-compatible database above works.
+Netlify has server functions, scheduled functions and PostgreSQL support, but Watchtower has no Netlify adapter. Static-only hosts cannot run this backend. MySQL/MariaDB and PlanetScale MySQL (Vitess) have no storage adapter. See the [support inventory](provider-verification.md).
 
 ## Step 6. DNS — only if you want your own domain
 
@@ -329,7 +310,7 @@ Change DNS only at the DNS host.
 
 Do not copy IP addresses or IDs from another install.
 Wait until the host shows the domain as active and HTTPS works.
-Set `PUBLIC_URL` to the new address. Run setup again with `--force`. Deploy again. Do Step 7 again.
+Set `PUBLIC_URL` to the new address. Run setup again with `--force` and deploy again. For the VM path, edit `app.env` (and `WATCHTOWER_DOMAIN` for Caddy), then rerun `sudo sh deploy/vm/install.sh` instead. Do Step 7 again using that installation's credentials.
 
 ## Step 7. Connect Telegram
 
@@ -349,6 +330,17 @@ npm run telegram:setup
 npm run telegram:mini-app
 npm run telegram:mini-app -- --check
 ```
+
+For the VM installer path, run these commands **on the VM from its checkout** instead. They use the deployed runtime values, including the secrets generated there:
+
+```sh
+sudo docker compose --env-file .watchtower/compose.env exec watchtower node scripts/setup.mjs --provider railway --check
+sudo docker compose --env-file .watchtower/compose.env exec watchtower node scripts/telegram-setup.mjs
+sudo docker compose --env-file .watchtower/compose.env exec watchtower node scripts/telegram-mini-app.mjs
+sudo docker compose --env-file .watchtower/compose.env exec watchtower node scripts/telegram-mini-app.mjs --check
+```
+
+The `railway` name selects the shared Node setup check; it does not deploy to Railway. Do not register using a different desktop `.env` whose webhook secret differs from the VM's.
 
 `telegram:setup` sets your app as the Telegram webhook. It keeps pending messages.
 `telegram:mini-app` adds an **Open dashboard** button to your private chat with the bot. It changes nothing else.
@@ -371,11 +363,13 @@ No other account can sign in.
 
 Use this to sign in from a normal browser.
 
+For the VM path, the installer already enables browser-token sign-in. Read `BROWSER_AUTH_TOKEN` privately from that VM's `app.env` or `.watchtower/runtime.env`, save it in your password manager, and enter it on the HTTPS sign-in page. Do not generate a separate token on your desktop. To change it later, edit the VM's `app.env` and rerun `sudo sh deploy/vm/install.sh`. The following npm/import steps apply to the other hosting paths.
+
 1. Run setup with this flag:
 
 ```sh
 npm run setup -- --provider YOUR_HOST --browser-auth --force
-# YOUR_HOST is one of: cloudflare, railway, digitalocean, vercel
+# YOUR_HOST is one of: cloudflare, railway, digitalocean, vercel, render, fly
 ```
 
 On Cloudflare, upload `.watchtower/secrets.json` again. On other hosts, import `.watchtower/runtime.env` again.
@@ -389,7 +383,7 @@ On Cloudflare, upload `.watchtower/secrets.json` again. On other hosts, import `
 Save the token in a password manager. Do not put it in a link.
 To sign out all users: change the token. Deploy again.
 
-### Method C. Cloudflare Access (Cloudflare only)
+### Method C. Cloudflare Access (optional upstream service)
 
 1. In Cloudflare Zero Trust, make an Access application for your app address.
    Allow only your email address. Copy its audience tag.
@@ -403,10 +397,9 @@ DASHBOARD_URL=https://your-app-address
 ```
 
 3. Run setup again with `--force`. Deploy again.
-4. Add a second Access application for only `/telegram/webhook`, `/mini`, and `/mini/*`.
-   Give it a Bypass policy for everyone.
-   Telegram must reach these paths with no Cloudflare login.
-   The app still checks the Telegram signature and owner ID on each request.
+4. If Access covers the whole hostname, configure narrowly scoped applications for `/telegram/webhook`, `/mini`, and `/mini/*`, plus `/internal/work`, `/api/cron` and `/health` where used. Each required path must reach the app without a browser login. Keep ordinary browser APIs protected. The application still requires each route's own credential. Follow the [Access path instructions](hosting.md#optional-cloudflare-access).
+
+Access can sit in front of another application host; DNS hosting and application hosting are independent. Its configuration and upstream headers must be verified on that host.
 
 ### Local test only
 
@@ -426,7 +419,7 @@ The group is in Observe mode. This is correct.
 
 ![Messages on a phone, light theme](screenshots/messages-light-390.png)
 
-3. Tap a message. You see the full text, score, and reason.
+3. Tap a message to inspect its text. Scores and reasons require a configured model key and completed classification; installing/importing without a key does not perform inference.
 
 ![Message detail on a phone, dark theme](screenshots/message-detail-dark-390.png)
 
@@ -484,3 +477,4 @@ Use your own Telegram account, not the bot.
 - [Telegram Mini App details](telegram-mini-app.md)
 - [Hosting reference](hosting.md)
 - [Deployment checks](deployment.md)
+- [Provider evidence and research corrections](provider-verification.md)
