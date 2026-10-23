@@ -83,6 +83,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
   if (miniAuthenticated || status?.authenticated) return children;
   return (
     <main className="group-bootstrap sign-in">
+      <img src={isMiniApp ? '/mini/favicon.svg' : '/favicon.svg'} width="48" height="48" alt="" />
       <h1>Sign in to Unspammed</h1>
       <p>
         {status

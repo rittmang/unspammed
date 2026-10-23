@@ -163,11 +163,10 @@ strong {
   color: #f4f7ef;
 }
 .brand-mark {
-  color: #d3eaa8;
   display: flex;
 }
-.brand-period {
-  color: #d3eaa8;
+.brand-mark img {
+  flex-shrink: 0;
 }
 .workspace {
   display: flex;
@@ -2553,8 +2552,9 @@ tbody tr:last-child td {
     gap: 7px;
     margin-left: 8px;
   }
-  .brand-mark svg {
-    width: 22px;
+  .brand-mark img {
+    width: 24px;
+    height: 24px;
   }
   .workspace {
     padding: 9px 7px;

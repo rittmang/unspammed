@@ -4,6 +4,16 @@ Research checked on **2026-10-21**. A template means the repository contains con
 
 Brand note, **2026-10-22**: the project is now Unspammed and its self-hosted edition is Naaradmuni. The 2026-10-21 provider run below tested the application under its former Watchtower name. Its source identities, measured results and outstanding conditions remain the original evidence; renaming the project does not establish a fresh provider deployment, the claimed `@unspammedbot` service, or commercial billing. See [editions and pricing status](brand-and-editions.md).
 
+## US brand asset release — 23 October 2026 Pacific
+
+The existing Cloudflare installation now serves Worker version `e1caab8f-6993-496d-8e6f-830f37e60b88`, with the same US monogram as the marketing site. Workspace, loading/sign-in states and favicon share `public/favicon.svg`; Telegram views request `/mini/favicon.svg` so optional browser Access protection does not block the image.
+
+- Node **22.23.4**: typecheck, **276 Workers tests**, **39 setup/deployment tests**, **12 portable runtime tests**, the bundled Vercel test/build, formatting and the preserved production configuration's Wrangler dry run passed. **30 optional Workers PostgreSQL tests and three PostgreSQL runtime tests were skipped** because no disposable database was supplied. No database/storage behavior changed.
+- Isolated Chromium/WebKit checks passed **32 browser workspace/sign-in cases** and **16 Mini App workspace cases**, covering **320, 390, 768 and 1440px** in both themes. They verify the correct image path, loaded square icons, visible drawer branding and no horizontal overflow. The Mini App uses mocked SDK/data; this is browser evidence, not a physical Telegram-client test.
+- **10 deployed HTTPS checks** passed: health, unauthenticated API rejection, signed owner reads, Mini App shell/favicon, byte-identical JavaScript/CSS and private/unknown asset rejection. Read-only comparisons confirmed unchanged installed configuration, bindings, schedules, compatibility flags, moderation settings and group membership. No Telegram configuration, real deletion/ban, owner-account login, model inference or explicit cron/restart test was performed for this asset release.
+
+The separate marketing Worker passed its own build, static checks, responsive browser matrix and deployed HTTP checks, recorded in that repository. This release adds no new provider or database compatibility claims; the provider-specific evidence below retains its original scope.
+
 ## Unspammed implementation inventory
 
 | Target                    | Repository implementation                                            | Provider build validation                                 | Actual hosted checks                                                                                                                                                                   |

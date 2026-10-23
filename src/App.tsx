@@ -173,7 +173,7 @@ export default function App() {
   if (!directory || !current)
     return (
       <main className="group-bootstrap">
-        <ShieldCheck size={32} />
+        <img src={isMiniApp ? '/mini/favicon.svg' : '/favicon.svg'} width="48" height="48" alt="" />
         <h1>Unspammed</h1>
         <p>{error || 'Loading your Telegram groups…'}</p>
         {error && (
@@ -410,11 +410,14 @@ function GroupWorkspace({
         </button>
         <a className="brand" href="#overview" onClick={() => navigate('overview')}>
           <span className="brand-mark">
-            <ShieldCheck size={25} strokeWidth={1.7} />
+            <img
+              src={isMiniApp ? '/mini/favicon.svg' : '/favicon.svg'}
+              width="28"
+              height="28"
+              alt=""
+            />
           </span>
-          <span>
-            unspammed<span className="brand-period">.</span>
-          </span>
+          <span>Unspammed</span>
         </a>
         <GroupSwitcher
           current={group}
