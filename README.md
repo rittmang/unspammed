@@ -4,7 +4,7 @@
 
 Unspammed is a private Telegram moderation bot with a dashboard for reviewing messages, labelling datasets, comparing models, and improving your moderation policy. Cloudflare Workers, persistent Node 22 and Vercel entry points share the same moderation, PostgreSQL storage and authentication code. Provider templates and their actual verification status are listed in the [provider evidence register](docs/provider-verification.md).
 
-Self-host **Unspammed** using the instructions in this repository: bring your own bot, infrastructure and model-provider billing. **Unspammed Bot** is the planned hosted edition associated with [@unspammedbot](https://t.me/unspammedbot). Its **US$5/month is a placeholder**, and hosted signup, checkout, billing and automatic provisioning are not implemented. Claiming the username does not establish a configured or running service. See [editions and pricing status](docs/brand-and-editions.md).
+Add [**@unspammedbot** to your Telegram group](https://t.me/unspammedbot?startgroup&admin=delete_messages+restrict_members), or self-host **Unspammed** with your own bot, infrastructure and model-provider billing. The operator confirmed the public bot running and ready for new groups on 2026-10-22. This repository does not implement hosted signup, checkout, subscription billing or automatic customer provisioning; the earlier US$5/month figure remains a planning placeholder. See [editions and pricing status](docs/brand-and-editions.md).
 
 New groups start in **Observe**: messages can be scored and reviewed, but Unspammed does not delete messages, issue strikes or ban until you explicitly choose **Enforce**. Historical imports never trigger live moderation.
 
