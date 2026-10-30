@@ -1,0 +1,89 @@
+{
+  "schemaVersion": 1,
+  "observedAt": "2026-10-30T23:05:40.342Z",
+  "scope": "Operator-authorized rollout to both active provisioned groups on the existing Cloudflare installation; group identities and private snapshots omitted",
+  "releaseCommit": "507d6c4e843a30520aada62b0fb22d299d7ca1a3",
+  "previousWorkerVersion": "aef2b25a-6f50-4986-8137-b76e82067f4f",
+  "deployedWorkerVersions": [
+    {
+      "version_id": "42331437-e4b8-4708-a045-50bb669b1103",
+      "percentage": 100
+    }
+  ],
+  "verification": {
+    "productionConfigurationDryRunPassed": true,
+    "deployedHttpChecks": 11,
+    "postApplyReadChecks": 7,
+    "builtJavaScriptAndCssMatched": true,
+    "installedSettingsPreservedByCodeDeployment": true,
+    "activeRegistryPreserved": true,
+    "configurationBindingsSchedulesDomainsAndCompatibilityPreserved": true,
+    "retryColumnsMissingBeforeDeployment": 0,
+    "additionalSchemaMigrationPerformed": false
+  },
+  "groups": [
+    {
+      "label": "group-1",
+      "before": {
+        "provider": "openrouter",
+        "model": "google/gemini-2.5-flash-lite",
+        "batchSize": 20,
+        "reasoningTokens": 0,
+        "mode": "enforce",
+        "threshold": 0.9,
+        "reviewThreshold": 0.75
+      },
+      "after": {
+        "provider": "openrouter",
+        "model": "google/gemini-2.5-flash-lite",
+        "batchSize": 1,
+        "reasoningTokens": 1024,
+        "mode": "enforce",
+        "threshold": 0.9,
+        "reviewThreshold": 0.75
+      },
+      "changedFields": ["batchSize", "reasoningTokens", "policy"],
+      "beforePolicySha256": "c120c0767153c2ab43524f25b437ece9e58b7ad6b89c82f737480b3b38ec7f38",
+      "afterPolicySha256": "9d0ceb6c7ffe0283513012519287d5ab0c09755d16c076ecca60268922cb2606",
+      "policyApplication": "Evaluated bait, greeting/question and judgment edits adapted to custom policy; existing promotion-obscuring rule retained; inverse edit exactly reconstructs original",
+      "otherSettingsPreserved": true,
+      "datasetsAndLabelsPreserved": true,
+      "completedEvaluationCursorsPreserved": true
+    },
+    {
+      "label": "group-2",
+      "before": {
+        "provider": "openrouter",
+        "model": "google/gemini-2.5-flash-lite",
+        "batchSize": 20,
+        "reasoningTokens": 0,
+        "mode": "enforce",
+        "threshold": 0.9,
+        "reviewThreshold": 0.75
+      },
+      "after": {
+        "provider": "openrouter",
+        "model": "google/gemini-2.5-flash-lite",
+        "batchSize": 1,
+        "reasoningTokens": 1024,
+        "mode": "enforce",
+        "threshold": 0.9,
+        "reviewThreshold": 0.75
+      },
+      "changedFields": ["batchSize", "reasoningTokens", "policy"],
+      "beforePolicySha256": "40a3426fc347f70ab344d311ee72da763fd837f4faa8f484a33535a331050be4",
+      "afterPolicySha256": "1cd28c7d81acd5b7f66ede8932f950c4e92f77b649689c54077a76fea2ebb67a",
+      "policyApplication": "Exact evaluated policy replacements",
+      "otherSettingsPreserved": true,
+      "datasetsAndLabelsPreserved": true,
+      "completedEvaluationCursorsPreserved": true
+    }
+  ],
+  "verificationLimits": [
+    "No additional paid model inference was requested for rollout verification; normal live scheduling remained enabled",
+    "No manual Telegram moderation action, owner-account login, webhook/menu change or secret rotation was performed",
+    "No new actual cron/restart experiment or physical Telegram-client check was performed",
+    "Readback verifies applied settings and preserved state, not independent production accuracy or guaranteed throughput",
+    "The custom full policy was not separately evaluated with paid inference"
+  ]
+}

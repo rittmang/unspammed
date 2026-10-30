@@ -1,6 +1,6 @@
 # Single-message Gemini moderation
 
-Implemented locally on **2026-10-30** at the operator's request, following the [protocol investigation](gemini-protocol-investigation.md) and [exact-input owner adjudication](gemini-owner-adjudicated-evidence.json).
+Implemented, pushed and deployed on **2026-10-30** at the operator's request, following the [protocol investigation](gemini-protocol-investigation.md) and [exact-input owner adjudication](gemini-owner-adjudicated-evidence.json). The operator separately authorized applying the setup to both active live groups; [rollout evidence](single-message-rollout-evidence.json) records the release identity and authenticated settings readback.
 
 ## Behavior
 
@@ -20,6 +20,8 @@ Installed settings are not rewritten on read or deployment. Missing legacy field
 
 In **Settings → The spam policy**, **Use evaluated Gemini setup** prepares the matching policy edits and selects OpenRouter/Gemini, batch size one and 1,024 thinking tokens. This action leaves an unsaved draft. **Save settings** applies it through the existing authenticated settings endpoint and stale-version check. The preset preserves the selected moderation mode and thresholds; it does not enable Enforce. The owner can turn thinking off and choose a batch size separately.
 
+For the authorized 30 October rollout, both active groups were updated through that authenticated settings endpoint after code deployment and before/after comparison. Both retained their existing **Enforce** mode, **0.90** spam threshold, **0.75** review threshold and daily token limits. One policy accepted the exact evaluated replacements. The other needed an intentional adaptation: its existing rule against obscured promotional posts was retained, the evaluated bait rule was added beside it, and the greeting/question and judgment edits were applied. Reversing those edits exactly reconstructed the custom original. That custom full policy has not received a separate paid accuracy evaluation.
+
 Replay jobs freeze batching and thinking with their policy/model/threshold snapshot. A later live settings change does not alter the queued run's execution settings. Old snapshots without the new field retain thinking off; recorded cursor progress and already completed predictions are preserved. Thinking and batching participate in new policy fingerprints, so old draft approvals may become stale rather than authorize a protocol they did not measure. Rolling back a policy version that predates thinking restores thinking off.
 
 ## Evidence and limits
@@ -28,4 +30,4 @@ The selected configuration passed the 16-case development screen and 64 previous
 
 That screen cost **7.88×** the reported same-policy batch-eight comparison. This is a measured experiment ratio, not a monthly billing forecast. The settings page states that provider usage increases; installed daily token limits remain unchanged.
 
-Local verification and build results are recorded in the [provider evidence register](provider-verification.md). No additional paid inference, live configuration update, deployment, actual cron/restart experiment or Telegram action was performed to verify this implementation.
+Local verification, the production deployment and the separately authorized live settings changes are recorded in the [provider evidence register](provider-verification.md). Deployed HTTP and settings readback passed; no additional paid inference, manual Telegram moderation action, actual cron/restart experiment or physical Telegram-client check was requested for rollout verification. Normal live scheduling remained enabled. Those deployment checks do not establish independent production accuracy.

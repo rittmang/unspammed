@@ -6,7 +6,15 @@
 
 # Deployment status
 
-## Current: portability, auth hardening and fresh-install verification
+## Current: single-message Gemini moderation — 30 October 2026 Pacific
+
+Release commit `507d6c4e843a30520aada62b0fb22d299d7ca1a3` was pushed to `main` and deployed to the existing Cloudflare installation as Worker version `42331437-e4b8-4708-a045-50bb669b1103` at 100%, replacing `aef2b25a-6f50-4986-8137-b76e82067f4f`. The preserved private production configuration passed its dry run. Both provisioned groups already had the required retry columns; no schema migration was run.
+
+The operator explicitly authorized applying the updated policy and single-message/1,024-token thinking setup to both active live groups. Authenticated settings writes and readback confirmed OpenRouter `google/gemini-2.5-flash-lite`, batch size one and 1,024 thinking tokens. Both groups retained their existing Enforce mode, spam/review thresholds of 0.90/0.75, token limits and all unrelated settings. One policy used the exact evaluated replacements; the other retained its custom promotion-obscuring rule while adding the evaluated bait rule and greeting/question/judgment edits. That custom full policy has not received a separate paid accuracy evaluation.
+
+Eleven deployed HTTP checks and seven post-apply authenticated reads passed. The served JavaScript/CSS matched the tested build. Registry membership, datasets/label counts, completed evaluation cursors, configuration, bindings, schedules, domains and compatibility settings were preserved. No additional paid inference, manual Telegram moderation action, owner-account login, Telegram configuration change, cron/restart experiment or physical-client check was requested for rollout verification; normal live scheduling remained enabled. See the [full verification record](provider-verification.md#single-message-thinking-implementation-and-production-rollout--30-october-2026-pacific) and [sanitized rollout evidence](single-message-rollout-evidence.json).
+
+## Previous: portability, auth hardening and fresh-install verification
 
 Worker version `5c5b8f42-ffaa-4ce7-9068-5305dd5ae382`, deployed 2026-10-21 (Pacific) from the preserved private production config (`wrangler.production.jsonc`, migration history retained). This ships the account-neutral setup for Cloudflare/Railway/DigitalOcean/Vercel, shared Node/Vercel runtime, browser-token and Telegram Mini App sign-in, exact built-asset allowlist, and renewable database work leases, on top of the responsive mobile/dark-theme dashboard.
 
