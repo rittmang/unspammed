@@ -6,7 +6,13 @@
 
 # Deployment status
 
-## Current: single-message Gemini moderation — 30 October 2026 Pacific
+## Current: general model thinking controls — 30 October 2026 Pacific
+
+Release `b8a2008` was pushed to `main` and deployed as Worker version `7ca07447-02bc-4ea2-be3a-fa04fa380148` at 100%, replacing `42331437-e4b8-4708-a045-50bb669b1103`. Settings now separates the evaluated preset from general token-budget, advertised-effort, model-default and Off controls, with independent output limits, batching and optional upstream routing. Public model capabilities stream through an authenticated fixed-origin proxy; custom endpoints must declare compatible reasoning support.
+
+All required Node 22 checks, six responsive browser cases, metadata outage/retry, formatting and the preserved production configuration's dry run passed. Seventeen deployed HTTPS checks passed, including authentication for the new catalog and exact served asset comparison. Both live groups retained their complete settings, datasets/label counts and completed evaluation cursors. Local old/new request construction for both installed profiles matched exactly without inference. No live settings write, schema migration, manual Telegram action or additional paid inference was requested for rollout verification. Configuration, bindings, domains, schedules and compatibility were preserved; normal scheduling remained enabled. See [verification and limits](provider-verification.md#general-model-thinking-controls--30-october-2026-pacific) and [sanitized evidence](model-thinking-rollout-evidence.json).
+
+## Previous: single-message Gemini moderation — 30 October 2026 Pacific
 
 Release commit `507d6c4e843a30520aada62b0fb22d299d7ca1a3` was pushed to `main` and deployed to the existing Cloudflare installation as Worker version `42331437-e4b8-4708-a045-50bb669b1103` at 100%, replacing `aef2b25a-6f50-4986-8137-b76e82067f4f`. The preserved private production configuration passed its dry run. Both provisioned groups already had the required retry columns; no schema migration was run.
 

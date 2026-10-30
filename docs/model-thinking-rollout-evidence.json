@@ -1,0 +1,78 @@
+{
+  "schemaVersion": 1,
+  "observedAt": "2026-10-30T23:26:56.470Z",
+  "releaseCommit": "b8a200805c9b43871a039a5b2a73269f3e1a1b45",
+  "scope": "Existing Cloudflare installation; both active provisioned groups; no live settings writes",
+  "previousWorkerVersions": [
+    {
+      "version_id": "42331437-e4b8-4708-a045-50bb669b1103",
+      "percentage": 100
+    }
+  ],
+  "deployedWorkerVersions": [
+    {
+      "version_id": "7ca07447-02bc-4ea2-be3a-fa04fa380148",
+      "percentage": 100
+    }
+  ],
+  "verification": {
+    "productionConfigurationDryRunPassed": true,
+    "deployedHttpChecks": 17,
+    "modelCatalogCount": 456,
+    "anonymousCatalogRejected": true,
+    "authenticatedCatalogLoaded": true,
+    "servedAssetsMatchBuild": true,
+    "configurationBindingsSchedulesDomainsCompatibilityPreserved": true,
+    "liveSettingsExactlyPreserved": true,
+    "datasetsLabelCountsAndCompletedEvaluationCursorsPreserved": true,
+    "localPriorReleaseRequestConstruction": {
+      "groupsChecked": 2,
+      "payloadsExactlyMatch": true,
+      "tokenEstimatesExactlyMatch": true,
+      "modelCalls": 0
+    }
+  },
+  "groups": [
+    {
+      "label": "group-1",
+      "provider": "openrouter",
+      "model": "google/gemini-2.5-flash-lite",
+      "batchSize": 1,
+      "reasoningTokens": 1024,
+      "mode": "enforce",
+      "threshold": 0.9,
+      "reviewThreshold": 0.75,
+      "allSettingsPreserved": true
+    },
+    {
+      "label": "group-2",
+      "provider": "openrouter",
+      "model": "google/gemini-2.5-flash-lite",
+      "batchSize": 1,
+      "reasoningTokens": 1024,
+      "mode": "enforce",
+      "threshold": 0.9,
+      "reviewThreshold": 0.75,
+      "allSettingsPreserved": true
+    }
+  ],
+  "localChecks": {
+    "node": "22.22.0",
+    "workersPassed": 328,
+    "workersOptionalSkipped": 31,
+    "setupPassed": 41,
+    "portableRuntimePassed": 12,
+    "portableRuntimeOptionalPostgresSkipped": 3,
+    "bundledVercelBuildExecutionPassed": 1,
+    "formattingPassed": true,
+    "responsiveBrowserCases": 6,
+    "viewportWidths": [320, 390, 1280],
+    "themes": ["light", "dark"],
+    "catalogFailureRetryCasePassed": true
+  },
+  "limits": [
+    "No paid inference or manual Telegram moderation action requested for verification; normal live scheduling remains enabled",
+    "Generic model controls verified through metadata and mocked request/replay tests; no new moderation-accuracy claim for other models or budgets",
+    "No new actual cron/restart experiment or physical Telegram-client check"
+  ]
+}
