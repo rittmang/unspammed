@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "date": "2026-10-30",
+  "scope": "Retrospective owner adjudication of three exact synthetic validation inputs after their text and supplied context were shown in conversation. Preserve the original fixture, model outputs and original gate result. This record is not a new blind validation or approval to change live settings.",
+  "source": "The owner explicitly classified all three examples as spam: no these are spammy too, so it's fine",
+  "originalFixtureSHA256": "0a820b8fd64a3f4e0cbb158bf27a2ddde83b236f4df2fa48e8ab2e17956a3942",
+  "inputHashFormat": "SHA-256 of JSON.stringify({text, context: context || [], media: media || ''}), in that property order; original opaque ID and labels excluded.",
+  "generalization": "These three complete inputs are owner-adjudicated. This record does not relabel other unreviewed examples or prohibit all greetings, emoji use or genuine questions.",
+  "decisions": [
+    {
+      "id": "n37",
+      "originalLabel": "ham",
+      "ownerLabel": "spam",
+      "inputSHA256": "a9ed8ab9f1916876556da7efdbf4825c1c10d4407e2c5bf8400ba26ec7f22b64"
+    },
+    {
+      "id": "n38",
+      "originalLabel": "ham",
+      "ownerLabel": "spam",
+      "inputSHA256": "0209cd629217567dbc6fb598d1d0c597c30a11c9c5dbd7bb5656cb72fd4bc7dd"
+    },
+    {
+      "id": "n46",
+      "originalLabel": "ham",
+      "ownerLabel": "spam",
+      "inputSHA256": "d63ac4162df600e409b60a9b8e604ed63f58b3f90bac966503513f82f195d1f1"
+    }
+  ]
+}

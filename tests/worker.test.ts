@@ -143,6 +143,63 @@ async function tick(s: DurableObjectStub) {
 }
 
 describe('durable moderation', () => {
+  it('retries only the submitted thinking target when fitting shrinks a larger configured batch', async () => {
+    const s = stub();
+    await configure(s, { batchSize: 3, reasoningTokens: 1024 });
+    for (let id = 1; id <= 3; id++) await send(s, update(id, 42, `Separate target ${id}`));
+    modelReply = () =>
+      Response.json(
+        { error: { code: 429, message: 'Thinking route is temporarily limited' } },
+        { status: 429, headers: { 'Retry-After': '3600' } },
+      );
+    await tick(s);
+    const rows = await runInDurableObject(s, (_instance, state) =>
+      state.storage.sql
+        .exec<{ id: number; retry_attempts: number; next_at: number }>(
+          'SELECT id,retry_attempts,next_at FROM messages ORDER BY id',
+        )
+        .toArray(),
+    );
+    expect(calls.filter((c) => c.method === 'classify')).toHaveLength(1);
+    expect(rows[0].retry_attempts).toBe(1);
+    expect(rows[0].next_at).toBeGreaterThan(Date.now() + 3500000);
+    expect(rows.slice(1)).toEqual([
+      { id: 2, retry_attempts: 0, next_at: 0 },
+      { id: 3, retry_attempts: 0, next_at: 0 },
+    ]);
+  });
+
+  it('classifies new groups one message per call with thinking and checkpoints each result', async () => {
+    const s = stub();
+    expect((await overview(s)).settings).toMatchObject({
+      batchSize: 1,
+      reasoningTokens: 1024,
+      mode: 'observe',
+    });
+    for (let id = 1; id <= 3; id++) await send(s, update(id, 42, `Separate target ${id}`));
+    for (let i = 0; i < 3; i++) {
+      await tick(s);
+      expect((await overview(s)).stats.pending).toBe(2 - i);
+    }
+    const requests = calls.filter((c) => c.method === 'classify');
+    expect(requests).toHaveLength(3);
+    expect(requests.map((r) => JSON.parse(r.body.messages[1].content).messages[0].text)).toEqual([
+      'Separate target 1',
+      'Separate target 2',
+      'Separate target 3',
+    ]);
+    for (const r of requests) {
+      expect(JSON.parse(r.body.messages[1].content).messages).toHaveLength(1);
+      expect(r.body).toMatchObject({
+        reasoning: { max_tokens: 1024, exclude: true },
+        max_tokens: 2024,
+      });
+    }
+    await tick(s);
+    expect(calls.filter((c) => c.method === 'classify')).toHaveLength(3);
+    expect(calls.some((c) => c.method === 'deleteMessages')).toBe(false);
+  });
+
   it('drains existing bans before classification, bounds work, and coalesces legacy duplicates', async () => {
     const s = stub();
     await configure(s, { mode: 'enforce' });
@@ -220,6 +277,7 @@ describe('durable moderation', () => {
   });
   it('reuses overview reads until storage changes or the cache expires', async () => {
     const s = stub();
+    await configure(s, { batchSize: 20, reasoningTokens: 0 });
     await send(s, update(1));
     await overview(s);
     await runInDurableObject(s, async (instance: GroupModerator) => {
@@ -276,6 +334,7 @@ describe('durable moderation', () => {
   });
   it('provides only recent same-sender messages as repetition context', async () => {
     const s = stub();
+    await configure(s, { batchSize: 20, reasoningTokens: 0 });
     nextScore = 0.05;
     const old = update(1, 42, 'Yesterday greeting');
     old.message!.date -= 86400;
@@ -340,7 +399,7 @@ describe('durable moderation', () => {
   });
   it('awards strikes in message chronology even if a model returns reversed results', async () => {
     const s = stub();
-    await configure(s, { mode: 'enforce' });
+    await configure(s, { mode: 'enforce', batchSize: 20, reasoningTokens: 0 });
     await send(s, update(1));
     await send(s, update(2));
     await send(s, update(3));
@@ -860,6 +919,66 @@ describe('worker authorization', () => {
 });
 
 describe('model evaluation jobs', () => {
+  it('keeps an old replay batched with thinking off after the live setup changes', async () => {
+    const s = stub();
+    const id = await dataset(s);
+    const queued = await request(s, '/evaluations', {
+      datasetId: id,
+      models: [{ provider: 'openrouter', model: defaultSettings.model }],
+    });
+    expect(queued.status).toBe(202);
+    await runInDurableObject(s, (_instance, state) => {
+      const rows = state.storage.sql
+        .exec<{ id: string; settings_snapshot: string }>(
+          'SELECT id,settings_snapshot FROM evaluations',
+        )
+        .toArray();
+      for (const run of rows) {
+        const snapshot = JSON.parse(run.settings_snapshot);
+        delete snapshot.reasoningTokens;
+        state.storage.sql.exec(
+          'UPDATE evaluations SET settings_snapshot=? WHERE id=?',
+          JSON.stringify(snapshot),
+          run.id,
+        );
+      }
+    });
+    await configure(s, { batchSize: 1, reasoningTokens: 1024 });
+    await tick(s);
+    const [run] = (await (await s.fetch('https://group.internal/api/evaluations')).json()) as any[];
+    expect(run).toMatchObject({ status: 'complete', cursor: 3 });
+    const requests = calls.filter((c) => c.method === 'classify');
+    expect(requests).toHaveLength(1);
+    expect(requests[0].body.reasoning).toBeUndefined();
+    expect(JSON.parse(requests[0].body.messages[1].content).messages).toHaveLength(3);
+  });
+
+  it('uses frozen single-message thinking settings after live settings change', async () => {
+    const s = stub();
+    const id = await dataset(s);
+    await configure(s, { batchSize: 1, reasoningTokens: 1024 });
+    const queued = await request(s, '/evaluations', {
+      datasetId: id,
+      models: [{ provider: 'openrouter', model: defaultSettings.model }],
+    });
+    expect(queued.status).toBe(202);
+    await tick(s);
+    await configure(s, { batchSize: 20, reasoningTokens: 0 });
+    await tick(s);
+    await tick(s);
+    const [run] = (await (await s.fetch('https://group.internal/api/evaluations')).json()) as any[];
+    expect(run).toMatchObject({ status: 'complete', cursor: 3 });
+    expect(JSON.parse(run.settings_snapshot)).toMatchObject({
+      batchSize: 1,
+      reasoningTokens: 1024,
+    });
+    expect(calls.filter((c) => c.method === 'classify')).toHaveLength(3);
+    for (const c of calls.filter((c) => c.method === 'classify')) {
+      expect(c.body.reasoning.max_tokens).toBe(1024);
+      expect(JSON.parse(c.body.messages[1].content).messages).toHaveLength(1);
+    }
+  });
+
   it('reads a small evaluation batch using its position index instead of scanning the sample', async () => {
     const s = stub();
     await runInDurableObject(s, (_instance, state) => {
@@ -886,6 +1005,8 @@ describe('model evaluation jobs', () => {
       body: JSON.stringify(body),
     });
   async function dataset(s: DurableObjectStub) {
+    // Retain explicit coverage of historical batched evaluation jobs.
+    await configure(s, { batchSize: 20, reasoningTokens: 0 });
     const response = await request(s, '/datasets', {
       name: 'Test corpus',
       data: {
@@ -1111,8 +1232,8 @@ describe('model evaluation jobs', () => {
   });
   it('evaluates models in durable batches without affecting live strikes', async () => {
     let s = stub();
-    await configure(s, { mode: 'enforce', batchSize: 1 });
     const id = await dataset(s);
+    await configure(s, { mode: 'enforce', batchSize: 1 });
     const response = await request(s, '/evaluations', {
       datasetId: id,
       models: [
@@ -1291,7 +1412,7 @@ describe('model evaluation jobs', () => {
   it('runs Model lab independently of the moderation token budget', async () => {
     const s = stub(),
       id = await dataset(s);
-    await configure(s, { dailyTokenBudget: 1000 });
+    await configure(s, { dailyTokenBudget: 1000, batchSize: 20, reasoningTokens: 0 });
     await request(s, '/evaluations', {
       datasetId: id,
       models: [{ provider: 'openrouter', model: 'model-a' }],
@@ -1386,6 +1507,134 @@ describe('model evaluation jobs', () => {
     expect(run.predictions).toHaveLength(3);
     expect(calls.filter((c) => c.method === 'classify')).toHaveLength(3);
     expect((await overview(s)).stats).toMatchObject({ tokens: 1000, labTokens: 450 });
+  });
+  it('persists rate-limit backoff across restarts and resumes the same cursor without corrupting usage', async () => {
+    let s = stub();
+    const id = await dataset(s);
+    await configure(s, { batchSize: 1 });
+    const response = await request(s, '/evaluations', {
+      datasetId: id,
+      models: [{ provider: 'openrouter', model: 'model-a' }],
+    });
+    const { ids } = (await response.json()) as { ids: string[] };
+    const success = (body: Record<string, any>) =>
+      Response.json({
+        model: body.model,
+        provider: 'Test provider',
+        choices: [
+          {
+            message: {
+              content: JSON.stringify({
+                results: JSON.parse(body.messages[1].content).messages.map((m: { id: string }) => ({
+                  id: m.id,
+                  score: 0.1,
+                  category: 'ham',
+                  reason: 'Ordinary question',
+                })),
+              }),
+            },
+          },
+        ],
+        usage: { prompt_tokens: 100, completion_tokens: 50, cost: 0.00001 },
+      });
+    modelReply = success;
+    await tick(s);
+    const diagnostic = 'Upstream quota diagnostic '.repeat(25) + 'unabridged-end-marker';
+    modelReply = () =>
+      Response.json(
+        { error: { code: 429, message: 'Rate limit exceeded', metadata: { raw: diagnostic } } },
+        { status: 429, headers: { 'Retry-After': '3600', 'X-Request-ID': 'req-rate-limit' } },
+      );
+    await tick(s);
+    let run = (
+      (await (await s.fetch('https://group.internal/api/evaluations')).json()) as any[]
+    )[0];
+    expect(run).toMatchObject({
+      status: 'running',
+      cursor: 1,
+      retry_attempts: 1,
+      input_tokens: 100,
+      output_tokens: 50,
+      usage_estimated: 0,
+      cost_complete: 1,
+      cost: 0.00001,
+    });
+    expect(run.next_at).toBeGreaterThan(Date.now() + 3500000);
+    expect(JSON.parse(run.model_meta).missing).toBe(false);
+    expect(run.error).toContain(diagnostic);
+    expect((await overview(s)).stats.labTokens).toBe(150);
+    expect(
+      (await overview(s)).audit.some(
+        (a) =>
+          a.detail.includes(diagnostic) &&
+          a.detail.includes(ids[0]) &&
+          a.detail.includes('req-rate-limit'),
+      ),
+    ).toBe(true);
+    const attempted = calls.filter((c) => c.method === 'classify').length;
+    await abortAllDurableObjects();
+    s = env.GROUPS.get(s.id);
+    await runInDurableObject(s, async (instance: GroupModerator) => {
+      expect(await instance.hasDueWork()).toBe(false);
+      await instance.processBatch();
+    });
+    expect(calls.filter((c) => c.method === 'classify')).toHaveLength(attempted);
+    await runInDurableObject(s, (_instance, state) => {
+      state.storage.sql.exec('UPDATE evaluations SET next_at=0 WHERE id=?', ids[0]);
+    });
+    modelReply = success;
+    await tick(s);
+    await tick(s);
+    run = ((await (await s.fetch('https://group.internal/api/evaluations')).json()) as any[])[0];
+    expect(run).toMatchObject({
+      status: 'complete',
+      cursor: 3,
+      next_at: 0,
+      retry_attempts: 0,
+      input_tokens: 300,
+      output_tokens: 150,
+      usage_estimated: 0,
+      cost_complete: 1,
+      error: '',
+    });
+    expect(run.cost).toBeCloseTo(0.00003);
+    expect(run.predictions.map((p: any) => p.id).sort()).toEqual(['a', 'b', 'c']);
+    expect((await overview(s)).stats.labTokens).toBe(450);
+  });
+  it('keeps rate-limited images pending and refunds the live reservation until classification succeeds', async () => {
+    const s = stub();
+    await configure(s, { mode: 'observe' });
+    modelReply = () =>
+      Response.json(
+        { error: { code: 429, message: 'Image model rate limit' } },
+        { status: 429, headers: { 'Retry-After': '3600' } },
+      );
+    await send(s, {
+      update_id: 1,
+      message: {
+        message_id: 1,
+        date: Math.floor(Date.now() / 1000),
+        chat: { id: Number(env.TELEGRAM_CHAT_ID), type: 'supergroup' },
+        from: { id: 42, first_name: 'Test' },
+        photo: [{ file_id: 'test-photo', file_unique_id: 'photo-one', width: 64, height: 64 }],
+      },
+    });
+    await tick(s);
+    expect((await overview(s)).messages[0]).toMatchObject({ status: 'pending', strike_awarded: 0 });
+    expect((await overview(s)).stats.tokens).toBe(0);
+    const attempted = calls.filter((c) => c.method === 'classify').length;
+    await runInDurableObject(s, async (instance: GroupModerator) => {
+      await instance.processBatch();
+    });
+    expect(calls.filter((c) => c.method === 'classify')).toHaveLength(attempted);
+    await runInDurableObject(s, (_instance, state) => {
+      state.storage.sql.exec('UPDATE messages SET next_at=0');
+    });
+    modelReply = null;
+    await tick(s);
+    expect((await overview(s)).messages[0].status).toBe('observed_spam');
+    expect((await overview(s)).stats.tokens).toBe(150);
+    expect(calls.some((c) => ['deleteMessages', 'banChatMember'].includes(c.method))).toBe(false);
   });
   it('allows a failed run to resume from its existing cursor and retains unknown-usage reservations', async () => {
     const s = stub(),

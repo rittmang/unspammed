@@ -514,6 +514,66 @@ describe.skipIf(!env.TEST_POSTGRES_URL)('Postgres backend in Workers runtime', (
       output_tokens: 50,
     });
   });
+  it('recovers a rate-limited evaluation through PostgreSQL leases and replacement services without billing rejected work', async () => {
+    const s = stub();
+    const created = await request(s, '/api/datasets', {
+      name: 'Retry fixture',
+      data: [{ id: 'retry-one', text: 'A harmless question', label: 'ham' }],
+    });
+    const dataset = (await created.json()) as { id: string };
+    const queued = await request(s, '/api/evaluations', {
+      datasetId: dataset.id,
+      models: [{ provider: 'openrouter', model: defaultSettings.model }],
+    });
+    const { ids } = (await queued.json()) as { ids: string[] };
+    vi.mocked(fetch).mockImplementationOnce(async () =>
+      Response.json(
+        { error: { code: 429, message: 'Exact leased retry diagnostic' } },
+        { status: 429, headers: { 'Retry-After': '3600', 'X-Request-ID': 'leased-request' } },
+      ),
+    );
+    await runScheduledWork(env, 0);
+    const [waiting] = await db.exec<any>('SELECT * FROM evaluations WHERE id=?', ids[0]);
+    expect(waiting).toMatchObject({
+      status: 'running',
+      cursor: 0,
+      retry_attempts: 1,
+      input_tokens: 0,
+      output_tokens: 0,
+      usage_estimated: 0,
+      cost_complete: 1,
+    });
+    expect(waiting.error).toContain('Exact leased retry diagnostic');
+    expect(waiting.next_at).toBeGreaterThan(Date.now() + 3500000);
+    const replacement = stub();
+    expect(await replacement.hasDueWork()).toBe(false);
+    const attempted = vi.mocked(fetch).mock.calls.length;
+    await runScheduledWork(env, 0, new PostgresDatabase(env));
+    expect(vi.mocked(fetch)).toHaveBeenCalledTimes(attempted);
+    await db.exec('UPDATE evaluations SET next_at=0 WHERE id=?', ids[0]);
+    await runScheduledWork(env, 0, new PostgresDatabase(env));
+    const [completed] = await db.exec<any>('SELECT * FROM evaluations WHERE id=?', ids[0]);
+    expect(completed).toMatchObject({
+      status: 'complete',
+      cursor: 1,
+      retry_attempts: 0,
+      next_at: 0,
+      input_tokens: 100,
+      output_tokens: 50,
+      usage_estimated: 0,
+      cost_complete: 1,
+      cost: 0.00001,
+      error: '',
+    });
+    expect(await db.exec('SELECT id FROM predictions WHERE run_id=?', ids[0])).toEqual([
+      { id: 'retry-one' },
+    ]);
+    const [usage] = await db.exec<any>('SELECT lab_tokens FROM usage');
+    expect(usage.lab_tokens).toBe(150);
+    const [audit] = await db.exec<any>("SELECT detail FROM audit WHERE kind='evaluation_error'");
+    expect(audit.detail).toContain('Exact leased retry diagnostic');
+    expect(audit.detail).toContain('leased-request');
+  });
   it('stores dataset imports larger than one Postgres insert batch in the original order', async () => {
     const s = stub();
     const examples = Array.from({ length: 501 }, (_, i) => ({

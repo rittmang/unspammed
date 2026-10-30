@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { defaultPolicy, legacyDefaultPolicy } from './moderation-policy';
 
 export const REPETITION_CONTEXT_MS = 10 * 60 * 1000;
 
@@ -13,23 +14,28 @@ export const settingsSchema = z
     threshold: z.number().min(0.5).max(1).default(0.9),
     reviewThreshold: z.number().min(0).max(1).default(0.6),
     batchSeconds: z.number().int().min(1).max(60).default(10),
-    batchSize: z.number().int().min(1).max(30).default(20),
+    batchSize: z.number().int().min(1).max(30).default(1),
+    reasoningTokens: z.union([z.literal(0), z.literal(1024)]).default(1024),
     dailyTokenBudget: z.number().int().min(1000).max(10_000_000).default(100_000),
     retentionDays: z.number().int().min(3).max(365).default(30),
     exemptUserIds: z.array(z.string().regex(/^\d+$/)).max(100).default([]),
-    policy: z
-      .string()
-      .min(20)
-      .max(6000)
-      .default(
-        'Flag scams, phishing, unsolicited commercial promotion, fake giveaways, and disruptive repeated messages. A single greeting, question, emoji, or relevant link is not spam. Repetition is spam only when the supplied recent messages show repeated disruption by the same sender. Consider multilingual messages fairly. If context is insufficient, assign a low score and explain the uncertainty.',
-      ),
+    policy: z.string().min(20).max(6000).default(defaultPolicy),
   })
   .refine((s) => s.reviewThreshold <= s.threshold, {
     message: 'Review threshold must not exceed enforcement threshold.',
   });
 export type Settings = z.infer<typeof settingsSchema>;
 export const defaultSettings: Settings = settingsSchema.parse({});
+// Old configurations and frozen evaluations predate configurable thinking.
+// Reading them must not opt them into the new inference protocol.
+export function storedSettings(value: unknown): Settings {
+  return settingsSchema.parse({
+    batchSize: 20,
+    reasoningTokens: 0,
+    policy: legacyDefaultPolicy,
+    ...z.record(z.string(), z.unknown()).parse(value),
+  });
+}
 export type Label = 'spam' | 'ham' | 'review' | null;
 export interface WatchtowerGroup {
   chat_id: string;
@@ -116,6 +122,8 @@ export interface Prediction {
   needs_review?: boolean;
 }
 export interface Evaluation {
+  next_at?: number;
+  retry_attempts?: number;
   id: string;
   dataset_id: string;
   dataset_name: string;

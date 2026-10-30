@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "date": "2026-10-30",
+  "scope": "Development screening and adaptive shortlisting before opening the fresh validation set. No live publication.",
+  "freshValidationFileSHA256": "0a820b8fd64a3f4e0cbb158bf27a2ddde83b236f4df2fa48e8ab2e17956a3942",
+  "protocolSourceHash": "9fbc517979faeeb4656046f4c42550067782792ed64d91d459b88871fb33d827",
+  "model": "google/gemini-2.5-flash-lite",
+  "endpoint": "google-ai-studio",
+  "thresholds": { "spam": 0.9, "review": 0.75 },
+  "development": {
+    "candidateArms": [
+      { "protocol": "standard", "batchSize": 8 },
+      { "protocol": "standard", "batchSize": 4 },
+      { "protocol": "standard", "batchSize": 2 },
+      { "protocol": "standard", "batchSize": 1 },
+      { "protocol": "reason-first", "batchSize": 1 },
+      { "protocol": "categorical", "batchSize": 1 }
+    ],
+    "installedPolicyControls": [
+      { "protocol": "standard", "batchSize": 8 },
+      { "protocol": "standard", "batchSize": 1 }
+    ],
+    "screeningRounds": 1,
+    "shortlistRounds": 3,
+    "maxShortlist": 2,
+    "selection": "Prefer full coverage, zero false positives/misses/unnecessary reviews, and all intended spam automatically caught. Among passing arms prefer lower reported cost, then smaller protocol change. If none pass, preserve failures and revise only on development evidence; do not declare a winner.",
+    "stressSet": "The 64 previously inspected Clef cascade cases are reused only as development stress evidence, never as a fresh holdout."
+  },
+  "validation": {
+    "selectionLockedBeforeCalls": true,
+    "repeatPerturbations": [
+      "positional wire IDs",
+      "hashed opaque wire IDs",
+      "different hashed opaque wire IDs"
+    ],
+    "requirements": "Full classification coverage and known cost/identity; catch the target bait patterns; no false positives, no new misses or incorrect review decisions across repeat perturbations. Compare policy-only versus protocol effects separately. Repeated orders are not independent observations.",
+    "baseline": { "protocol": "standard", "batchSize": 8, "samePolicy": true },
+    "historicalRegression": "Use frozen owner-labelled text references as retrospective evidence, separately from fresh synthetic validation. Preserve safety/invalid-output failures and unknown billing without replay."
+  }
+}

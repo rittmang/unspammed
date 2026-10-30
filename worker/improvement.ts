@@ -1,7 +1,9 @@
 import { z } from 'zod';
-import type { Database } from './database';
+import { DatabaseUnavailableError, LostWorkLeaseError, type Database } from './database';
 import type { Env } from './env';
 import { HttpError, json, readJson } from './http';
+import { errorText, providerError, rateLimitRetry } from './provider-errors';
+import { writeAudit } from './logging';
 import { configuredProvider, modelProvider, publicProviders, requestPayload } from './classifier';
 import type { Evaluation, Example, Prediction, Settings } from '../shared/types';
 import {
@@ -12,12 +14,14 @@ import {
   familyText,
   relatedText,
   feedbackSchema,
+  feedbackReasons,
   normalizedPolicy,
   policyFingerprint,
   policyGate,
   replayCostRatio,
   policyMetrics,
   policyProgress,
+  policyAssessment,
   routed,
   splitReferences,
   referenceIssues,
@@ -159,6 +163,9 @@ export async function proposePolicy(
             context: (e.example.context || []).slice(-3).map((text) => text.slice(0, 400)),
             label: e.example.label,
             reasonCode: e.feedback?.reasonCode,
+            reason:
+              e.feedback?.reasonCode &&
+              feedbackReasons[e.feedback.reasonCode as keyof typeof feedbackReasons],
             note: e.feedback?.note,
             originalPrediction: e.prediction,
           })),
@@ -242,15 +249,17 @@ export async function proposePolicy(
     // Workers supports manual/follow; reject non-2xx without forwarding credentials.
     redirect: 'manual',
   });
-  if (!response.ok)
-    throw new Error(
-      `Policy drafting provider returned HTTP ${response.status}. Retry explicitly after reviewing usage.`,
-    );
+  if (!response.ok) throw await providerError(response, env, 'Policy drafting provider');
   const result = (await response.json()) as {
+    error?: unknown;
     model?: string;
     choices?: { finish_reason?: string; message?: { content?: string } }[];
     usage?: { total_tokens?: number; cost?: number };
   };
+  if (result.error)
+    throw new Error(
+      errorText(`Policy drafting provider returned an error: ${JSON.stringify(result.error)}`, env),
+    );
   if (result.model && result.model !== model)
     throw new Error('Policy drafting returned a different model.');
   if (result.choices?.[0]?.finish_reason === 'length')
@@ -339,9 +348,10 @@ export class ImprovementService {
       );
     }
     await this.db.exec(
-      'UPDATE policy_drafts SET status=?,payload=? WHERE id=?',
+      'UPDATE policy_drafts SET status=?,payload=?,next_at=? WHERE id=?',
       draft.status,
       JSON.stringify(summary),
+      draft.retry?.nextAt ?? 0,
       draft.id,
     );
   }
@@ -500,7 +510,10 @@ export class ImprovementService {
         );
       if (body.label === null) disposition = 'retracted';
       else if (unresolvedConflict) disposition = 'conflicting_label';
-      else if (!body.reasonCode || (body.reasonCode === 'other' && !body.note.trim()))
+      else if (
+        !body.reasonCode ||
+        (['other', 'attention_bait'].includes(body.reasonCode) && !body.note.trim())
+      )
         disposition = 'needs_reason';
       else if (!body.contextComplete) disposition = 'needs_context';
       else if (snapshot.example.media && snapshot.example.media !== 'text')
@@ -676,8 +689,9 @@ export class ImprovementService {
   }
   async process() {
     const row = await this.one<{ id: string }>(
-      `SELECT id FROM policy_drafts WHERE status IN (${activeStatuses.map(() => '?').join(',')}) ORDER BY created_at LIMIT 1`,
+      `SELECT id FROM policy_drafts WHERE status IN (${activeStatuses.map(() => '?').join(',')}) AND next_at<=? ORDER BY created_at LIMIT 1`,
       ...activeStatuses,
+      Date.now(),
     );
     if (!row) return;
     const d = await this.draft(row.id);
@@ -717,7 +731,9 @@ export class ImprovementService {
             return;
           }
           d.candidate = result.policy;
+          delete d.retry;
           d.criteria = result.criteria;
+          d.diagnosis = result.diagnosis;
           d.usage = result.usage;
           d.proposalRoute = { model: result.model, provider: result.provider };
           const duplicates = await this.db.exec<{ payload: string }>(
@@ -768,11 +784,23 @@ export class ImprovementService {
           ),
         );
         if (runs.some((r) => !r)) throw new Error('Replay run is missing.');
-        if (runs.some((r) => ['failed', 'cancelled'].includes(r!.status)))
+        const failed = runs.filter((r) => ['failed', 'cancelled'].includes(r!.status));
+        if (failed.length)
           throw new Error(
-            'A replay failed or was cancelled. Review the saved run before retrying.',
+            `Replay ${phase} failed:\n${failed.map((r) => `${r!.id}: ${r!.error || r!.status}`).join('\n')}`,
           );
-        if (!runs.every((r) => r!.status === 'complete')) return;
+        if (!runs.every((r) => r!.status === 'complete')) {
+          const nextAt = Math.min(
+            ...runs.filter((r) => r!.status !== 'complete').map((r) => r!.next_at || 0),
+          );
+          if (nextAt > Date.now()) {
+            d.retry = { attempts: Math.max(...runs.map((r) => r!.retry_attempts || 0)), nextAt };
+            d.error = runs.find((r) => r!.next_at === nextAt)!.error;
+            await this.save(d);
+          }
+          return;
+        }
+        delete d.retry;
         const predictions = await Promise.all(
           ids.map((id) =>
             this.db.exec<Prediction>(
@@ -885,17 +913,27 @@ export class ImprovementService {
         });
       }
     } catch (e) {
+      if (e instanceof DatabaseUnavailableError || e instanceof LostWorkLeaseError) throw e;
       await this.db.transaction(async () => {
         const latest = await this.draft(d.id);
         if (!activeStatuses.includes(latest.status)) return;
         if (['development', 'validation', 'test'].includes(latest.status))
           d.failedPhase = latest.status as PolicyDraft['failedPhase'];
-        d.status =
-          latest.status === 'preparing' && e instanceof HttpError && e.status === 400
+        const retry = rateLimitRetry(e, d.retry?.attempts);
+        d.status = retry
+          ? 'queued'
+          : latest.status === 'preparing' && e instanceof HttpError && e.status === 400
             ? 'needs_examples'
             : 'failed';
-        d.error = e instanceof Error ? e.message.slice(0, 400) : 'Policy improvement failed.';
+        d.retry = retry ?? undefined;
+        d.error = errorText(e, this.env);
         await this.save(d);
+        await writeAudit(
+          this.db,
+          this.env,
+          'policy_error',
+          `Draft ${d.id} (${latest.status})${retry ? `; retry at ${new Date(retry.nextAt).toISOString()}` : ''}: ${d.error}`,
+        );
       });
     }
   }
@@ -1375,8 +1413,11 @@ export class ImprovementService {
             causes: [],
             evidenceIds: [],
             clarification: '',
-            error: '',
+            error: d.error,
+            retry: d.retry,
             criteria: d.criteria,
+            diagnosis: d.diagnosis,
+            assessment: policyAssessment(d),
             progress,
             optimization: d.optimization
               ? {
@@ -1432,7 +1473,8 @@ export class ImprovementService {
           body.versionId,
         );
         if (!previous) throw new HttpError(404, 'Policy version not found.');
-        const restored = { ...current, ...JSON.parse(previous.settings) } as Settings;
+        const prior = JSON.parse(previous.settings) as Partial<Settings>;
+        const restored = { ...current, ...prior, reasoningTokens: prior.reasoningTokens ?? 0 };
         await this.db.exec('UPDATE config SET value=? WHERE id=1', JSON.stringify(restored));
         await this.db.exec(
           'INSERT INTO audit (kind,detail,created_at) VALUES (?,?,?)',

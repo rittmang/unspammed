@@ -79,6 +79,34 @@ function request(path: string, body: unknown) {
 }
 
 describe('reasoned correction intake in local Durable Object storage', () => {
+  it('holds unexplained attention-bait labels and retains reasoned corrections without multiplying related families', async () => {
+    await withServices(async ({ improvement, wake }) => {
+      const unreasoned = await improvement.record(
+        'bait:unexplained',
+        snapshot('empty'),
+        feedback({ reasonCode: 'attention_bait' }),
+      );
+      expect(unreasoned.disposition).toBe('needs_reason');
+      for (let index = 0; index < 3; index++) {
+        const saved = await improvement.record(
+          `bait:${index}`,
+          snapshot(`bait-${index}`),
+          feedback({
+            reasonCode: 'attention_bait',
+            note: 'An unspecified question paired with exaggerated filler and unrelated emoji bait; preserve questions naming an actual topic.',
+            family: 'same-contact-bait-campaign',
+          }),
+        );
+        expect(saved.disposition).toBe('accepted');
+      }
+      const overview = await improvement.overview();
+      expect(overview.readyCauses).toEqual([
+        { reason: 'attention_bait', label: 'spam', families: 1 },
+      ]);
+      expect(overview.drafts).toEqual([]);
+      expect(wake).not.toHaveBeenCalled();
+    });
+  });
   it('queues one draft after three fresh correction families without changing live settings', async () => {
     await withServices(async ({ db, improvement, settings, wake }) => {
       const before = await settings();

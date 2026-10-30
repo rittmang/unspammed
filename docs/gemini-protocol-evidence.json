@@ -1,0 +1,1428 @@
+{
+  "version": 1,
+  "generatedAt": "2026-10-30T20:02:34.656Z",
+  "scope": "Adaptive development and prospectively selected synthetic validation. Missing/invalid outcomes and unfinished screens remain explicit. Repeats are not independent cases. Synthetic labels are not independent production adjudication; no deployed-accuracy claim.",
+  "experiments": [
+    {
+      "ledger": "gemini-protocol-dev-candidate-criteria-b1.json",
+      "ledgerSHA256": "9e709121ca2d03493d0b714f34a4cab25029c8536655ae2f575cc5295db06671",
+      "seal": "97595a0a32903b2d2a7463132e9d9694b3fa8b4bba97607f7f235022fa0abdd4",
+      "plan": {
+        "version": 1,
+        "split": "development",
+        "policyName": "candidate",
+        "policyHash": "1cd28c7d81acd5b7f66ede8932f950c4e92f77b649689c54077a76fea2ebb67a",
+        "inputsHash": "a5e71740e778ef1503245d66ccb2a69fa6807dcf9bce7eb3c5d37d8f1bf2dc0e",
+        "protocol": "criteria",
+        "batchSize": 1,
+        "repeats": 1,
+        "model": "google/gemini-2.5-flash-lite",
+        "provider": "openrouter",
+        "endpoint": "google-ai-studio",
+        "thresholds": {
+          "spam": 0.9,
+          "review": 0.75
+        },
+        "repeatPerturbations": ["label-blind permutation; positional wire IDs"],
+        "examples": 16,
+        "maxRequests": 16,
+        "classifierSourceHash": "2f4eeb9bdaa7136e700b23b7b8cb7d62d29bc9d6ec5011c0cfa637677c497f23",
+        "protocolSourceHash": "1de7538fe4fcb6e51203d2f0ffb4c6a93955568e94261eced5029e736bf341dc",
+        "runnerSourceHash": "e68afb3a57e59f880b7f3f3df946575361a317d724d11b65a2e2cf5adddb25dc"
+      },
+      "createdAt": "2026-10-30T19:43:54.068Z",
+      "completedAt": "2026-10-30T19:45:43.923Z",
+      "screenedAt": null,
+      "completedRounds": 1,
+      "hasUncertainInFlightRequest": false,
+      "labels": {
+        "spam": 7,
+        "ham": 9,
+        "review": 0
+      },
+      "successfulRequests": 16,
+      "terminalFailedRequests": 0,
+      "rejectedUnbilledRequests": 1,
+      "unknownCostRequests": 0,
+      "knownReportedCostUSD": 0.0028564500000000004,
+      "allCapturedBillingKnown": true,
+      "reportedReasoningTokens": {
+        "requests": 16,
+        "total": 3,
+        "min": 0,
+        "max": 2
+      },
+      "identities": ["google/gemini-2.5-flash-lite / Google AI Studio"],
+      "rounds": [
+        {
+          "repeat": 0,
+          "expected": 16,
+          "attempted": 16,
+          "classified": 16,
+          "terminalUnclassified": 0,
+          "notAttempted": 0,
+          "spamCaught": 7,
+          "spamAllowed": 0,
+          "spamReviewed": 0,
+          "legitimateBlocked": 2,
+          "legitimateReviewed": 0,
+          "weightedLossOnClassifiedOnly": 20,
+          "costUSD": 0.0028564500000000004,
+          "requestLatencyMeanMs": 882.5625
+        }
+      ]
+    },
+    {
+      "ledger": "gemini-protocol-dev-candidate-thinking1024-b1.json",
+      "ledgerSHA256": "c37641c46efa519f63ee57f47905575f9ab0b14c7d6d44ee943ccba8a76a9e9e",
+      "seal": "cd60072e8b589cffc773c36173c41ed32f6c55088352543e60e9aa680fc6acaa",
+      "plan": {
+        "version": 1,
+        "split": "development",
+        "policyName": "candidate",
+        "policyHash": "1cd28c7d81acd5b7f66ede8932f950c4e92f77b649689c54077a76fea2ebb67a",
+        "inputsHash": "a5e71740e778ef1503245d66ccb2a69fa6807dcf9bce7eb3c5d37d8f1bf2dc0e",
+        "protocol": "standard",
+        "reasoningTokens": 1024,
+        "batchSize": 1,
+        "repeats": 1,
+        "model": "google/gemini-2.5-flash-lite",
+        "provider": "openrouter",
+        "endpoint": "google-ai-studio",
+        "thresholds": {
+          "spam": 0.9,
+          "review": 0.75
+        },
+        "repeatPerturbations": ["label-blind permutation; positional wire IDs"],
+        "examples": 16,
+        "maxRequests": 16,
+        "classifierSourceHash": "2f4eeb9bdaa7136e700b23b7b8cb7d62d29bc9d6ec5011c0cfa637677c497f23",
+        "protocolSourceHash": "1de7538fe4fcb6e51203d2f0ffb4c6a93955568e94261eced5029e736bf341dc",
+        "runnerSourceHash": "2b34213d3a56a4f87c0adff68e80b0d08bb8792af2434a9d87c530371c88cf8a"
+      },
+      "createdAt": "2026-10-30T19:46:51.269Z",
+      "completedAt": "2026-10-30T19:49:54.749Z",
+      "screenedAt": null,
+      "completedRounds": 1,
+      "hasUncertainInFlightRequest": false,
+      "labels": {
+        "spam": 7,
+        "ham": 9,
+        "review": 0
+      },
+      "successfulRequests": 16,
+      "terminalFailedRequests": 0,
+      "rejectedUnbilledRequests": 2,
+      "unknownCostRequests": 0,
+      "knownReportedCostUSD": 0.00600919,
+      "allCapturedBillingKnown": true,
+      "reportedReasoningTokens": {
+        "requests": 16,
+        "total": 9583,
+        "min": 132,
+        "max": 795
+      },
+      "identities": ["google/gemini-2.5-flash-lite / Google AI Studio"],
+      "rounds": [
+        {
+          "repeat": 0,
+          "expected": 16,
+          "attempted": 16,
+          "classified": 16,
+          "terminalUnclassified": 0,
+          "notAttempted": 0,
+          "spamCaught": 7,
+          "spamAllowed": 0,
+          "spamReviewed": 0,
+          "legitimateBlocked": 0,
+          "legitimateReviewed": 0,
+          "weightedLossOnClassifiedOnly": 0,
+          "costUSD": 0.00600919,
+          "requestLatencyMeanMs": 2690.8125
+        }
+      ]
+    },
+    {
+      "ledger": "gemini-protocol-dev-categorical-b1.json",
+      "ledgerSHA256": "8db9a649aaadb23ae5d50afe35f46a394ecc8ee04fbc6686aebe2c437d5a9349",
+      "seal": "ceee06dd50ad71d16decb374a340829f182b6bcff0af1511d78719644a80dc83",
+      "plan": {
+        "version": 1,
+        "split": "development",
+        "policyName": "candidate",
+        "policyHash": "1cd28c7d81acd5b7f66ede8932f950c4e92f77b649689c54077a76fea2ebb67a",
+        "inputsHash": "a5e71740e778ef1503245d66ccb2a69fa6807dcf9bce7eb3c5d37d8f1bf2dc0e",
+        "protocol": "categorical",
+        "batchSize": 1,
+        "repeats": 3,
+        "model": "google/gemini-2.5-flash-lite",
+        "provider": "openrouter",
+        "endpoint": "google-ai-studio",
+        "thresholds": {
+          "spam": 0.9,
+          "review": 0.75
+        },
+        "repeatPerturbations": [
+          "label-blind permutation; positional wire IDs",
+          "reverse; hashed opaque wire IDs",
+          "rotate seven; different hashed opaque wire IDs"
+        ],
+        "examples": 16,
+        "maxRequests": 48,
+        "classifierSourceHash": "2f4eeb9bdaa7136e700b23b7b8cb7d62d29bc9d6ec5011c0cfa637677c497f23",
+        "protocolSourceHash": "9fbc517979faeeb4656046f4c42550067782792ed64d91d459b88871fb33d827"
+      },
+      "createdAt": "2026-10-30T19:35:31.579Z",
+      "completedAt": "2026-10-30T19:36:40.681Z",
+      "screenedAt": "2026-10-30T19:35:42.038Z",
+      "completedRounds": 3,
+      "hasUncertainInFlightRequest": false,
+      "labels": {
+        "spam": 7,
+        "ham": 9,
+        "review": 0
+      },
+      "successfulRequests": 46,
+      "terminalFailedRequests": 2,
+      "rejectedUnbilledRequests": 0,
+      "unknownCostRequests": 1,
+      "knownReportedCostUSD": 0.00548271,
+      "allCapturedBillingKnown": false,
+      "reportedReasoningTokens": {
+        "requests": 47,
+        "total": 16,
+        "min": 0,
+        "max": 2
+      },
+      "identities": ["google/gemini-2.5-flash-lite / Google AI Studio"],
+      "rounds": [
+        {
+          "repeat": 0,
+          "expected": 16,
+          "attempted": 16,
+          "classified": 16,
+          "terminalUnclassified": 0,
+          "notAttempted": 0,
+          "spamCaught": 7,
+          "spamAllowed": 0,
+          "spamReviewed": 0,
+          "legitimateBlocked": 0,
+          "legitimateReviewed": 0,
+          "weightedLossOnClassifiedOnly": 0,
+          "costUSD": 0.001936,
+          "requestLatencyMeanMs": 651.5625
+        },
+        {
+          "repeat": 1,
+          "expected": 16,
+          "attempted": 16,
+          "classified": 14,
+          "terminalUnclassified": 2,
+          "notAttempted": 0,
+          "spamCaught": 5,
+          "spamAllowed": 0,
+          "spamReviewed": 0,
+          "legitimateBlocked": 0,
+          "legitimateReviewed": 0,
+          "weightedLossOnClassifiedOnly": 0,
+          "costUSD": null,
+          "requestLatencyMeanMs": 1705.9375
+        },
+        {
+          "repeat": 2,
+          "expected": 16,
+          "attempted": 16,
+          "classified": 16,
+          "terminalUnclassified": 0,
+          "notAttempted": 0,
+          "spamCaught": 7,
+          "spamAllowed": 0,
+          "spamReviewed": 0,
+          "legitimateBlocked": 0,
+          "legitimateReviewed": 0,
+          "weightedLossOnClassifiedOnly": 0,
+          "costUSD": 0.0015291100000000002,
+          "requestLatencyMeanMs": 714.25
+        }
+      ]
+    },
+    {
+      "ledger": "gemini-protocol-dev-concise-criteria-b1.json",
+      "ledgerSHA256": "14ab9579111007561650d43e69e7b03af5629827ee91a71ff4bc31fcb52e0d0d",
+      "seal": "06ee0fcaccd156bd45d0d72863c40f3a0797b264a8f5d4d8ff3f37bd9f0c6740",
+      "plan": {
+        "version": 1,
+        "split": "development",
+        "policyName": "concise",
+        "policyHash": "6a8cc82bd2f54018bcf12a8a4402c99492b97396e44b93f90009e2739f19244a",
+        "inputsHash": "a5e71740e778ef1503245d66ccb2a69fa6807dcf9bce7eb3c5d37d8f1bf2dc0e",
+        "protocol": "criteria",
+        "batchSize": 1,
+        "repeats": 1,
+        "model": "google/gemini-2.5-flash-lite",
+        "provider": "openrouter",
+        "endpoint": "google-ai-studio",
+        "thresholds": {
+          "spam": 0.9,
+          "review": 0.75
+        },
+        "repeatPerturbations": ["label-blind permutation; positional wire IDs"],
+        "examples": 16,
+        "maxRequests": 16,
+        "classifierSourceHash": "2f4eeb9bdaa7136e700b23b7b8cb7d62d29bc9d6ec5011c0cfa637677c497f23",
+        "protocolSourceHash": "1de7538fe4fcb6e51203d2f0ffb4c6a93955568e94261eced5029e736bf341dc",
+        "runnerSourceHash": "e68afb3a57e59f880b7f3f3df946575361a317d724d11b65a2e2cf5adddb25dc"
+      },
+      "createdAt": "2026-10-30T19:45:41.346Z",
+      "completedAt": "2026-10-30T19:45:55.748Z",
+      "screenedAt": null,
+      "completedRounds": 1,
+      "hasUncertainInFlightRequest": false,
+      "labels": {
+        "spam": 7,
+        "ham": 9,
+        "review": 0
+      },
+      "successfulRequests": 15,
+      "terminalFailedRequests": 1,
+      "rejectedUnbilledRequests": 0,
+      "unknownCostRequests": 0,
+      "knownReportedCostUSD": 0.00257236,
+      "allCapturedBillingKnown": true,
+      "reportedReasoningTokens": {
+        "requests": 16,
+        "total": 3,
+        "min": 0,
+        "max": 1
+      },
+      "identities": ["google/gemini-2.5-flash-lite / Google AI Studio"],
+      "rounds": [
+        {
+          "repeat": 0,
+          "expected": 16,
+          "attempted": 16,
+          "classified": 15,
+          "terminalUnclassified": 1,
+          "notAttempted": 0,
+          "spamCaught": 6,
+          "spamAllowed": 0,
+          "spamReviewed": 0,
+          "legitimateBlocked": 1,
+          "legitimateReviewed": 0,
+          "weightedLossOnClassifiedOnly": 10,
+          "costUSD": 0.00257236,
+          "requestLatencyMeanMs": 896.25
+        }
+      ]
+    },
+    {
+      "ledger": "gemini-protocol-dev-concise-standard-b1.json",
+      "ledgerSHA256": "9088f64ebdf29c15e26a5eb8307c16083a245a70f1592e2300d9ccdaf1517ee8",
+      "seal": "3af323b66689e832ce9fcec639c6b7ddd2eb83bfed33c57c069de84332b99bb7",
+      "plan": {
+        "version": 1,
+        "split": "development",
+        "policyName": "concise",
+        "policyHash": "6a8cc82bd2f54018bcf12a8a4402c99492b97396e44b93f90009e2739f19244a",
+        "inputsHash": "a5e71740e778ef1503245d66ccb2a69fa6807dcf9bce7eb3c5d37d8f1bf2dc0e",
+        "protocol": "standard",
+        "batchSize": 1,
+        "repeats": 1,
+        "model": "google/gemini-2.5-flash-lite",
+        "provider": "openrouter",
+        "endpoint": "google-ai-studio",
+        "thresholds": {
+          "spam": 0.9,
+          "review": 0.75
+        },
+        "repeatPerturbations": ["label-blind permutation; positional wire IDs"],
+        "examples": 16,
+        "maxRequests": 16,
+        "classifierSourceHash": "2f4eeb9bdaa7136e700b23b7b8cb7d62d29bc9d6ec5011c0cfa637677c497f23",
+        "protocolSourceHash": "1de7538fe4fcb6e51203d2f0ffb4c6a93955568e94261eced5029e736bf341dc",
+        "runnerSourceHash": "e68afb3a57e59f880b7f3f3df946575361a317d724d11b65a2e2cf5adddb25dc"
+      },
+      "createdAt": "2026-10-30T19:43:54.068Z",
+      "completedAt": "2026-10-30T19:44:04.789Z",
+      "screenedAt": null,
+      "completedRounds": 1,
+      "hasUncertainInFlightRequest": false,
+      "labels": {
+        "spam": 7,
+        "ham": 9,
+        "review": 0
+      },
+      "successfulRequests": 16,
+      "terminalFailedRequests": 0,
+      "rejectedUnbilledRequests": 0,
+      "unknownCostRequests": 0,
+      "knownReportedCostUSD": 0.00175335,
+      "allCapturedBillingKnown": true,
+      "reportedReasoningTokens": {
+        "requests": 16,
+        "total": 12,
+        "min": 0,
+        "max": 2
+      },
+      "identities": ["google/gemini-2.5-flash-lite / Google AI Studio"],
+      "rounds": [
+        {
+          "repeat": 0,
+          "expected": 16,
+          "attempted": 16,
+          "classified": 16,
+          "terminalUnclassified": 0,
+          "notAttempted": 0,
+          "spamCaught": 5,
+          "spamAllowed": 1,
+          "spamReviewed": 1,
+          "legitimateBlocked": 0,
+          "legitimateReviewed": 0,
+          "weightedLossOnClassifiedOnly": 2.5,
+          "costUSD": 0.00175335,
+          "requestLatencyMeanMs": 666.375
+        }
+      ]
+    },
+    {
+      "ledger": "gemini-protocol-dev-current-b1.json",
+      "ledgerSHA256": "1cb84058f62344c729ec9d6e0d908d6caef5b60640f7bba8a9c31f0c294766b6",
+      "seal": "f97464eb3253b9ea2286271340787817990b4ae07a0f4ef93b0fa6537252d916",
+      "plan": {
+        "version": 1,
+        "split": "development",
+        "policyName": "current",
+        "policyHash": "40a3426fc347f70ab344d311ee72da763fd837f4faa8f484a33535a331050be4",
+        "inputsHash": "a5e71740e778ef1503245d66ccb2a69fa6807dcf9bce7eb3c5d37d8f1bf2dc0e",
+        "protocol": "standard",
+        "batchSize": 1,
+        "repeats": 1,
+        "model": "google/gemini-2.5-flash-lite",
+        "provider": "openrouter",
+        "endpoint": "google-ai-studio",
+        "thresholds": {
+          "spam": 0.9,
+          "review": 0.75
+        },
+        "repeatPerturbations": ["label-blind permutation; positional wire IDs"],
+        "examples": 16,
+        "maxRequests": 16,
+        "classifierSourceHash": "2f4eeb9bdaa7136e700b23b7b8cb7d62d29bc9d6ec5011c0cfa637677c497f23",
+        "protocolSourceHash": "9fbc517979faeeb4656046f4c42550067782792ed64d91d459b88871fb33d827"
+      },
+      "createdAt": "2026-10-30T19:35:40.431Z",
+      "completedAt": "2026-10-30T19:35:50.446Z",
+      "screenedAt": null,
+      "completedRounds": 1,
+      "hasUncertainInFlightRequest": false,
+      "labels": {
+        "spam": 7,
+        "ham": 9,
+        "review": 0
+      },
+      "successfulRequests": 16,
+      "terminalFailedRequests": 0,
+      "rejectedUnbilledRequests": 0,
+      "unknownCostRequests": 0,
+      "knownReportedCostUSD": 0.0013669700000000001,
+      "allCapturedBillingKnown": true,
+      "reportedReasoningTokens": {
+        "requests": 16,
+        "total": 0,
+        "min": 0,
+        "max": 0
+      },
+      "identities": ["google/gemini-2.5-flash-lite / Google AI Studio"],
+      "rounds": [
+        {
+          "repeat": 0,
+          "expected": 16,
+          "attempted": 16,
+          "classified": 16,
+          "terminalUnclassified": 0,
+          "notAttempted": 0,
+          "spamCaught": 3,
+          "spamAllowed": 4,
+          "spamReviewed": 0,
+          "legitimateBlocked": 0,
+          "legitimateReviewed": 0,
+          "weightedLossOnClassifiedOnly": 8,
+          "costUSD": 0.0013669700000000001,
+          "requestLatencyMeanMs": 623.375
+        }
+      ]
+    },
+    {
+      "ledger": "gemini-protocol-dev-current-b8.json",
+      "ledgerSHA256": "80cb5d84cba01fd3bb096787b017d282ce712d01f7d00a4f9e69eb0cad32956e",
+      "seal": "f34dee157518d22394d52e74bb9732ae831dd37720c65cdac087ce264e81fe64",
+      "plan": {
+        "version": 1,
+        "split": "development",
+        "policyName": "current",
+        "policyHash": "40a3426fc347f70ab344d311ee72da763fd837f4faa8f484a33535a331050be4",
+        "inputsHash": "a5e71740e778ef1503245d66ccb2a69fa6807dcf9bce7eb3c5d37d8f1bf2dc0e",
+        "protocol": "standard",
+        "batchSize": 8,
+        "repeats": 1,
+        "model": "google/gemini-2.5-flash-lite",
+        "provider": "openrouter",
+        "endpoint": "google-ai-studio",
+        "thresholds": {
+          "spam": 0.9,
+          "review": 0.75
+        },
+        "repeatPerturbations": ["label-blind permutation; positional wire IDs"],
+        "examples": 16,
+        "maxRequests": 2,
+        "classifierSourceHash": "2f4eeb9bdaa7136e700b23b7b8cb7d62d29bc9d6ec5011c0cfa637677c497f23",
+        "protocolSourceHash": "9fbc517979faeeb4656046f4c42550067782792ed64d91d459b88871fb33d827"
+      },
+      "createdAt": "2026-10-30T19:36:02.937Z",
+      "completedAt": "2026-10-30T19:36:19.917Z",
+      "screenedAt": null,
+      "completedRounds": 1,
+      "hasUncertainInFlightRequest": false,
+      "labels": {
+        "spam": 7,
+        "ham": 9,
+        "review": 0
+      },
+      "successfulRequests": 1,
+      "terminalFailedRequests": 1,
+      "rejectedUnbilledRequests": 0,
+      "unknownCostRequests": 1,
+      "knownReportedCostUSD": 0.0002974,
+      "allCapturedBillingKnown": false,
+      "reportedReasoningTokens": {
+        "requests": 1,
+        "total": 0,
+        "min": 0,
+        "max": 0
+      },
+      "identities": ["google/gemini-2.5-flash-lite / Google AI Studio"],
+      "rounds": [
+        {
+          "repeat": 0,
+          "expected": 16,
+          "attempted": 16,
+          "classified": 8,
+          "terminalUnclassified": 8,
+          "notAttempted": 0,
+          "spamCaught": 0,
+          "spamAllowed": 2,
+          "spamReviewed": 1,
+          "legitimateBlocked": 0,
+          "legitimateReviewed": 0,
+          "weightedLossOnClassifiedOnly": 4.5,
+          "costUSD": null,
+          "requestLatencyMeanMs": 8487
+        }
+      ]
+    },
+    {
+      "ledger": "gemini-protocol-dev-current-thinking1024-b1.json",
+      "ledgerSHA256": "b77f90231722ecbaba65a2ba46d314a7212bc607df78f07e1082577c287434ed",
+      "seal": "11126ba45e7f2292daa7437b2630cfe6212d74cfb9e8ff02e92a83ebfd94aba9",
+      "plan": {
+        "version": 1,
+        "split": "development",
+        "policyName": "current",
+        "policyHash": "40a3426fc347f70ab344d311ee72da763fd837f4faa8f484a33535a331050be4",
+        "inputsHash": "a5e71740e778ef1503245d66ccb2a69fa6807dcf9bce7eb3c5d37d8f1bf2dc0e",
+        "protocol": "standard",
+        "reasoningTokens": 1024,
+        "batchSize": 1,
+        "repeats": 1,
+        "model": "google/gemini-2.5-flash-lite",
+        "provider": "openrouter",
+        "endpoint": "google-ai-studio",
+        "thresholds": {
+          "spam": 0.9,
+          "review": 0.75
+        },
+        "repeatPerturbations": ["label-blind permutation; positional wire IDs"],
+        "examples": 16,
+        "maxRequests": 16,
+        "classifierSourceHash": "2f4eeb9bdaa7136e700b23b7b8cb7d62d29bc9d6ec5011c0cfa637677c497f23",
+        "protocolSourceHash": "1de7538fe4fcb6e51203d2f0ffb4c6a93955568e94261eced5029e736bf341dc",
+        "runnerSourceHash": "2b34213d3a56a4f87c0adff68e80b0d08bb8792af2434a9d87c530371c88cf8a"
+      },
+      "createdAt": "2026-10-30T19:54:05.402Z",
+      "completedAt": "2026-10-30T19:54:34.771Z",
+      "screenedAt": null,
+      "completedRounds": 1,
+      "hasUncertainInFlightRequest": false,
+      "labels": {
+        "spam": 7,
+        "ham": 9,
+        "review": 0
+      },
+      "successfulRequests": 16,
+      "terminalFailedRequests": 0,
+      "rejectedUnbilledRequests": 0,
+      "unknownCostRequests": 0,
+      "knownReportedCostUSD": 0.00398858,
+      "allCapturedBillingKnown": true,
+      "reportedReasoningTokens": {
+        "requests": 16,
+        "total": 6776,
+        "min": 131,
+        "max": 777
+      },
+      "identities": ["google/gemini-2.5-flash-lite / Google AI Studio"],
+      "rounds": [
+        {
+          "repeat": 0,
+          "expected": 16,
+          "attempted": 16,
+          "classified": 16,
+          "terminalUnclassified": 0,
+          "notAttempted": 0,
+          "spamCaught": 3,
+          "spamAllowed": 4,
+          "spamReviewed": 0,
+          "legitimateBlocked": 0,
+          "legitimateReviewed": 0,
+          "weightedLossOnClassifiedOnly": 8,
+          "costUSD": 0.00398858,
+          "requestLatencyMeanMs": 1832.5
+        }
+      ]
+    },
+    {
+      "ledger": "gemini-protocol-dev-reason-first-b1.json",
+      "ledgerSHA256": "82643d21ad734fff900c5c9cbb07e1b1354813b5556c929148352244500d0fa1",
+      "seal": "785b9b474d58078c3b4ab41bebf9e8f64896f17f8a503975a928f86c90f07300",
+      "plan": {
+        "version": 1,
+        "split": "development",
+        "policyName": "candidate",
+        "policyHash": "1cd28c7d81acd5b7f66ede8932f950c4e92f77b649689c54077a76fea2ebb67a",
+        "inputsHash": "a5e71740e778ef1503245d66ccb2a69fa6807dcf9bce7eb3c5d37d8f1bf2dc0e",
+        "protocol": "reason-first",
+        "batchSize": 1,
+        "repeats": 3,
+        "model": "google/gemini-2.5-flash-lite",
+        "provider": "openrouter",
+        "endpoint": "google-ai-studio",
+        "thresholds": {
+          "spam": 0.9,
+          "review": 0.75
+        },
+        "repeatPerturbations": [
+          "label-blind permutation; positional wire IDs",
+          "reverse; hashed opaque wire IDs",
+          "rotate seven; different hashed opaque wire IDs"
+        ],
+        "examples": 16,
+        "maxRequests": 48,
+        "classifierSourceHash": "2f4eeb9bdaa7136e700b23b7b8cb7d62d29bc9d6ec5011c0cfa637677c497f23",
+        "protocolSourceHash": "9fbc517979faeeb4656046f4c42550067782792ed64d91d459b88871fb33d827"
+      },
+      "createdAt": "2026-10-30T19:35:23.037Z",
+      "completedAt": null,
+      "screenedAt": "2026-10-30T19:35:33.089Z",
+      "completedRounds": 1,
+      "hasUncertainInFlightRequest": false,
+      "labels": {
+        "spam": 7,
+        "ham": 9,
+        "review": 0
+      },
+      "successfulRequests": 16,
+      "terminalFailedRequests": 0,
+      "rejectedUnbilledRequests": 0,
+      "unknownCostRequests": 0,
+      "knownReportedCostUSD": 0.00165896,
+      "allCapturedBillingKnown": true,
+      "reportedReasoningTokens": {
+        "requests": 16,
+        "total": 0,
+        "min": 0,
+        "max": 0
+      },
+      "identities": ["google/gemini-2.5-flash-lite / Google AI Studio"],
+      "rounds": [
+        {
+          "repeat": 0,
+          "expected": 16,
+          "attempted": 16,
+          "classified": 16,
+          "terminalUnclassified": 0,
+          "notAttempted": 0,
+          "spamCaught": 7,
+          "spamAllowed": 0,
+          "spamReviewed": 0,
+          "legitimateBlocked": 1,
+          "legitimateReviewed": 0,
+          "weightedLossOnClassifiedOnly": 10,
+          "costUSD": 0.00165896,
+          "requestLatencyMeanMs": 626.25
+        }
+      ]
+    },
+    {
+      "ledger": "gemini-protocol-dev-standard-b1.json",
+      "ledgerSHA256": "991ea2f9a81070fbfe5fdbec3360fa6a1b1a725d384d9573e6ba196b2547f15d",
+      "seal": "91abbb9b6448d3021e19af9ce28b27b50ed965647366961308c67f1cead9940d",
+      "plan": {
+        "version": 1,
+        "split": "development",
+        "policyName": "candidate",
+        "policyHash": "1cd28c7d81acd5b7f66ede8932f950c4e92f77b649689c54077a76fea2ebb67a",
+        "inputsHash": "a5e71740e778ef1503245d66ccb2a69fa6807dcf9bce7eb3c5d37d8f1bf2dc0e",
+        "protocol": "standard",
+        "batchSize": 1,
+        "repeats": 3,
+        "model": "google/gemini-2.5-flash-lite",
+        "provider": "openrouter",
+        "endpoint": "google-ai-studio",
+        "thresholds": {
+          "spam": 0.9,
+          "review": 0.75
+        },
+        "repeatPerturbations": [
+          "label-blind permutation; positional wire IDs",
+          "reverse; hashed opaque wire IDs",
+          "rotate seven; different hashed opaque wire IDs"
+        ],
+        "examples": 16,
+        "maxRequests": 48,
+        "classifierSourceHash": "2f4eeb9bdaa7136e700b23b7b8cb7d62d29bc9d6ec5011c0cfa637677c497f23",
+        "protocolSourceHash": "9fbc517979faeeb4656046f4c42550067782792ed64d91d459b88871fb33d827"
+      },
+      "createdAt": "2026-10-30T19:33:03.840Z",
+      "completedAt": "2026-10-30T19:37:41.378Z",
+      "screenedAt": "2026-10-30T19:34:11.228Z",
+      "completedRounds": 3,
+      "hasUncertainInFlightRequest": false,
+      "labels": {
+        "spam": 7,
+        "ham": 9,
+        "review": 0
+      },
+      "successfulRequests": 47,
+      "terminalFailedRequests": 1,
+      "rejectedUnbilledRequests": 2,
+      "unknownCostRequests": 1,
+      "knownReportedCostUSD": 0.005289059999999998,
+      "allCapturedBillingKnown": false,
+      "reportedReasoningTokens": {
+        "requests": 47,
+        "total": 0,
+        "min": 0,
+        "max": 0
+      },
+      "identities": ["google/gemini-2.5-flash-lite / Google AI Studio"],
+      "rounds": [
+        {
+          "repeat": 0,
+          "expected": 16,
+          "attempted": 16,
+          "classified": 16,
+          "terminalUnclassified": 0,
+          "notAttempted": 0,
+          "spamCaught": 7,
+          "spamAllowed": 0,
+          "spamReviewed": 0,
+          "legitimateBlocked": 0,
+          "legitimateReviewed": 0,
+          "weightedLossOnClassifiedOnly": 0,
+          "costUSD": 0.0020725599999999998,
+          "requestLatencyMeanMs": 704.125
+        },
+        {
+          "repeat": 1,
+          "expected": 16,
+          "attempted": 16,
+          "classified": 15,
+          "terminalUnclassified": 1,
+          "notAttempted": 0,
+          "spamCaught": 6,
+          "spamAllowed": 0,
+          "spamReviewed": 0,
+          "legitimateBlocked": 0,
+          "legitimateReviewed": 0,
+          "weightedLossOnClassifiedOnly": 0,
+          "costUSD": null,
+          "requestLatencyMeanMs": 1587.25
+        },
+        {
+          "repeat": 2,
+          "expected": 16,
+          "attempted": 16,
+          "classified": 16,
+          "terminalUnclassified": 0,
+          "notAttempted": 0,
+          "spamCaught": 7,
+          "spamAllowed": 0,
+          "spamReviewed": 0,
+          "legitimateBlocked": 0,
+          "legitimateReviewed": 0,
+          "weightedLossOnClassifiedOnly": 0,
+          "costUSD": 0.0014628300000000002,
+          "requestLatencyMeanMs": 660.625
+        }
+      ]
+    },
+    {
+      "ledger": "gemini-protocol-dev-standard-b2.json",
+      "ledgerSHA256": "37909e405b5ee8658fd470b423834c451cff09dbb8caddd5f1f98f120338975a",
+      "seal": "89b2194363722713eba27ce7ae779c9ec796af1eb36deee284257ed054ec4a67",
+      "plan": {
+        "version": 1,
+        "split": "development",
+        "policyName": "candidate",
+        "policyHash": "1cd28c7d81acd5b7f66ede8932f950c4e92f77b649689c54077a76fea2ebb67a",
+        "inputsHash": "a5e71740e778ef1503245d66ccb2a69fa6807dcf9bce7eb3c5d37d8f1bf2dc0e",
+        "protocol": "standard",
+        "batchSize": 2,
+        "repeats": 3,
+        "model": "google/gemini-2.5-flash-lite",
+        "provider": "openrouter",
+        "endpoint": "google-ai-studio",
+        "thresholds": {
+          "spam": 0.9,
+          "review": 0.75
+        },
+        "repeatPerturbations": [
+          "label-blind permutation; positional wire IDs",
+          "reverse; hashed opaque wire IDs",
+          "rotate seven; different hashed opaque wire IDs"
+        ],
+        "examples": 16,
+        "maxRequests": 24,
+        "classifierSourceHash": "2f4eeb9bdaa7136e700b23b7b8cb7d62d29bc9d6ec5011c0cfa637677c497f23",
+        "protocolSourceHash": "9fbc517979faeeb4656046f4c42550067782792ed64d91d459b88871fb33d827"
+      },
+      "createdAt": "2026-10-30T19:34:16.004Z",
+      "completedAt": null,
+      "screenedAt": "2026-10-30T19:35:09.761Z",
+      "completedRounds": 1,
+      "hasUncertainInFlightRequest": false,
+      "labels": {
+        "spam": 7,
+        "ham": 9,
+        "review": 0
+      },
+      "successfulRequests": 8,
+      "terminalFailedRequests": 0,
+      "rejectedUnbilledRequests": 1,
+      "unknownCostRequests": 0,
+      "knownReportedCostUSD": 0.00102683,
+      "allCapturedBillingKnown": true,
+      "reportedReasoningTokens": {
+        "requests": 8,
+        "total": 0,
+        "min": 0,
+        "max": 0
+      },
+      "identities": ["google/gemini-2.5-flash-lite / Google AI Studio"],
+      "rounds": [
+        {
+          "repeat": 0,
+          "expected": 16,
+          "attempted": 16,
+          "classified": 16,
+          "terminalUnclassified": 0,
+          "notAttempted": 0,
+          "spamCaught": 7,
+          "spamAllowed": 0,
+          "spamReviewed": 0,
+          "legitimateBlocked": 0,
+          "legitimateReviewed": 2,
+          "weightedLossOnClassifiedOnly": 0.5,
+          "costUSD": 0.00102683,
+          "requestLatencyMeanMs": 883.25
+        }
+      ]
+    },
+    {
+      "ledger": "gemini-protocol-dev-standard-b4.json",
+      "ledgerSHA256": "cef24e5b53ade8bc663908fd64aa844e223bb557880d93085ba8ef67988b235f",
+      "seal": "376f2895caaa4a661199982e1ad105fb9182621c1741682f2cc86000aadd09fe",
+      "plan": {
+        "version": 1,
+        "split": "development",
+        "policyName": "candidate",
+        "policyHash": "1cd28c7d81acd5b7f66ede8932f950c4e92f77b649689c54077a76fea2ebb67a",
+        "inputsHash": "a5e71740e778ef1503245d66ccb2a69fa6807dcf9bce7eb3c5d37d8f1bf2dc0e",
+        "protocol": "standard",
+        "batchSize": 4,
+        "repeats": 3,
+        "model": "google/gemini-2.5-flash-lite",
+        "provider": "openrouter",
+        "endpoint": "google-ai-studio",
+        "thresholds": {
+          "spam": 0.9,
+          "review": 0.75
+        },
+        "repeatPerturbations": [
+          "label-blind permutation; positional wire IDs",
+          "reverse; hashed opaque wire IDs",
+          "rotate seven; different hashed opaque wire IDs"
+        ],
+        "examples": 16,
+        "maxRequests": 12,
+        "classifierSourceHash": "2f4eeb9bdaa7136e700b23b7b8cb7d62d29bc9d6ec5011c0cfa637677c497f23",
+        "protocolSourceHash": "9fbc517979faeeb4656046f4c42550067782792ed64d91d459b88871fb33d827"
+      },
+      "createdAt": "2026-10-30T19:34:16.005Z",
+      "completedAt": null,
+      "screenedAt": "2026-10-30T19:35:18.705Z",
+      "completedRounds": 1,
+      "hasUncertainInFlightRequest": false,
+      "labels": {
+        "spam": 7,
+        "ham": 9,
+        "review": 0
+      },
+      "successfulRequests": 4,
+      "terminalFailedRequests": 0,
+      "rejectedUnbilledRequests": 1,
+      "unknownCostRequests": 0,
+      "knownReportedCostUSD": 0.00070286,
+      "allCapturedBillingKnown": true,
+      "reportedReasoningTokens": {
+        "requests": 4,
+        "total": 0,
+        "min": 0,
+        "max": 0
+      },
+      "identities": ["google/gemini-2.5-flash-lite / Google AI Studio"],
+      "rounds": [
+        {
+          "repeat": 0,
+          "expected": 16,
+          "attempted": 16,
+          "classified": 16,
+          "terminalUnclassified": 0,
+          "notAttempted": 0,
+          "spamCaught": 7,
+          "spamAllowed": 0,
+          "spamReviewed": 0,
+          "legitimateBlocked": 1,
+          "legitimateReviewed": 0,
+          "weightedLossOnClassifiedOnly": 10,
+          "costUSD": 0.00070286,
+          "requestLatencyMeanMs": 1101.25
+        }
+      ]
+    },
+    {
+      "ledger": "gemini-protocol-dev-standard-b8.json",
+      "ledgerSHA256": "6a02d009a5ce4c53b1a55fde6b862cbb8ba2b8794cd3eef875eb9e64aa3bb410",
+      "seal": "1affebcae068fe0ec46f41717e9e54b35fd2bf449b0ad1f1ca8203a23046bbca",
+      "plan": {
+        "version": 1,
+        "split": "development",
+        "policyName": "candidate",
+        "policyHash": "1cd28c7d81acd5b7f66ede8932f950c4e92f77b649689c54077a76fea2ebb67a",
+        "inputsHash": "a5e71740e778ef1503245d66ccb2a69fa6807dcf9bce7eb3c5d37d8f1bf2dc0e",
+        "protocol": "standard",
+        "batchSize": 8,
+        "repeats": 3,
+        "model": "google/gemini-2.5-flash-lite",
+        "provider": "openrouter",
+        "endpoint": "google-ai-studio",
+        "thresholds": {
+          "spam": 0.9,
+          "review": 0.75
+        },
+        "repeatPerturbations": [
+          "label-blind permutation; positional wire IDs",
+          "reverse; hashed opaque wire IDs",
+          "rotate seven; different hashed opaque wire IDs"
+        ],
+        "examples": 16,
+        "maxRequests": 6,
+        "classifierSourceHash": "2f4eeb9bdaa7136e700b23b7b8cb7d62d29bc9d6ec5011c0cfa637677c497f23",
+        "protocolSourceHash": "9fbc517979faeeb4656046f4c42550067782792ed64d91d459b88871fb33d827"
+      },
+      "createdAt": "2026-10-30T19:33:03.840Z",
+      "completedAt": null,
+      "screenedAt": "2026-10-30T19:34:03.549Z",
+      "completedRounds": 1,
+      "hasUncertainInFlightRequest": false,
+      "labels": {
+        "spam": 7,
+        "ham": 9,
+        "review": 0
+      },
+      "successfulRequests": 2,
+      "terminalFailedRequests": 0,
+      "rejectedUnbilledRequests": 1,
+      "unknownCostRequests": 0,
+      "knownReportedCostUSD": 0.0007248999999999999,
+      "allCapturedBillingKnown": true,
+      "reportedReasoningTokens": {
+        "requests": 2,
+        "total": 0,
+        "min": 0,
+        "max": 0
+      },
+      "identities": ["google/gemini-2.5-flash-lite / Google AI Studio"],
+      "rounds": [
+        {
+          "repeat": 0,
+          "expected": 16,
+          "attempted": 16,
+          "classified": 16,
+          "terminalUnclassified": 0,
+          "notAttempted": 0,
+          "spamCaught": 7,
+          "spamAllowed": 0,
+          "spamReviewed": 0,
+          "legitimateBlocked": 1,
+          "legitimateReviewed": 0,
+          "weightedLossOnClassifiedOnly": 10,
+          "costUSD": 0.0007248999999999999,
+          "requestLatencyMeanMs": 1820.5
+        }
+      ]
+    },
+    {
+      "ledger": "gemini-protocol-stress-candidate-thinking1024-b1.json",
+      "ledgerSHA256": "eaa6f8df65dee7dad07eca5320b490d7fd3c5ad8512a20a9fe6546a61cbed1e6",
+      "seal": "9bd7a22ecc608429fd903c0a9d14f97887778905aa1b2c3c097e9138d0b3b3f5",
+      "plan": {
+        "version": 1,
+        "split": "stress",
+        "policyName": "candidate",
+        "policyHash": "1cd28c7d81acd5b7f66ede8932f950c4e92f77b649689c54077a76fea2ebb67a",
+        "inputsHash": "22009b350a07b6356b4922a60c12bbc1ef28119d62a45906ce9379ab7a5e2b2b",
+        "protocol": "standard",
+        "reasoningTokens": 1024,
+        "batchSize": 1,
+        "repeats": 1,
+        "model": "google/gemini-2.5-flash-lite",
+        "provider": "openrouter",
+        "endpoint": "google-ai-studio",
+        "thresholds": {
+          "spam": 0.9,
+          "review": 0.75
+        },
+        "repeatPerturbations": ["label-blind permutation; positional wire IDs"],
+        "examples": 64,
+        "maxRequests": 64,
+        "classifierSourceHash": "2f4eeb9bdaa7136e700b23b7b8cb7d62d29bc9d6ec5011c0cfa637677c497f23",
+        "protocolSourceHash": "1de7538fe4fcb6e51203d2f0ffb4c6a93955568e94261eced5029e736bf341dc",
+        "runnerSourceHash": "2b34213d3a56a4f87c0adff68e80b0d08bb8792af2434a9d87c530371c88cf8a"
+      },
+      "createdAt": "2026-10-30T19:50:13.776Z",
+      "completedAt": "2026-10-30T19:54:42.160Z",
+      "screenedAt": null,
+      "completedRounds": 1,
+      "hasUncertainInFlightRequest": false,
+      "labels": {
+        "spam": 24,
+        "ham": 40,
+        "review": 0
+      },
+      "successfulRequests": 64,
+      "terminalFailedRequests": 0,
+      "rejectedUnbilledRequests": 2,
+      "unknownCostRequests": 0,
+      "knownReportedCostUSD": 0.02402196,
+      "allCapturedBillingKnown": true,
+      "reportedReasoningTokens": {
+        "requests": 64,
+        "total": 42525,
+        "min": 188,
+        "max": 807
+      },
+      "identities": ["google/gemini-2.5-flash-lite / Google AI Studio"],
+      "rounds": [
+        {
+          "repeat": 0,
+          "expected": 64,
+          "attempted": 64,
+          "classified": 64,
+          "terminalUnclassified": 0,
+          "notAttempted": 0,
+          "spamCaught": 24,
+          "spamAllowed": 0,
+          "spamReviewed": 0,
+          "legitimateBlocked": 0,
+          "legitimateReviewed": 0,
+          "weightedLossOnClassifiedOnly": 0,
+          "costUSD": 0.02402196,
+          "requestLatencyMeanMs": 2491.671875
+        }
+      ]
+    },
+    {
+      "ledger": "gemini-protocol-stress-categorical-b1.json",
+      "ledgerSHA256": "72856f8a5542b0914c7750c349a36e068030d1c550beaa773890621cc4d4c861",
+      "seal": "c3308653bc1d23ac5f81b4ca53fe8ee4722b80fa2b494541b507567539ff87a8",
+      "plan": {
+        "version": 1,
+        "split": "stress",
+        "policyName": "candidate",
+        "policyHash": "1cd28c7d81acd5b7f66ede8932f950c4e92f77b649689c54077a76fea2ebb67a",
+        "inputsHash": "22009b350a07b6356b4922a60c12bbc1ef28119d62a45906ce9379ab7a5e2b2b",
+        "protocol": "categorical",
+        "batchSize": 1,
+        "repeats": 3,
+        "model": "google/gemini-2.5-flash-lite",
+        "provider": "openrouter",
+        "endpoint": "google-ai-studio",
+        "thresholds": {
+          "spam": 0.9,
+          "review": 0.75
+        },
+        "repeatPerturbations": [
+          "label-blind permutation; positional wire IDs",
+          "reverse; hashed opaque wire IDs",
+          "rotate seven; different hashed opaque wire IDs"
+        ],
+        "examples": 64,
+        "maxRequests": 192,
+        "classifierSourceHash": "2f4eeb9bdaa7136e700b23b7b8cb7d62d29bc9d6ec5011c0cfa637677c497f23",
+        "protocolSourceHash": "9fbc517979faeeb4656046f4c42550067782792ed64d91d459b88871fb33d827"
+      },
+      "createdAt": "2026-10-30T19:38:32.415Z",
+      "completedAt": null,
+      "screenedAt": null,
+      "completedRounds": null,
+      "hasUncertainInFlightRequest": false,
+      "labels": {
+        "spam": 24,
+        "ham": 40,
+        "review": 0
+      },
+      "successfulRequests": 44,
+      "terminalFailedRequests": 1,
+      "rejectedUnbilledRequests": 2,
+      "unknownCostRequests": 0,
+      "knownReportedCostUSD": 0.003980639999999999,
+      "allCapturedBillingKnown": true,
+      "reportedReasoningTokens": {
+        "requests": 45,
+        "total": 8,
+        "min": 0,
+        "max": 2
+      },
+      "identities": ["google/gemini-2.5-flash-lite / Google AI Studio"],
+      "rounds": [
+        {
+          "repeat": 0,
+          "expected": 64,
+          "attempted": 45,
+          "classified": 44,
+          "terminalUnclassified": 1,
+          "notAttempted": 19,
+          "spamCaught": 12,
+          "spamAllowed": 0,
+          "spamReviewed": 0,
+          "legitimateBlocked": 2,
+          "legitimateReviewed": 0,
+          "weightedLossOnClassifiedOnly": 20,
+          "costUSD": 0.003980639999999999,
+          "requestLatencyMeanMs": 774.1333333333333
+        }
+      ]
+    },
+    {
+      "ledger": "gemini-protocol-stress-standard-b1.json",
+      "ledgerSHA256": "2976dd1dd6bfd782d8adbe1e24faed2ea45b702fec10f4d1f587a3f1e9dcb7e3",
+      "seal": "45931f7a32d72df62802667b7874bcd2e24ae84de85c3073abac18dfed53af99",
+      "plan": {
+        "version": 1,
+        "split": "stress",
+        "policyName": "candidate",
+        "policyHash": "1cd28c7d81acd5b7f66ede8932f950c4e92f77b649689c54077a76fea2ebb67a",
+        "inputsHash": "22009b350a07b6356b4922a60c12bbc1ef28119d62a45906ce9379ab7a5e2b2b",
+        "protocol": "standard",
+        "batchSize": 1,
+        "repeats": 3,
+        "model": "google/gemini-2.5-flash-lite",
+        "provider": "openrouter",
+        "endpoint": "google-ai-studio",
+        "thresholds": {
+          "spam": 0.9,
+          "review": 0.75
+        },
+        "repeatPerturbations": [
+          "label-blind permutation; positional wire IDs",
+          "reverse; hashed opaque wire IDs",
+          "rotate seven; different hashed opaque wire IDs"
+        ],
+        "examples": 64,
+        "maxRequests": 192,
+        "classifierSourceHash": "2f4eeb9bdaa7136e700b23b7b8cb7d62d29bc9d6ec5011c0cfa637677c497f23",
+        "protocolSourceHash": "9fbc517979faeeb4656046f4c42550067782792ed64d91d459b88871fb33d827"
+      },
+      "createdAt": "2026-10-30T19:38:32.416Z",
+      "completedAt": null,
+      "screenedAt": "2026-10-30T19:40:30.569Z",
+      "completedRounds": 1,
+      "hasUncertainInFlightRequest": false,
+      "labels": {
+        "spam": 24,
+        "ham": 40,
+        "review": 0
+      },
+      "successfulRequests": 64,
+      "terminalFailedRequests": 0,
+      "rejectedUnbilledRequests": 1,
+      "unknownCostRequests": 0,
+      "knownReportedCostUSD": 0.00613928,
+      "allCapturedBillingKnown": true,
+      "reportedReasoningTokens": {
+        "requests": 64,
+        "total": 2,
+        "min": 0,
+        "max": 1
+      },
+      "identities": ["google/gemini-2.5-flash-lite / Google AI Studio"],
+      "rounds": [
+        {
+          "repeat": 0,
+          "expected": 64,
+          "attempted": 64,
+          "classified": 64,
+          "terminalUnclassified": 0,
+          "notAttempted": 0,
+          "spamCaught": 24,
+          "spamAllowed": 0,
+          "spamReviewed": 0,
+          "legitimateBlocked": 4,
+          "legitimateReviewed": 1,
+          "weightedLossOnClassifiedOnly": 40.25,
+          "costUSD": 0.00613928,
+          "requestLatencyMeanMs": 703.4375
+        }
+      ]
+    },
+    {
+      "ledger": "gemini-protocol-validation-candidate-standard-b8.json",
+      "ledgerSHA256": "0a0fdc605158e97548c4f9ad64d5b0ad509b892981e1c2ea3991cd0e5f63daba",
+      "seal": "1bee787fda5d8e37634e2c6054521a6d2f6a4990a1f9640ffc058b8874c3354f",
+      "plan": {
+        "version": 1,
+        "split": "validation",
+        "policyName": "candidate",
+        "policyHash": "1cd28c7d81acd5b7f66ede8932f950c4e92f77b649689c54077a76fea2ebb67a",
+        "inputsHash": "55482cd1ac5a6ce35a256fd9ed599107aa1be674e695bc7c0992a398617e1e51",
+        "protocol": "standard",
+        "reasoningTokens": 0,
+        "batchSize": 8,
+        "repeats": 3,
+        "model": "google/gemini-2.5-flash-lite",
+        "provider": "openrouter",
+        "endpoint": "google-ai-studio",
+        "thresholds": {
+          "spam": 0.9,
+          "review": 0.75
+        },
+        "repeatPerturbations": [
+          "label-blind permutation; positional wire IDs",
+          "reverse; hashed opaque wire IDs",
+          "rotate seven; different hashed opaque wire IDs"
+        ],
+        "examples": 64,
+        "maxRequests": 24,
+        "classifierSourceHash": "2f4eeb9bdaa7136e700b23b7b8cb7d62d29bc9d6ec5011c0cfa637677c497f23",
+        "protocolSourceHash": "1de7538fe4fcb6e51203d2f0ffb4c6a93955568e94261eced5029e736bf341dc",
+        "runnerSourceHash": "2b34213d3a56a4f87c0adff68e80b0d08bb8792af2434a9d87c530371c88cf8a"
+      },
+      "createdAt": "2026-10-30T19:55:27.595Z",
+      "completedAt": null,
+      "screenedAt": "2026-10-30T19:55:41.376Z",
+      "completedRounds": 1,
+      "hasUncertainInFlightRequest": false,
+      "labels": {
+        "spam": 24,
+        "ham": 40,
+        "review": 0
+      },
+      "successfulRequests": 8,
+      "terminalFailedRequests": 0,
+      "rejectedUnbilledRequests": 0,
+      "unknownCostRequests": 0,
+      "knownReportedCostUSD": 0.0028391,
+      "allCapturedBillingKnown": true,
+      "reportedReasoningTokens": {
+        "requests": 8,
+        "total": 0,
+        "min": 0,
+        "max": 0
+      },
+      "identities": ["google/gemini-2.5-flash-lite / Google AI Studio"],
+      "rounds": [
+        {
+          "repeat": 0,
+          "expected": 64,
+          "attempted": 64,
+          "classified": 64,
+          "terminalUnclassified": 0,
+          "notAttempted": 0,
+          "spamCaught": 24,
+          "spamAllowed": 0,
+          "spamReviewed": 0,
+          "legitimateBlocked": 6,
+          "legitimateReviewed": 7,
+          "weightedLossOnClassifiedOnly": 61.75,
+          "costUSD": 0.0028391,
+          "requestLatencyMeanMs": 1719.125
+        }
+      ]
+    },
+    {
+      "ledger": "gemini-protocol-validation-candidate-thinking1024-b1.json",
+      "ledgerSHA256": "00c4ce1a73f955b250abbeaa483e7b47fbab129e99455cba5b5ba5f17f81924a",
+      "seal": "c1038c18797b626eaf2e5a7f1cc11c093b329da2df3d315434fdfbd244401ec5",
+      "plan": {
+        "version": 1,
+        "split": "validation",
+        "policyName": "candidate",
+        "policyHash": "1cd28c7d81acd5b7f66ede8932f950c4e92f77b649689c54077a76fea2ebb67a",
+        "inputsHash": "55482cd1ac5a6ce35a256fd9ed599107aa1be674e695bc7c0992a398617e1e51",
+        "protocol": "standard",
+        "reasoningTokens": 1024,
+        "batchSize": 1,
+        "repeats": 3,
+        "model": "google/gemini-2.5-flash-lite",
+        "provider": "openrouter",
+        "endpoint": "google-ai-studio",
+        "thresholds": {
+          "spam": 0.9,
+          "review": 0.75
+        },
+        "repeatPerturbations": [
+          "label-blind permutation; positional wire IDs",
+          "reverse; hashed opaque wire IDs",
+          "rotate seven; different hashed opaque wire IDs"
+        ],
+        "examples": 64,
+        "maxRequests": 192,
+        "classifierSourceHash": "2f4eeb9bdaa7136e700b23b7b8cb7d62d29bc9d6ec5011c0cfa637677c497f23",
+        "protocolSourceHash": "1de7538fe4fcb6e51203d2f0ffb4c6a93955568e94261eced5029e736bf341dc",
+        "runnerSourceHash": "2b34213d3a56a4f87c0adff68e80b0d08bb8792af2434a9d87c530371c88cf8a"
+      },
+      "createdAt": "2026-10-30T19:55:27.595Z",
+      "completedAt": null,
+      "screenedAt": "2026-10-30T19:57:58.088Z",
+      "completedRounds": 1,
+      "hasUncertainInFlightRequest": false,
+      "labels": {
+        "spam": 24,
+        "ham": 40,
+        "review": 0
+      },
+      "successfulRequests": 64,
+      "terminalFailedRequests": 0,
+      "rejectedUnbilledRequests": 0,
+      "unknownCostRequests": 0,
+      "knownReportedCostUSD": 0.022385330000000002,
+      "allCapturedBillingKnown": true,
+      "reportedReasoningTokens": {
+        "requests": 64,
+        "total": 40392,
+        "min": 130,
+        "max": 807
+      },
+      "identities": ["google/gemini-2.5-flash-lite / Google AI Studio"],
+      "rounds": [
+        {
+          "repeat": 0,
+          "expected": 64,
+          "attempted": 64,
+          "classified": 64,
+          "terminalUnclassified": 0,
+          "notAttempted": 0,
+          "spamCaught": 24,
+          "spamAllowed": 0,
+          "spamReviewed": 0,
+          "legitimateBlocked": 3,
+          "legitimateReviewed": 0,
+          "weightedLossOnClassifiedOnly": 30,
+          "costUSD": 0.022385330000000002,
+          "requestLatencyMeanMs": 2347.046875
+        }
+      ]
+    },
+    {
+      "ledger": "gemini-protocol-validation-current-thinking1024-b1.json",
+      "ledgerSHA256": "9cfb0c5adee2fe48594f905eb0209131c99ae19bf45fc7f1ddee34e1bbc597d2",
+      "seal": "76c9f2b8f8c64c425857fd325b130d454542d096eb3df615a11b6cf37e90365a",
+      "plan": {
+        "version": 1,
+        "split": "validation",
+        "policyName": "current",
+        "policyHash": "40a3426fc347f70ab344d311ee72da763fd837f4faa8f484a33535a331050be4",
+        "inputsHash": "55482cd1ac5a6ce35a256fd9ed599107aa1be674e695bc7c0992a398617e1e51",
+        "protocol": "standard",
+        "reasoningTokens": 1024,
+        "batchSize": 1,
+        "repeats": 3,
+        "model": "google/gemini-2.5-flash-lite",
+        "provider": "openrouter",
+        "endpoint": "google-ai-studio",
+        "thresholds": {
+          "spam": 0.9,
+          "review": 0.75
+        },
+        "repeatPerturbations": [
+          "label-blind permutation; positional wire IDs",
+          "reverse; hashed opaque wire IDs",
+          "rotate seven; different hashed opaque wire IDs"
+        ],
+        "examples": 64,
+        "maxRequests": 192,
+        "classifierSourceHash": "2f4eeb9bdaa7136e700b23b7b8cb7d62d29bc9d6ec5011c0cfa637677c497f23",
+        "protocolSourceHash": "1de7538fe4fcb6e51203d2f0ffb4c6a93955568e94261eced5029e736bf341dc",
+        "runnerSourceHash": "2b34213d3a56a4f87c0adff68e80b0d08bb8792af2434a9d87c530371c88cf8a"
+      },
+      "createdAt": "2026-10-30T19:56:20.315Z",
+      "completedAt": null,
+      "screenedAt": "2026-10-30T20:02:08.309Z",
+      "completedRounds": 1,
+      "hasUncertainInFlightRequest": false,
+      "labels": {
+        "spam": 24,
+        "ham": 40,
+        "review": 0
+      },
+      "successfulRequests": 64,
+      "terminalFailedRequests": 0,
+      "rejectedUnbilledRequests": 2,
+      "unknownCostRequests": 0,
+      "knownReportedCostUSD": 0.017932399999999998,
+      "allCapturedBillingKnown": true,
+      "reportedReasoningTokens": {
+        "requests": 64,
+        "total": 34473,
+        "min": 125,
+        "max": 867
+      },
+      "identities": ["google/gemini-2.5-flash-lite / Google AI Studio"],
+      "rounds": [
+        {
+          "repeat": 0,
+          "expected": 64,
+          "attempted": 64,
+          "classified": 64,
+          "terminalUnclassified": 0,
+          "notAttempted": 0,
+          "spamCaught": 11,
+          "spamAllowed": 12,
+          "spamReviewed": 1,
+          "legitimateBlocked": 2,
+          "legitimateReviewed": 0,
+          "weightedLossOnClassifiedOnly": 44.5,
+          "costUSD": 0.017932399999999998,
+          "requestLatencyMeanMs": 2173.421875
+        }
+      ]
+    }
+  ],
+  "successfulRequests": 527,
+  "terminalFailedRequests": 6,
+  "rejectedUnbilledRequests": 15,
+  "unknownCostRequests": 3,
+  "knownReportedCostUSD": 0.11102833,
+  "totalBillingKnown": false
+}

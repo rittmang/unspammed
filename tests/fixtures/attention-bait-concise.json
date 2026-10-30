@@ -1,0 +1,17 @@
+{
+  "scope": "Second development candidate, frozen after observing the earlier single-message false positives. Never an independent holdout or an approved live policy.",
+  "edits": [
+    {
+      "before": "Messages that combine excessive symbols, decorative text, or repeated/elongated filler, making the content difficult to read or understand, and which do not convey a clear question, meaningful contribution, or legitimate purpose.",
+      "after": "Empty attention/contact bait requires ALL of these: (1) no actual topic, question, information or meaningful emotional disclosure anywhere in the full target OR its supplied recent same-sender context; (2) only a generic help, clarification, question-exists, greeting or availability hook; (3) exaggerated repeated punctuation or elongated filler; AND (4) a cluster of emotional/suggestive emojis. If ANY condition is absent, this bait rule does not apply. Separately, multiple long repetitions of a greeting/filler within one message, with no substantive content, are spam. A single elongated greeting is allowed. Readability, commercial intent and prior posting are not prerequisites for these rules."
+    },
+    {
+      "before": "Allow greetings, questions, short replies, emojis, casual conversation, friendship requests, complaints, and discussion of offers or scams. Profanity or disagreement alone does not establish spam.",
+      "after": "Allow greetings, questions, short replies, emojis, casual conversation, friendship requests, complaints, and discussion of offers or scams, except for the precisely defined bait/flooding rules. Actual content in either the target or supplied context defeats the EMPTY-bait rule even with exaggerated punctuation and suggestive emojis. Generic help plus emojis alone is allowed when exaggerated punctuation/elongated filler is absent. A single elongated greeting is allowed. Warnings, quotations and questions ABOUT a scam or prohibited offer are allowed when the target itself does not promote or solicit it. Profanity or disagreement alone does not establish spam."
+    },
+    {
+      "before": "Give high scores to clear policy violations and low scores to allowed content or unsupported suspicion. Explain the applicable rule briefly.",
+      "after": "Check the entire target and recent_same_sender context before deciding. Identify actual content, then check every prerequisite of the applicable rule. For bait, missing ANY required condition means that rule is not satisfied. Do not mistake a warning about solicitation for solicitation. Give high scores to clear policy violations and low scores to allowed content or unsupported suspicion. Review requires a genuinely material missing/conflicting fact, not mere unfamiliarity or a harmless short message. Explain the decisive rule and evidence briefly."
+    }
+  ]
+}

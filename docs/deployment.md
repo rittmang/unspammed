@@ -24,6 +24,8 @@ To upgrade, back up the database and private configuration, preserve the root na
 
 For an existing Cloudflare Worker, retain its complete Durable Object migration history, bindings, routes and account selection. The setup generator's `v1-admin` history is for a **new** Worker; do not replace an installed Worker's migrations with it. The preserved private configuration can be selected explicitly with `npm run deploy -- --config wrangler.production.jsonc` (add `--dry-run` first). Merge new public variables deliberately, retaining existing secrets in the host. Generating a fresh config is not a migration of an existing deployment.
 
+The rate-limit recovery upgrade adds only defaulted retry columns to messages, evaluations and policy drafts. Run `npm run database:setup` with the installed runtime configuration before publishing the new application code; it upgrades every provisioned group without resetting records or settings. Existing completed evaluations stay completed. Historical unknown-usage flags require evidence-based receipt reconciliation; the upgrade does not silently clear them or resume failed paid work.
+
 ## Verification checklist
 
 Run the repository checks with test credentials and isolated state:

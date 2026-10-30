@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "date": "2026-10-30",
+  "scope": "Locked after development/stress results, before requesting any predictions on the fresh Gemini validation fixture. No live approval.",
+  "selected": {
+    "policy": "candidate",
+    "policySHA256": "1cd28c7d81acd5b7f66ede8932f950c4e92f77b649689c54077a76fea2ebb67a",
+    "protocol": "standard",
+    "batchSize": 1,
+    "reasoningTokens": 1024,
+    "model": "google/gemini-2.5-flash-lite",
+    "endpoint": "google-ai-studio",
+    "thresholds": { "spam": 0.9, "review": 0.75 }
+  },
+  "developmentBasis": "16/16 development and 64/64 previously inspected stress cases correctly classified with known reported costs/identities. Identically configured installed-policy development control misses four of seven spam cases. Original single-message protocol without thinking blocks four legitimate stress cases. Other shortlisted ideas have recorded failures.",
+  "fixtureSHA256": "0a820b8fd64a3f4e0cbb158bf27a2ddde83b236f4df2fa48e8ab2e17956a3942",
+  "validation": {
+    "repeats": 3,
+    "perturbations": [
+      "positional wire IDs",
+      "hashed opaque wire IDs",
+      "different hashed opaque wire IDs"
+    ],
+    "baseline": {
+      "policy": "candidate",
+      "protocol": "standard",
+      "batchSize": 8,
+      "reasoningTokens": 0
+    },
+    "installedPolicyControl": {
+      "policy": "current",
+      "protocol": "standard",
+      "batchSize": 1,
+      "reasoningTokens": 1024
+    },
+    "screenFirstRoundBeforeRepeating": true,
+    "requirements": "Complete coverage, known cost and fixed observed identity, all spam automatically caught, no false positives or incorrect review routes. Stop a failed arm without tuning or reusing fresh outcomes as a holdout. If the selected arm fails, do not spend on further repeats or historical regression.",
+    "interpretation": "The baseline tests the combined single-message/thinking intervention at the same policy; the installed-policy control isolates the policy change under the same intervention. Repeated orders/IDs are robustness tests, not independent observations."
+  },
+  "historicalRegression": "Only if fresh validation passes, compare frozen owner-labelled retrospective references; this is a separate evidence level. Preserve safety/invalid-output failures and unknown billing without replay. No deployment or policy approval follows automatically."
+}

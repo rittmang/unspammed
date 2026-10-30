@@ -54,9 +54,13 @@ export class GroupModerator extends GroupService {
     ctx.storage.sql.exec(IMPROVEMENT_SCHEMA);
     for (const [table, column, definition] of [
       ['messages', 'classification_snapshot', "TEXT NOT NULL DEFAULT ''"],
+      ['messages', 'retry_attempts', 'INTEGER NOT NULL DEFAULT 0'],
       ['predictions', 'needs_review', 'INTEGER NOT NULL DEFAULT 0'],
       ['evaluations', 'model_meta', "TEXT NOT NULL DEFAULT '{}'"],
       ['evaluations', 'settings_snapshot', "TEXT NOT NULL DEFAULT ''"],
+      ['evaluations', 'next_at', 'INTEGER NOT NULL DEFAULT 0'],
+      ['evaluations', 'retry_attempts', 'INTEGER NOT NULL DEFAULT 0'],
+      ['policy_drafts', 'next_at', 'INTEGER NOT NULL DEFAULT 0'],
       ['examples', 'family', "TEXT NOT NULL DEFAULT ''"],
       ['run_examples', 'family', "TEXT NOT NULL DEFAULT ''"],
       ['feedback_events', 'request_hash', "TEXT NOT NULL DEFAULT ''"],

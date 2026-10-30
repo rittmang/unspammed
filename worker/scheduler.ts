@@ -13,9 +13,15 @@ export async function runScheduledWork(
   const deadline = Date.now() + durationMs;
   try {
     return await db.withWorkLease(async () => {
-      // Production gets a fresh CPU allowance on the next cron invocation.
+      // Each call checkpoints its own progress. Drain several isolated decisions
+      // within the invocation budget instead of limiting production to one message/minute.
       const bounded = env.DEV_MODE !== 'true';
-      for (let batches = 0; batches < (bounded ? 1 : 20) && (await group.hasDueWork()); batches++) {
+      for (
+        let batches = 0;
+        batches < 20 && Date.now() < deadline && (await group.hasDueWork());
+        batches++
+      ) {
+        if (Date.now() >= deadline) break;
         await group.processBatch(bounded);
         if (Date.now() >= deadline) break;
       }

@@ -92,17 +92,33 @@ export function FeedbackEditor({
               </option>
             ))}
           </select>
+          {reason === 'attention_bait' && (
+            <small>
+              Explain the empty hook and exaggerated presentation together. Group related variants
+              as one family. Ordinary greetings and genuine questions need to remain allowed.
+            </small>
+          )}
+          {reason === 'missing_context' && (
+            <small>
+              Use this when evidence needed to decide is unavailable. A post that withholds its
+              question may instead be empty attention or contact bait.
+            </small>
+          )}
         </label>
         <label className="field">
           Explanation
           <textarea
             aria-label="Feedback explanation"
-            required={reason === 'other'}
+            required={reason === 'other' || reason === 'attention_bait'}
             maxLength={1000}
             rows={2}
             value={note}
             onChange={(e) => setNote(e.target.value)}
-            placeholder="What boundary should the policy recognize?"
+            placeholder={
+              reason === 'attention_bait'
+                ? 'What makes this bait? Which similar genuine help requests should stay allowed?'
+                : 'What boundary should the policy recognize?'
+            }
           />
         </label>
         <label className="field">

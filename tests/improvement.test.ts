@@ -8,12 +8,34 @@ import {
   policyGate,
   policyMetrics,
   policyProgress,
+  policyAssessment,
   referenceIssues,
   relatedText,
   routed,
   splitReferences,
 } from '../shared/improvement';
 import { defaultSettings, type Example, type Label, type Prediction } from '../shared/types';
+
+describe('compact policy evidence', () => {
+  it('reports the latest completed comparison without exposing reference identities', () => {
+    const examples = [reference('private-spam-id', 'spam'), reference('private-ham-id', 'ham')];
+    const baseline = measured(examples, { 'private-spam-id': 'ham', 'private-ham-id': 'ham' });
+    const candidate = measured(examples, { 'private-spam-id': 'spam', 'private-ham-id': 'spam' });
+    const result = policyGate(baseline, candidate, 1);
+    const assessment = policyAssessment({
+      results: { development: policyGate(baseline, baseline, 1), validation: result },
+    });
+    expect(assessment).toMatchObject({
+      phase: 'validation',
+      total: 2,
+      baseline: { falsePositives: 0, misses: 1 },
+      candidate: { falsePositives: 1, misses: 0 },
+      failedChecks: expect.arrayContaining(['noNewFalsePositives']),
+    });
+    expect(JSON.stringify(assessment)).not.toContain('private-');
+    expect(policyAssessment({})).toBeUndefined();
+  });
+});
 
 type Decision = Exclude<Label, null>;
 const thresholds = { threshold: 0.9, reviewThreshold: 0.6 };
@@ -423,7 +445,6 @@ describe('policy identity and human-readable diffs', () => {
       mode: 'enforce' as const,
       dailyTokenBudget: defaultSettings.dailyTokenBudget + 1000,
       batchSeconds: 5,
-      batchSize: 10,
       retentionDays: 365,
       exemptUserIds: ['123'],
     };
@@ -444,6 +465,8 @@ describe('policy identity and human-readable diffs', () => {
     { imageModeration: !defaultSettings.imageModeration },
     { imageProvider: 'another-image-provider' },
     { imageModel: 'another-image-model' },
+    { batchSize: 10 },
+    { reasoningTokens: 0 as const },
   ])('changes the fingerprint for a decision setting %j', async (change) => {
     expect(await policyFingerprint({ ...defaultSettings, ...change })).not.toBe(
       await policyFingerprint(defaultSettings),

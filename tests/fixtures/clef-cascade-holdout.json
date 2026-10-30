@@ -1,0 +1,301 @@
+{
+  "scope": "Frozen synthetic validation stress set, authored before Clef cascade development results. Labels are experimental targets, not independent owner-adjudicated production families. No model output used to create these labels.",
+  "examples": [
+    {
+      "id": "v01",
+      "label": "spam",
+      "text": "Got a little confusion.....!!!! Someone respond plssss 🥺😭💋🔥"
+    },
+    {
+      "id": "v02",
+      "label": "spam",
+      "text": "एक डाउट पूछना है.....!!!! कोई ऑनलाइन है प्लीज 😭😭🙈🔥"
+    },
+    {
+      "id": "v03",
+      "label": "spam",
+      "text": "Ek baat clear karni hai......!!!! koi help karega plzzzz 🥺😭💋🔥"
+    },
+    {
+      "id": "v04",
+      "label": "spam",
+      "text": "Una preguntita.....!!!! alguien me ayuda porfaaaa 😭😭💋🔥"
+    },
+    {
+      "id": "v05",
+      "label": "spam",
+      "text": "J'ai une question.....!!!! quelqu'un peut m'aider svpppp 😭😭💋🔥"
+    },
+    { "id": "v06", "label": "spam", "text": "Heeeeeeeey anyone online 👅🙈" },
+    {
+      "id": "v07",
+      "label": "spam",
+      "text": "Just one thingggg.....!!!! who can explain to me plzzzzz 🥺😭🔥💋"
+    },
+    {
+      "id": "v08",
+      "label": "spam",
+      "text": "Hellooooooooooooooo\nHellooooooooooooooo\nHellooooooooooooooo\nHellooooooooooooooo"
+    },
+    {
+      "id": "v09",
+      "label": "spam",
+      "text": "A small queryyyyy......!!!! anyone available to sort me out 😭😭🙈💋"
+    },
+    { "id": "v10", "label": "spam", "text": "Hiiiiiiii anyone awake 👅🙈" },
+    {
+      "id": "v11",
+      "label": "spam",
+      "text": "Need someone to clarify.......!!!! Plzzzz replyyyy 😭🔥💋🙈"
+    },
+    {
+      "id": "v12",
+      "label": "spam",
+      "text": "I have something to ask......!!!! can anybody assistttt 😭😭🍑🔥"
+    },
+    {
+      "id": "v13",
+      "label": "spam",
+      "text": "एक सवाल है......!!!! कोई समझा देगा प्लीज़ज़ज़ 😭😭💋🔥"
+    },
+    {
+      "id": "v14",
+      "label": "spam",
+      "text": "Hiiiiiiiiiiiiiiiiii\nHiiiiiiiiiiiiiiiiii\nHiiiiiiiiiiiiiiiiii"
+    },
+    {
+      "id": "v15",
+      "label": "spam",
+      "text": "Koi online hai......!!!! ek doubt hai plzzzz clear karo 😭😭💋🙈"
+    },
+    {
+      "id": "v16",
+      "label": "spam",
+      "text": "𝗚𝗼𝘁 𝗮 𝗾𝘂𝗲𝗿𝘆.....!!!! Somebody answer plzzzz 😭😭🔥💋"
+    },
+    {
+      "id": "v17",
+      "label": "spam",
+      "text": "Transfer a joining deposit and earn guaranteed returns every day through our trading bot."
+    },
+    {
+      "id": "v18",
+      "label": "spam",
+      "text": "I sell completed graded assignments. Send your coursework and pay for a finished submission."
+    },
+    {
+      "id": "v19",
+      "label": "spam",
+      "text": "Your bank account will close tonight. Send your password and OTP to claim account verification."
+    },
+    {
+      "id": "v20",
+      "label": "spam",
+      "text": "Need a fake degree certificate? I can supply one for payment; contact me privately."
+    },
+    {
+      "id": "v21",
+      "label": "spam",
+      "text": "Bulk verified financial accounts for sale. DM for prices and instant delivery."
+    },
+    {
+      "id": "v22",
+      "label": "spam",
+      "text": "Promoting my unrelated commercial appliance repair business. Book paid jobs through my sales chat."
+    },
+    {
+      "id": "v23",
+      "label": "spam",
+      "text": "Women in this group, contact me privately for intimate sexual chats."
+    },
+    {
+      "id": "v24",
+      "label": "spam",
+      "text": "Pay an upfront activation fee for a guaranteed cash giveaway; send banking credentials to receive it."
+    },
+    {
+      "id": "v25",
+      "label": "ham",
+      "text": "Got a little confusion.....!!!! Is tutorial attendance included in the 75% requirement? 🥺😭💋🔥"
+    },
+    {
+      "id": "v26",
+      "label": "ham",
+      "text": "एक डाउट है.....!!!! बस पास के लिए कौन से कागज़ चाहिए? 😭😭🙈🔥"
+    },
+    {
+      "id": "v27",
+      "label": "ham",
+      "text": "Ek baat clear karni hai......!!!! Saturday ko workshop ka time kya hai? 🥺😭💋🔥"
+    },
+    {
+      "id": "v28",
+      "label": "ham",
+      "text": "Una preguntita.....!!!! a qué hora abre la biblioteca? 😭😭💋🔥"
+    },
+    {
+      "id": "v29",
+      "label": "ham",
+      "text": "J'ai une question.....!!!! où est le laboratoire de chimie? 😭😭💋🔥"
+    },
+    {
+      "id": "v30",
+      "label": "ham",
+      "text": "Heeeeeeeey anyone online 👅🙈 who can tell me the bus stop for the north campus?"
+    },
+    {
+      "id": "v31",
+      "label": "ham",
+      "text": "Just one thingggg.....!!!! Is the essay deadline midnight or 5 pm? 🥺😭🔥💋"
+    },
+    {
+      "id": "v32",
+      "label": "ham",
+      "text": "A small queryyyyy......!!!! does the hostel deposit get refunded? 😭😭🙈💋"
+    },
+    {
+      "id": "v33",
+      "label": "ham",
+      "text": "Hiiiiiiii anyone awake 👅🙈 my flight is delayed, does the hostel allow late check-in?"
+    },
+    {
+      "id": "v34",
+      "label": "ham",
+      "text": "Need someone to clarify.......!!!! Does this scholarship cover hostel fees? 😭🔥💋🙈"
+    },
+    {
+      "id": "v35",
+      "label": "ham",
+      "text": "I have something to ask......!!!! Which department signs the internship form? 😭😭🍑🔥"
+    },
+    { "id": "v36", "label": "ham", "text": "Hi, anybody free to help?" },
+    { "id": "v37", "label": "ham", "text": "Hellooooooooooooooo" },
+    { "id": "v38", "label": "ham", "text": "Can someone explain? 😭😭" },
+    { "id": "v39", "label": "ham", "text": "Anyone here?" },
+    { "id": "v40", "label": "ham", "text": "Hiiii everyone! 🙈" },
+    {
+      "id": "v41",
+      "label": "ham",
+      "text": "Plzzzzz help 😭 I lost my ID card outside the library."
+    },
+    {
+      "id": "v42",
+      "label": "ham",
+      "text": "Please clarify.....!!!! 😭😭🔥💋",
+      "context": ["For the hostel application, is my parent's signature required on both forms?"]
+    },
+    {
+      "id": "v43",
+      "label": "ham",
+      "text": "Who can explain this to me plzzzz 😭🔥💋🙈",
+      "context": [
+        "I am solving a quadratic equation and do not understand why the discriminant is negative."
+      ]
+    },
+    {
+      "id": "v44",
+      "label": "ham",
+      "text": "Got a little confusion.....!!!! Someone respond plssss 🥺😭💋🔥",
+      "context": [
+        "The scholarship portal lists two deadlines. Which deadline applies to first-year students?"
+      ]
+    },
+    {
+      "id": "v45",
+      "label": "ham",
+      "text": "Hello everyone, tomorrow's lab is postponed; the coordinator will announce the replacement date."
+    },
+    {
+      "id": "v46",
+      "label": "ham",
+      "text": "🎉✨ Admissions support session!!! Bring your application forms to room 402 at 2pm 🔥🔥"
+    },
+    {
+      "id": "v47",
+      "label": "ham",
+      "text": "FINAL REMINDER!!! Free student robotics workshop registration closes tonight. 🎓🔥"
+    },
+    {
+      "id": "v48",
+      "label": "ham",
+      "text": "Selling my used desk to another student for ₹500. Pickup near campus; DM if interested."
+    },
+    {
+      "id": "v49",
+      "label": "ham",
+      "text": "Looking for a roommate near campus. Rent is ₹8,000; please contact me if you are searching too."
+    },
+    {
+      "id": "v50",
+      "label": "ham",
+      "text": "Could someone recommend a beginner Python course? Paid or free recommendations are welcome."
+    },
+    {
+      "id": "v51",
+      "label": "ham",
+      "text": "Our club internship registration form is open. Use referral code CLUB when applying."
+    },
+    {
+      "id": "v52",
+      "label": "ham",
+      "text": "This internship post asks for an upfront deposit. Is it a scam? Please don't transfer money yet."
+    },
+    {
+      "id": "v53",
+      "label": "ham",
+      "text": "😭😭 I'm overwhelmed by exams and need to talk to somebody. Anyone free?"
+    },
+    {
+      "id": "v54",
+      "label": "ham",
+      "text": "HELP!!!! My roommate collapsed. Does anyone have the campus security phone number? 😭🙏"
+    },
+    {
+      "id": "v55",
+      "label": "ham",
+      "text": "Hiiiiii friends!!! The basketball team won the final 😭😭🔥🔥"
+    },
+    {
+      "id": "v56",
+      "label": "ham",
+      "text": "🍆🥕 Recipe club is making roasted vegetables after class. Anyone joining?"
+    },
+    {
+      "id": "v57",
+      "label": "ham",
+      "text": "Thanks everyone 😭😭💋🔥, the transport office fixed my bus pass."
+    },
+    {
+      "id": "v58",
+      "label": "ham",
+      "text": "New here and hoping to make some friends. Anyone interested in a coffee after lectures? 🙂"
+    },
+    {
+      "id": "v59",
+      "label": "ham",
+      "text": "Don't reply to those vague help hooks with suggestive emojis; report the bots to the moderators."
+    },
+    {
+      "id": "v60",
+      "label": "ham",
+      "text": "URGENT.....!!!! Someone tell me whether the finance office accepts fee payments tomorrow 😭😭💋🔥"
+    },
+    {
+      "id": "v61",
+      "label": "ham",
+      "text": "That offer is bullshit. They promised an internship and never replied."
+    },
+    {
+      "id": "v62",
+      "label": "ham",
+      "text": "Sharing my notes for tomorrow's exam. Message me if you'd like a copy; they're free."
+    },
+    {
+      "id": "v63",
+      "label": "ham",
+      "text": "Does anyone know when the library opens?",
+      "context": ["Does anyone know when the library opens?"]
+    },
+    { "id": "v64", "label": "ham", "text": "𝗛𝗶 everyone, has the exam timetable been posted?" }
+  ]
+}

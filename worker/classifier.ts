@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { defaultSettings } from '../shared/types';
 import type { Example, Prediction, ProviderPublic, Settings } from '../shared/types';
 import type { Env } from './env';
+import { ProviderError, providerError, errorText } from './provider-errors';
 
 const providerSchema = z.object({
   id: z.string().min(1).max(60),
@@ -15,6 +16,17 @@ type Provider = z.infer<typeof providerSchema>;
 // Image bytes exist only for a single live request, never in lab datasets or logs.
 export interface ClassificationExample extends Example {
   image?: string;
+}
+export type ClassificationSettings = Pick<Settings, 'threshold' | 'reviewThreshold'> &
+  Partial<Pick<Settings, 'reasoningTokens' | 'batchSize'>>;
+
+function reasoningBudget(provider: Provider, model: string, settings: ClassificationSettings) {
+  // Only the audited OpenRouter/Gemini route has a verified thinking contract.
+  return provider.format !== 'decisions' &&
+    provider.baseUrl.replace(/\/$/, '') === 'https://openrouter.ai/api/v1' &&
+    model === 'google/gemini-2.5-flash-lite'
+    ? settings.reasoningTokens || 0
+    : 0;
 }
 const defaults: Provider[] = [
   {
@@ -72,6 +84,7 @@ export function modelProvider(env: Env, id: string, model: string): Provider {
   return provider;
 }
 export interface ClassificationUsage {
+  rejected?: boolean;
   latency: number;
   input: number | null;
   output: number | null;
@@ -85,8 +98,9 @@ export class ClassificationError extends Error {
     message: string,
     public usage: ClassificationUsage,
     public invalidOutput = false,
+    cause?: unknown,
   ) {
-    super(message);
+    super(message, { cause });
     this.name = 'ClassificationError';
   }
 }
@@ -117,8 +131,11 @@ export function requestPayload(
   model: string,
   policy: string,
   examples: ClassificationExample[],
-  thresholds: Pick<Settings, 'threshold' | 'reviewThreshold'> = defaultSettings,
+  thresholds: ClassificationSettings = defaultSettings,
 ) {
+  const thinking = reasoningBudget(provider, model, thresholds);
+  if (thinking && examples.length !== 1)
+    throw new Error('Gemini thinking moderation requires exactly one message per call.');
   if (provider.format === 'decisions') {
     if (examples.some((e) => e.image))
       throw new Error('This decision model adapter does not accept images.');
@@ -227,7 +244,13 @@ export function requestPayload(
       },
     ],
     temperature: 0,
-    max_tokens: Math.max(1000, examples.length * 160),
+    max_tokens: Math.max(1000, examples.length * 160) + thinking,
+    ...(thinking
+      ? {
+          reasoning: { max_tokens: thinking, exclude: true },
+          provider: { only: ['google-ai-studio'], allow_fallbacks: false },
+        }
+      : {}),
     ...(format ? { response_format: format } : {}),
   };
 }
@@ -237,7 +260,7 @@ export function estimateTokens(
   model: string,
   policy: string,
   examples: ClassificationExample[],
-  thresholds: Pick<Settings, 'threshold' | 'reviewThreshold'> = defaultSettings,
+  thresholds: ClassificationSettings = defaultSettings,
 ) {
   const provider = modelProvider(env, providerId, model);
   // Base64 is transport, not text tokens. Reserve separately for image processing.
@@ -259,9 +282,7 @@ export function estimateTokens(
       ) +
       examples.length * 128
     );
-  return (
-    images + Math.ceil(JSON.stringify(body).length / 2) + Math.max(1000, examples.length * 160)
-  );
+  return images + Math.ceil(JSON.stringify(body).length / 2) + body.max_tokens;
 }
 export function fitExamples(
   env: Env,
@@ -270,14 +291,19 @@ export function fitExamples(
   policy: string,
   examples: ClassificationExample[],
   budget = Infinity,
+  settings: ClassificationSettings = defaultSettings,
 ) {
   const fitted: ClassificationExample[] = [];
-  const maxBatch = modelProvider(env, providerId, model).format === 'decisions' ? 5 : 20;
+  const provider = modelProvider(env, providerId, model);
+  const maxBatch = Math.min(
+    settings.batchSize ?? 20,
+    reasoningBudget(provider, model, settings) ? 1 : provider.format === 'decisions' ? 5 : 20,
+  );
   for (const example of examples) {
+    if (fitted.length >= maxBatch) break;
     const candidate = [...fitted, example];
-    const estimate = estimateTokens(env, providerId, model, policy, candidate);
-    if (estimate > budget || fitted.length >= maxBatch || (fitted.length && estimate > 28000))
-      break;
+    const estimate = estimateTokens(env, providerId, model, policy, candidate, settings);
+    if (estimate > budget || (fitted.length && estimate > 28000)) break;
     fitted.push(example);
   }
   return fitted;
@@ -288,7 +314,7 @@ export async function classify(
   model: string,
   policy: string,
   examples: ClassificationExample[],
-  thresholds: Pick<Settings, 'threshold' | 'reviewThreshold'> = defaultSettings,
+  thresholds: ClassificationSettings = defaultSettings,
 ) {
   const provider = modelProvider(env, providerId, model);
   const start = Date.now();
@@ -316,7 +342,7 @@ export async function classify(
         signal: AbortSignal.timeout(25000),
       },
     );
-    if (!response.ok) throw new Error(`Model provider returned HTTP ${response.status}.`);
+    if (!response.ok) throw await providerError(response, env, 'Model provider');
     const data = (await response.json()) as {
       id?: string;
       model?: string;
@@ -341,7 +367,10 @@ export async function classify(
     measured.requestId = typeof data.id === 'string' ? data.id.slice(0, 200) : null;
     measured.actualModel = data.model;
     measured.actualProvider = data.provider;
-    if (data.error) throw new Error('Model provider returned an error.');
+    if (data.error)
+      throw new Error(
+        errorText(`Model provider returned an error: ${JSON.stringify(data.error)}`, env),
+      );
     invalidOutput = true;
     let results: Prediction[];
     if (provider.format === 'decisions') {
@@ -381,11 +410,11 @@ export async function classify(
     };
   } catch (error) {
     measured.latency = Date.now() - start;
+    if (error instanceof ProviderError && error.rejected) {
+      measured.rejected = true;
+      measured.input = measured.output = measured.cost = 0;
+    }
     // Preserve paid usage even when the output is unusable. Never persist the message content.
-    throw new ClassificationError(
-      error instanceof Error ? error.message.slice(0, 300) : 'Model request failed.',
-      measured,
-      invalidOutput,
-    );
+    throw new ClassificationError(errorText(error, env), measured, invalidOutput, error);
   }
 }

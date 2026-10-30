@@ -15,7 +15,7 @@ import {
 import { z } from 'zod';
 import {
   settingsSchema,
-  defaultSettings,
+  storedSettings,
   REPETITION_CONTEXT_MS,
   type Dataset,
   type Example,
@@ -32,6 +32,7 @@ import {
   configuredProvider,
   publicProviders,
   ClassificationError,
+  type ClassificationSettings,
   type ClassificationUsage,
   type ClassificationExample,
 } from './classifier';
@@ -43,6 +44,8 @@ import { importExamples } from './import';
 import { IMPORT_BATCH_MESSAGES, validateExamples } from '../shared/import';
 import { feedbackSchema, type CorrectionSnapshot, type FeedbackInput } from '../shared/improvement';
 import { ImprovementService } from './improvement';
+import { errorText, rateLimitRetry } from './provider-errors';
+import { writeAudit } from './logging';
 import {
   mediaType,
   messageText,
@@ -64,9 +67,9 @@ interface Action {
 interface MessageRow extends StoredMessage {
   telegram_revision: number;
   attempts: number;
+  retry_attempts: number;
   next_at: number;
 }
-const safeError = (e: unknown) => (e instanceof Error ? e.message.slice(0, 300) : 'Unknown error');
 class BudgetError extends Error {
   constructor() {
     super(
@@ -104,14 +107,13 @@ export class GroupService {
     return (await this.rows<T>(sql, ...params))[0];
   }
   async settings(): Promise<Settings> {
-    return {
-      ...defaultSettings,
-      ...JSON.parse(
+    return storedSettings(
+      JSON.parse(
         (await this.one<{
           value: string;
         }>('SELECT value FROM config WHERE id=1'))!.value,
       ),
-    };
+    );
   }
   private async requireLiveStorage() {
     if (this.db instanceof PostgresDatabase && !(await migrationState(this.db)).ready) {
@@ -148,14 +150,7 @@ export class GroupService {
   }
   private async log(kind: string, detail: string, userId = '', messageId: number | null = null) {
     if (this.db instanceof PostgresDatabase && !(await migrationState(this.db)).ready) return;
-    await this.db.exec(
-      'INSERT INTO audit (kind, user_id, message_id, detail, created_at) VALUES (?, ?, ?, ?, ?)',
-      kind,
-      userId,
-      messageId,
-      detail,
-      Date.now(),
-    );
+    await writeAudit(this.db, this.env, kind, detail, userId, messageId);
   }
   private serial<T>(fn: () => Promise<T>): Promise<T> {
     const next = this.execution.then(fn, fn);
@@ -307,9 +302,10 @@ export class GroupService {
     return Math.max(0, (await this.settings()).dailyTokenBudget - used);
   }
   private async recordEvaluationUsage(id: string, usage: ClassificationUsage, reserved: number) {
+    if (usage.rejected) return;
     const estimated = usage.input === null || usage.output === null;
     await this.db.exec(
-      'UPDATE evaluations SET input_tokens=input_tokens+?,output_tokens=output_tokens+?,usage_estimated=MAX(usage_estimated,?),latency_ms=latency_ms+?,cost=CASE WHEN cost_complete=0 OR ? IS NULL THEN NULL ELSE COALESCE(cost,0)+? END,cost_complete=CASE WHEN ? IS NULL THEN 0 ELSE cost_complete END,provider_request_id=? WHERE id=?',
+      'UPDATE evaluations SET input_tokens=input_tokens+?,output_tokens=output_tokens+?,usage_estimated=MAX(usage_estimated,?),latency_ms=latency_ms+?,cost=CASE WHEN cost_complete=0 OR ? IS NULL THEN NULL ELSE COALESCE(cost,0)+? END,cost_complete=CASE WHEN ? IS NULL THEN 0 ELSE cost_complete END,provider_request_id=COALESCE(?,provider_request_id) WHERE id=?',
       estimated ? reserved : usage.input!,
       estimated ? 0 : usage.output!,
       Number(estimated),
@@ -352,7 +348,7 @@ export class GroupService {
     policy: string,
     examples: ClassificationExample[],
     runId?: string,
-    thresholds?: Pick<Settings, 'threshold' | 'reviewThreshold'>,
+    thresholds?: ClassificationSettings,
   ) {
     if (!examples.length) throw new BudgetError();
     await this.assertWorkLease();
@@ -383,7 +379,7 @@ export class GroupService {
       throw error;
     } finally {
       if (measured) {
-        if (runId) {
+        if (runId && !measured.rejected) {
           const tokens =
             measured.input === null || measured.output === null
               ? reserved
@@ -394,7 +390,7 @@ export class GroupService {
             tokens,
           );
           await this.recordEvaluationUsage(runId, measured, reserved);
-        } else await this.settle(day, reserved, measured.input, measured.output);
+        } else if (!runId) await this.settle(day, reserved, measured.input, measured.output);
       }
     }
   }
@@ -549,7 +545,14 @@ export class GroupService {
           image ? { ...e, image: 'pending-download' } : e,
         ),
         await this.remainingBudget(),
+        settings,
       );
+      // Fitting can shrink a configured batch to one thinking target. Only
+      // submitted messages should receive this request's failure/retry state.
+      if (examples.length) {
+        const submitted = new Set(examples.map((e) => e.id));
+        processing = processing.filter((m) => submitted.has(String(m.id)));
+      }
       if (image && examples.length)
         examples[0].image = await imageData(this.env, processing[0].image_file_id!);
       const result = await this.classifyBatch(
@@ -631,9 +634,10 @@ export class GroupService {
       }
     } catch (e) {
       if (e instanceof DatabaseUnavailableError || e instanceof LostWorkLeaseError) throw e;
-      const error = safeError(e);
+      const error = errorText(e, this.env);
       for (const m of processing) {
-        if (usesImage(m) && !(e instanceof BudgetError)) {
+        const retry = rateLimitRetry(e, m.retry_attempts);
+        if (usesImage(m) && !(e instanceof BudgetError) && !retry) {
           await this.db.exec(
             "UPDATE messages SET status='unsupported',score=NULL,reason=?,category='image_review' WHERE id=? AND revision=? AND status='pending'",
             `Image review required: ${error}`,
@@ -642,15 +646,18 @@ export class GroupService {
           );
           continue;
         }
-        const attempts = m.attempts + Number(!(e instanceof BudgetError));
+        const attempts = m.attempts + Number(!retry && !(e instanceof BudgetError));
         await this.db.exec(
-          "UPDATE messages SET attempts=?,next_at=?,reason=?,status=? WHERE id=? AND revision=? AND status='pending'",
+          "UPDATE messages SET attempts=?,retry_attempts=?,next_at=?,reason=?,status=? WHERE id=? AND revision=? AND status='pending'",
           attempts,
-          e instanceof BudgetError
-            ? nextBudgetReset()
-            : Date.now() + Math.min(300000, 5000 * 2 ** attempts),
+          retry?.attempts ?? 0,
+          retry
+            ? retry.nextAt
+            : e instanceof BudgetError
+              ? nextBudgetReset()
+              : Date.now() + Math.min(300000, 5000 * 2 ** attempts),
           error,
-          attempts >= 5 ? 'error' : 'pending',
+          !retry && !(e instanceof BudgetError) && attempts >= 5 ? 'error' : 'pending',
           m.id,
           m.revision,
         );
@@ -775,7 +782,7 @@ export class GroupService {
         );
         await this.log(
           'action_error',
-          `${action.kind}: ${safeError(e)}`,
+          `${action.kind}: ${errorText(e, this.env)}`,
           action.user_id,
           action.message_id,
         );
@@ -972,7 +979,8 @@ export class GroupService {
   private async processEvaluation() {
     const hidden = await this.hiddenLabIds('run');
     const run = await this.one<Evaluation>(
-      `SELECT * FROM evaluations WHERE status IN ('queued','running') AND ${excludeIds('id', hidden)} ORDER BY created_at LIMIT 1`,
+      `SELECT * FROM evaluations WHERE status IN ('queued','running') AND next_at<=? AND ${excludeIds('id', hidden)} ORDER BY created_at LIMIT 1`,
+      Date.now(),
       ...hidden,
     );
     if (!run) return;
@@ -983,6 +991,13 @@ export class GroupService {
     if (!started.length) return;
     let attempted = 0;
     try {
+      const snapshot = run.settings_snapshot
+        ? storedSettings(JSON.parse(run.settings_snapshot))
+        : storedSettings({
+            ...(await this.settings()),
+            reasoningTokens: 0,
+            batchSize: run.batch_size,
+          });
       const examples = fitExamples(
         this.env,
         run.provider,
@@ -993,8 +1008,10 @@ export class GroupService {
           'run_id',
           run.id,
           run.cursor,
-          Math.min((await this.settings()).batchSize, run.batch_size),
+          Math.min(snapshot.batchSize, run.batch_size),
         ),
+        Infinity,
+        snapshot,
       );
       attempted = examples.length;
       const result = await this.classifyBatch(
@@ -1003,7 +1020,7 @@ export class GroupService {
         run.policy,
         examples,
         run.id,
-        run.settings_snapshot ? JSON.parse(run.settings_snapshot) : await this.settings(),
+        snapshot,
       );
       if (
         (
@@ -1031,7 +1048,7 @@ export class GroupService {
           );
         const cursor = run.cursor + examples.length;
         await this.db.exec(
-          "UPDATE evaluations SET cursor=?,status=?,error='' WHERE id=?",
+          "UPDATE evaluations SET cursor=?,status=?,error='',next_at=0,retry_attempts=0 WHERE id=?",
           cursor,
           cursor >= run.total ? 'complete' : 'running',
           run.id,
@@ -1040,15 +1057,23 @@ export class GroupService {
     } catch (e) {
       if (e instanceof DatabaseUnavailableError || e instanceof LostWorkLeaseError) throw e;
       const shrink = e instanceof ClassificationError && e.invalidOutput && attempted > 1;
+      const retry = rateLimitRetry(e, run.retry_attempts);
       const batchSize = shrink ? Math.max(1, Math.floor(attempted / 2)) : run.batch_size;
       await this.db.exec(
-        "UPDATE evaluations SET status=?,error=?,batch_size=? WHERE id=? AND status!='cancelled'",
-        shrink ? 'running' : 'failed',
-        shrink ? `${safeError(e)} Retrying with at most ${batchSize} messages.` : safeError(e),
+        "UPDATE evaluations SET status=?,error=?,batch_size=?,next_at=?,retry_attempts=? WHERE id=? AND status!='cancelled'",
+        retry || shrink ? 'running' : 'failed',
+        shrink
+          ? `${errorText(e, this.env)} Retrying with at most ${batchSize} messages.`
+          : errorText(e, this.env),
         batchSize,
+        retry?.nextAt ?? 0,
+        retry?.attempts ?? 0,
         run.id,
       );
-      await this.log('evaluation_error', `${run.model}: ${safeError(e)}`);
+      await this.log(
+        'evaluation_error',
+        `Run ${run.id} (${run.model})${retry ? `; retry at ${new Date(retry.nextAt).toISOString()}` : ''}: ${errorText(e, this.env)}`,
+      );
     }
   }
   async alarm() {
@@ -1074,7 +1099,7 @@ export class GroupService {
           if (databaseQuotaResponse(e)) {
             retry = true;
             await this.wake(300000);
-          } else await this.log('work_error', safeError(e));
+          } else await this.log('work_error', errorText(e, this.env));
         } finally {
           this.overviewCache = null;
           if (!retry) await this.scheduleRemaining();
@@ -1089,11 +1114,13 @@ export class GroupService {
         `SELECT 1 AS due WHERE
         (?!='paused' AND EXISTS(SELECT 1 FROM messages WHERE status='pending' AND next_at<=?)) OR
         (?='enforce' AND EXISTS(SELECT 1 FROM actions WHERE status='pending' AND next_at<=?)) OR
-        EXISTS(SELECT 1 FROM evaluations WHERE status IN ('queued','running')) OR
-        EXISTS(SELECT 1 FROM policy_drafts WHERE status IN ('queued','drafting','preparing','development','validation','test'))`,
+        EXISTS(SELECT 1 FROM evaluations WHERE status IN ('queued','running') AND next_at<=?) OR
+        EXISTS(SELECT 1 FROM policy_drafts WHERE status IN ('queued','drafting','preparing','development','validation','test') AND next_at<=?)`,
         settings.mode,
         Date.now(),
         settings.mode,
+        Date.now(),
+        Date.now(),
         Date.now(),
       ),
     );
@@ -1118,10 +1145,10 @@ export class GroupService {
             )
           )?.at
         : null;
-    const run = await this.one(
-      "SELECT id FROM evaluations WHERE status IN ('queued','running') UNION ALL SELECT id FROM policy_drafts WHERE status IN ('queued','drafting','preparing','development','validation','test') LIMIT 1",
+    const run = await this.one<{ at: number | null }>(
+      "SELECT MIN(next_at) AS at FROM (SELECT next_at FROM evaluations WHERE status IN ('queued','running') UNION ALL SELECT next_at FROM policy_drafts WHERE status IN ('queued','drafting','preparing','development','validation','test'))",
     );
-    const due = [nextMessage, nextAction, run ? Date.now() : null].filter(
+    const due = [nextMessage, nextAction, run?.at].filter(
       (n): n is number => n !== null && n !== undefined,
     );
     if (due.length) await this.wake(Math.max(1000, Math.min(...due) - Date.now()));
@@ -1134,7 +1161,7 @@ export class GroupService {
       const { state, ...rows } = await overviewRows(this.db, day, Date.now() - 7 * 86400000);
       const value: Omit<Overview, 'dev' | 'owner'> = {
         ...rows,
-        settings: { ...defaultSettings, ...rows.settings },
+        settings: storedSettings(rows.settings),
         providers: publicProviders(this.env),
         chatId: this.env.TELEGRAM_CHAT_ID,
         storage: {
@@ -1321,8 +1348,11 @@ export class GroupService {
         });
       }
       if (path === '/api/settings' && request.method === 'PUT') {
-        const raw = await readJson(request);
-        const settings = settingsSchema.parse(raw);
+        const raw = z.record(z.string(), z.unknown()).parse(await readJson(request));
+        const settings = settingsSchema.parse({
+          reasoningTokens: (await this.settings()).reasoningTokens,
+          ...raw,
+        });
         const { expectedPolicyFingerprint } = z
           .object({ expectedPolicyFingerprint: z.string().length(64).optional() })
           .parse(raw);
@@ -1650,7 +1680,7 @@ export class GroupService {
             try {
               await this.insertExamples('examples', importChunk[1], examples, state.count);
             } catch (e) {
-              if (safeError(e).includes('UNIQUE'))
+              if (errorText(e, this.env).includes('UNIQUE'))
                 throw new HttpError(409, 'Message IDs must be unique within a dataset.');
               throw e;
             }
@@ -2061,7 +2091,7 @@ export class GroupService {
           },
           400,
         );
-      return json({ error: safeError(e) }, 400);
+      return json({ error: errorText(e, this.env) }, 400);
     } finally {
       // A read can interleave while a mutation awaits Telegram or alarm storage.
       if (request.method !== 'GET') this.overviewCache = null;

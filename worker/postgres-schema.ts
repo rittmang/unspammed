@@ -13,6 +13,7 @@ export const POSTGRES_SCHEMA = `
       );
       ALTER TABLE messages ADD COLUMN IF NOT EXISTS image_file_id TEXT NOT NULL DEFAULT '';
       ALTER TABLE messages ADD COLUMN IF NOT EXISTS classification_snapshot TEXT NOT NULL DEFAULT '';
+      ALTER TABLE messages ADD COLUMN IF NOT EXISTS retry_attempts BIGINT NOT NULL DEFAULT 0;
       CREATE INDEX IF NOT EXISTS messages_sender ON messages(user_id, sent_at);
       CREATE INDEX IF NOT EXISTS messages_pending ON messages(status, next_at);
       CREATE INDEX IF NOT EXISTS messages_recent ON messages(sent_at DESC,id DESC);
@@ -30,6 +31,8 @@ export const POSTGRES_SCHEMA = `
       CREATE TABLE IF NOT EXISTS evaluations (id TEXT PRIMARY KEY, dataset_id TEXT NOT NULL, dataset_name TEXT NOT NULL, provider TEXT NOT NULL, model TEXT NOT NULL, policy TEXT NOT NULL, status TEXT NOT NULL, cursor BIGINT NOT NULL DEFAULT 0, total BIGINT NOT NULL, input_tokens BIGINT NOT NULL DEFAULT 0, output_tokens BIGINT NOT NULL DEFAULT 0, usage_estimated BIGINT NOT NULL DEFAULT 0, latency_ms BIGINT NOT NULL DEFAULT 0, cost DOUBLE PRECISION, cost_complete BIGINT NOT NULL DEFAULT 1, error TEXT NOT NULL DEFAULT '', created_at BIGINT NOT NULL, batch_size BIGINT NOT NULL DEFAULT 20, provider_request_id TEXT, usage_incomplete BIGINT NOT NULL DEFAULT 0);
       ALTER TABLE evaluations ADD COLUMN IF NOT EXISTS model_meta TEXT NOT NULL DEFAULT '{}';
       ALTER TABLE evaluations ADD COLUMN IF NOT EXISTS settings_snapshot TEXT NOT NULL DEFAULT '';
+      ALTER TABLE evaluations ADD COLUMN IF NOT EXISTS next_at BIGINT NOT NULL DEFAULT 0;
+      ALTER TABLE evaluations ADD COLUMN IF NOT EXISTS retry_attempts BIGINT NOT NULL DEFAULT 0;
       CREATE TABLE IF NOT EXISTS run_examples (run_id TEXT NOT NULL, id TEXT NOT NULL, position BIGINT NOT NULL, text TEXT NOT NULL, label TEXT, user_id TEXT, context TEXT NOT NULL, media TEXT NOT NULL, PRIMARY KEY(run_id,id));
       CREATE INDEX IF NOT EXISTS run_examples_position ON run_examples(run_id,position);
       ALTER TABLE run_examples ADD COLUMN IF NOT EXISTS family TEXT NOT NULL DEFAULT '';
@@ -38,4 +41,6 @@ export const POSTGRES_SCHEMA = `
       CREATE TABLE IF NOT EXISTS predictions (run_id TEXT NOT NULL, id TEXT NOT NULL, score DOUBLE PRECISION NOT NULL, category TEXT NOT NULL, reason TEXT NOT NULL, PRIMARY KEY(run_id,id));
       ALTER TABLE predictions ADD COLUMN IF NOT EXISTS needs_review BIGINT NOT NULL DEFAULT 0;
       CREATE TABLE IF NOT EXISTS evaluation_labels (dataset_id TEXT NOT NULL, id TEXT NOT NULL, text TEXT NOT NULL, context TEXT NOT NULL, media TEXT NOT NULL, label TEXT, updated_at BIGINT NOT NULL, PRIMARY KEY(dataset_id,id));
-    ${IMPROVEMENT_SCHEMA}`;
+    ${IMPROVEMENT_SCHEMA}
+    ALTER TABLE policy_drafts ADD COLUMN IF NOT EXISTS next_at BIGINT NOT NULL DEFAULT 0;
+`;

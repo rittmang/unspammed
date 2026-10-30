@@ -1,0 +1,228 @@
+{
+  "description": "Synthetic owner-boundary regression cases. Related paraphrases are development evidence, not independent campaign families or sealed production holdouts.",
+  "edits": [
+    {
+      "before": "Messages that combine excessive symbols, decorative text, or repeated/elongated filler, making the content difficult to read or understand, and which do not convey a clear question, meaningful contribution, or legitimate purpose.",
+      "after": "Empty attention/contact bait. Use this decision test, in order:\n  1. Read the whole message and supplied recent context. Identify what actual topic, information, problem or contribution it communicates. Merely saying that a question/doubt exists, asking somebody to explain/clarify without saying what, or asking who is available does NOT state an actual topic.\n  2. If an actual topic/question, relevant announcement, meaningful emotional disclosure or substantive conversation IS present anywhere, this bait rule does not apply, regardless of decoration.\n  3. With NO actual content, an empty help/clarification/contact hook is SPAM if it combines BOTH exaggerated repeated punctuation or elongated filler AND a cluster of unrelated emotional/suggestive emojis. An empty greeting/availability hook with elongated filler and a suggestive emoji cluster is also SPAM. The conjunction is a clear violation, not a request for genuine information and not an ambiguous case for review. A single readable message is sufficient; do not require a link, advertising, inferred intent or sender history.\n  4. With NO actual content, multiple long repetitions of an elongated greeting/filler are also SPAM.\n  Otherwise this bait rule does not apply. In particular, ordinary greetings, brief generic help requests, single elongated greetings, or emoji use without the required combination are allowed."
+    },
+    {
+      "before": "Allow greetings, questions, short replies, emojis, casual conversation, friendship requests, complaints, and discussion of offers or scams. Profanity or disagreement alone does not establish spam.",
+      "after": "Allow ordinary greetings, questions, short replies, emojis, casual conversation, friendship requests, complaints, and discussion of offers or scams. A brief generic help request or a single elongated greeting is allowed; do not assume concealed solicitation. A question that actually names what information is wanted remains allowed EVEN WITH an elongated opening, repeated punctuation and emotional/suggestive emojis. Only the specifically defined EMPTY attention/contact bait and repeated filler above are exceptions. Profanity or disagreement alone does not establish spam."
+    },
+    {
+      "before": "Give high scores to clear policy violations and low scores to allowed content or unsupported suspicion. Explain the applicable rule briefly.",
+      "after": "Before deciding, check the full message and recent context for the actual subject or contribution, rather than judging only the opening hook or transferring a decision from another message. Explain the decisive content or its absence and the applicable rule briefly. Give every clear violation, INCLUDING empty attention/contact bait, a score at or above the supplied spam threshold with needs_review=false. Do not reserve high scores for commercial scams or use review to soften a clearly satisfied rule. Allowed messages score below the supplied review threshold. Use review only for genuinely missing or conflicting material evidence.\n\nSynthetic boundary contrasts (illustrative, not literal matching rules):\n- SPAM: \"Need to ask something.....!!!! somebody reply plzzzz 😭🔥💋\". No subject is stated; the empty hook combines exaggerated punctuation/filler and unrelated emoji bait.\n- ALLOWED: \"Need to ask something.....!!!! Which room is calculus in? 😭🔥💋\". The actual question about the calculus room overrides the bait rule, even with identical decoration.\n- ALLOWED: \"Could somebody help me?\". An unspecified help request alone lacks the required exaggerated-presentation combination.\nApply the same content-versus-empty-hook distinction to paraphrases and every language, not just these words."
+    }
+  ],
+  "examples": [
+    {
+      "id": "d01",
+      "split": "development",
+      "label": "spam",
+      "text": "One Quick question.......!!\n\nCan anyone assist me Pls?😭😭💋😚"
+    },
+    {
+      "id": "d02",
+      "split": "development",
+      "label": "spam",
+      "text": "I Got one doubt......!!!! Anyone online to clear me Plzzz?😭😭🍆🔥"
+    },
+    {
+      "id": "d03",
+      "split": "development",
+      "label": "spam",
+      "text": "I'm getting one douut....!!!! Someone clarify me Please??😭😭🍑🍑"
+    },
+    { "id": "d04", "split": "development", "label": "spam", "text": "Hiiii Anyone 👅🙈" },
+    {
+      "id": "d05",
+      "split": "development",
+      "label": "spam",
+      "text": "Hiiiiiiiiiiiiiiiiiii\n\nHiiiiiiiiiiiiiiiiii\n\nHiiiiiiiiiiiiiiiiiii"
+    },
+    {
+      "id": "d06",
+      "split": "development",
+      "label": "ham",
+      "text": "One Quick question.......!! Can anyone help me find the exam registration link?😭😭💋😚"
+    },
+    {
+      "id": "d07",
+      "split": "development",
+      "label": "ham",
+      "text": "I have one doubt: does the library open on Sunday? 😭😭🍆🔥"
+    },
+    { "id": "d08", "split": "development", "label": "ham", "text": "Hi, can anyone help?" },
+    { "id": "d09", "split": "development", "label": "ham", "text": "Hiiii everyone 🥰" },
+    {
+      "id": "d10",
+      "split": "development",
+      "label": "ham",
+      "text": "😭😭😭 I failed my exam and feel awful. Could someone talk to me?"
+    },
+    {
+      "id": "d11",
+      "split": "development",
+      "label": "ham",
+      "text": "🎉🎉 FRESHERS PARTY!!! Register at the student desk by Friday 🔥🔥"
+    },
+    {
+      "id": "d12",
+      "split": "development",
+      "label": "ham",
+      "text": "𝗛𝗶 everyone! Where is today's robotics workshop?"
+    },
+    {
+      "id": "d13",
+      "split": "development",
+      "label": "ham",
+      "text": "Can someone clarify this please? 😭😭",
+      "context": [
+        "I cannot tell whether semester registration includes the lab fee. Here is the fee breakdown."
+      ]
+    },
+    {
+      "id": "d14",
+      "split": "development",
+      "label": "ham",
+      "text": "Does anyone know a good internship program?"
+    },
+    {
+      "id": "d15",
+      "split": "development",
+      "label": "spam",
+      "text": "Deposit money today for guaranteed daily trading returns. DM to join."
+    },
+    {
+      "id": "d16",
+      "split": "development",
+      "label": "spam",
+      "text": "I'll complete your graded coursework for payment. Message me for rates."
+    },
+    {
+      "id": "c01",
+      "split": "challenge",
+      "label": "spam",
+      "text": "Just a tiny query.......!!!! Somebody there to explain plssss?🥺😭🔥🙈"
+    },
+    {
+      "id": "c02",
+      "split": "challenge",
+      "label": "spam",
+      "text": "Mujhe ek doubt hai......!!!! Koi clear karega plzzzz?😭😭🔥🙈"
+    },
+    {
+      "id": "c03",
+      "split": "challenge",
+      "label": "spam",
+      "text": "एक सवाल है......!!!! कोई बताएगा प्लीज़??😭😭💋🙈"
+    },
+    { "id": "c04", "split": "challenge", "label": "spam", "text": "Heeeeeey anybody around 👅🙈" },
+    {
+      "id": "c05",
+      "split": "challenge",
+      "label": "spam",
+      "text": "𝗢𝗻𝗲 question.....!!!! Can somebody help plssss?😭😭🍑🔥"
+    },
+    {
+      "id": "c06",
+      "split": "challenge",
+      "label": "spam",
+      "text": "Helloooooooooooo\nHelloooooooooooo\nHelloooooooooooo"
+    },
+    {
+      "id": "c07",
+      "split": "challenge",
+      "label": "spam",
+      "text": "Yoooo anyone awake.....!!!! reply plzzzz 😭😭💋🔥"
+    },
+    {
+      "id": "c08",
+      "split": "challenge",
+      "label": "ham",
+      "text": "Just a tiny query.......!!!! Is the chemistry lab in building C?🥺😭🔥🙈"
+    },
+    {
+      "id": "c09",
+      "split": "challenge",
+      "label": "ham",
+      "text": "Mujhe fees receipt ke baare mein doubt hai......!!!! Koi portal ka link dega?😭😭🔥🙈"
+    },
+    {
+      "id": "c10",
+      "split": "challenge",
+      "label": "ham",
+      "text": "एक सवाल है......!!!! कल लाइब्रेरी कितने बजे खुलेगी??😭😭💋🙈"
+    },
+    { "id": "c11", "split": "challenge", "label": "ham", "text": "Hey anyone around?" },
+    { "id": "c12", "split": "challenge", "label": "ham", "text": "Helloooooooooooo" },
+    { "id": "c13", "split": "challenge", "label": "ham", "text": "Can somebody help me? 😭😭" },
+    {
+      "id": "c14",
+      "split": "challenge",
+      "label": "ham",
+      "text": "Anyone awake.....!!!! My roommate fainted, how do I call campus security? 😭😭🔥"
+    },
+    {
+      "id": "c15",
+      "split": "challenge",
+      "label": "ham",
+      "text": "Hiiii Anyone 👅🙈 who knows where the dance practice moved?"
+    },
+    {
+      "id": "c16",
+      "split": "challenge",
+      "label": "ham",
+      "text": "🎓 FINAL CALL!!!! Internship applications close tonight. Referral code CAMPUS. 🔥🔥"
+    },
+    {
+      "id": "c17",
+      "split": "challenge",
+      "label": "ham",
+      "text": "URGENT!!!! Lost my wallet near the cafeteria, please let me know if you find it 😭😭🙏🙏"
+    },
+    {
+      "id": "c18",
+      "split": "challenge",
+      "label": "ham",
+      "text": "Hello everyone, tomorrow's chemistry lab is cancelled; the department will post a new date."
+    },
+    {
+      "id": "c19",
+      "split": "challenge",
+      "label": "ham",
+      "text": "Just a tiny query.......!!!! Somebody there to explain plssss?🥺😭🔥🙈",
+      "context": ["About the assignment: should I include the bibliography in the word count?"]
+    },
+    {
+      "id": "c20",
+      "split": "challenge",
+      "label": "ham",
+      "text": "I Got one doubt......!!!! Anyone online to clear me Plzzz?😭😭🍆🔥 The doubt is whether the hostel fee includes meals."
+    },
+    {
+      "id": "c21",
+      "split": "challenge",
+      "label": "ham",
+      "text": "Warning: bots keep posting ‘one question, anyone help?’ with suggestive emojis. Please report them."
+    },
+    {
+      "id": "c22",
+      "split": "challenge",
+      "label": "spam",
+      "text": "Earn guaranteed returns by sending a joining deposit to our crypto trading bot."
+    },
+    {
+      "id": "c23",
+      "split": "challenge",
+      "label": "spam",
+      "text": "Girls only: DM me privately for a sexual video chat tonight."
+    },
+    {
+      "id": "c24",
+      "split": "challenge",
+      "label": "ham",
+      "text": "Anyone interested in making friends? I'm new in town 🙂"
+    }
+  ]
+}

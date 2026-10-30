@@ -5,6 +5,7 @@ export const feedbackReasons = {
   scam: 'Scam or phishing',
   promotion: 'Unsolicited commercial promotion',
   repetition: 'Disruptive repeated messages',
+  attention_bait: 'Empty attention or contact bait',
   ordinary_conversation: 'Ordinary conversation',
   relevant_announcement: 'Relevant community announcement',
   requested_resource: 'Requested recommendation or resource',
@@ -98,6 +99,9 @@ export function decisionSettings(s: Settings) {
     imageModeration: s.imageModeration,
     imageProvider: s.imageProvider,
     imageModel: s.imageModel,
+    ...(s.reasoningTokens === undefined
+      ? {}
+      : { batchSize: s.batchSize, reasoningTokens: s.reasoningTokens }),
   };
 }
 export const policyFingerprint = (s: Settings) => digest(decisionSettings(s));
@@ -350,6 +354,7 @@ export interface PolicyDraft {
   runs?: Partial<Record<'development' | 'validation' | 'test', string[]>>;
   results?: Partial<Record<'development' | 'validation' | 'test', PolicyGate>>;
   error: string;
+  retry?: { attempts: number; nextAt: number };
   usage?: { tokens: number | null; cost: number | null };
   updatedAt: number;
   referenceCounts?: Record<string, number>;
@@ -360,8 +365,54 @@ export interface PolicyDraft {
   runAllChecks?: boolean;
   referenceLabels?: Record<'spam' | 'ham' | 'review', number>;
   criteria?: string[];
+  diagnosis?: string;
+  assessment?: PolicyAssessment;
   optimization?: PolicyOptimization;
   progress?: PolicyProgress;
+}
+export interface PolicyAssessment {
+  phase: 'development' | 'validation' | 'test';
+  total: number;
+  baseline: {
+    loss: number;
+    spamFlagged: number;
+    falsePositives: number;
+    misses: number;
+    reviews: number;
+  };
+  candidate: {
+    loss: number;
+    spamFlagged: number;
+    falsePositives: number;
+    misses: number;
+    reviews: number;
+  };
+  failedChecks: string[];
+}
+// Only completed measurements; no reference text, labels, IDs or predictions in compact views.
+export function policyAssessment(
+  draft: Pick<PolicyDraft, 'results'>,
+): PolicyAssessment | undefined {
+  for (const phase of ['test', 'validation', 'development'] as const) {
+    const result = draft.results?.[phase];
+    if (!result) continue;
+    const counts = (metrics: PolicyMetrics) => ({
+      loss: metrics.loss,
+      spamFlagged: metrics.spamFlagged,
+      falsePositives: metrics.falsePositives.length,
+      misses: metrics.misses.length,
+      reviews: metrics.reviews,
+    });
+    return {
+      phase,
+      total: result.candidate.total,
+      baseline: counts(result.baseline),
+      candidate: counts(result.candidate),
+      failedChecks: Object.entries(result.checks)
+        .filter(([, passed]) => !passed)
+        .map(([name]) => name),
+    };
+  }
 }
 export interface PolicyProgress {
   stage: 'drafting' | 'development' | 'validation' | 'test' | 'approval';

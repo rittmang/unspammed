@@ -1,13 +1,21 @@
 import { env } from 'cloudflare:workers';
 import { abortAllDurableObjects, reset, runInDurableObject } from 'cloudflare:test';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { defaultSettings, type Example, type Settings } from '../shared/types';
+import {
+  defaultSettings as singleMessageDefaults,
+  type Example,
+  type Settings,
+} from '../shared/types';
 import { digest, policyFingerprint, type ImprovementOverview } from '../shared/improvement';
 import { GroupModerator } from '../worker/local-group';
 import { GroupService } from '../worker/group';
 import { PostgresDatabase, SqliteDatabase, STORAGE_TABLES } from '../worker/database';
 import { initializePostgres, initialMigration } from '../worker/storage';
 import { ImprovementService, modelIdentityMatches } from '../worker/improvement';
+
+// These lifecycle fixtures deliberately exercise legacy multi-message replay,
+// including call-number perturbations. Single-message snapshots are tested separately.
+const defaultSettings = { ...singleMessageDefaults, batchSize: 20, reasoningTokens: 0 as const };
 
 const candidate =
   'Flag scams and deceptive, unsolicited commercial recruitment. Allow useful community announcements and ordinary questions. Require review when material facts are missing. Judge repeated disruption using only the supplied recent same-sender context.';
@@ -33,6 +41,8 @@ let target: Target,
   optimizerMode: 'off' | 'repair' | 'always_bad' | 'final_failure' | 'perfect_holdout',
   proposalCount: number,
   classificationCalls: number,
+  releaseRetries: () => Promise<void>,
+  restart: () => Promise<void>,
   addCorrections: () => Promise<void>;
 beforeEach(() => {
   requests = [];
@@ -56,6 +66,8 @@ beforeEach(() => {
             {
               message: {
                 content: JSON.stringify({
+                  diagnosis:
+                    'The current solicitation rule misses the owner-labelled boundary. Preserve genuine community questions.',
                   edits: [
                     {
                       before: JSON.parse(body.messages[1].content).existingPolicy,
@@ -131,9 +143,18 @@ async function state() {
   return response.json() as Promise<ImprovementOverview>;
 }
 async function setup() {
-  const stub = env.GROUPS.get(env.GROUPS.idFromName(crypto.randomUUID()));
+  let stub = env.GROUPS.get(env.GROUPS.idFromName(crypto.randomUUID()));
+  restart = async () => {
+    await abortAllDurableObjects();
+    stub = env.GROUPS.get(stub.id);
+  };
   target = { fetch: (r) => stub.fetch(r) };
   tick = () => runInDurableObject(stub, (instance: GroupModerator) => instance.alarm());
+  releaseRetries = () =>
+    runInDurableObject(stub, (_instance, ctx) => {
+      ctx.storage.sql.exec('UPDATE policy_drafts SET next_at=0');
+      ctx.storage.sql.exec('UPDATE evaluations SET next_at=0');
+    });
   editContext = () =>
     runInDurableObject(stub, async (_instance, ctx) => {
       ctx.storage.sql.exec("UPDATE examples SET context='[\"New context\"]' WHERE id='ham-0'");
@@ -182,6 +203,7 @@ async function setup() {
         );
       }
     });
+  await call('/settings', defaultSettings, 'PUT');
   await call('/overview');
 }
 async function draftAndFreeze(pool = references, runAllChecks = false) {
@@ -334,6 +356,9 @@ describe('policy replay lifecycle', () => {
     expect(s.runs).toBeUndefined();
     expect(s.results).toBeUndefined();
     expect(s.corpus).toBeUndefined();
+    expect(s.diagnosis).toBe(
+      'The current solicitation rule misses the owner-labelled boundary. Preserve genuine community questions.',
+    );
   });
   it('accepts tied perfect validation and final results after development improves', async () => {
     optimizerMode = 'perfect_holdout';
@@ -347,6 +372,63 @@ describe('policy replay lifecycle', () => {
       expect(d.results?.[phase]?.pass).toBe(true);
     }
   }, 30000);
+  it('retries drafting after a persisted rate limit without losing the campaign or making early calls', async () => {
+    const id = await startAutomatic();
+    vi.mocked(fetch).mockImplementationOnce(async () =>
+      Response.json(
+        {
+          error: {
+            code: 429,
+            message: 'Draft quota exhausted',
+            metadata: { raw: 'Exact draft provider diagnostic' },
+          },
+        },
+        { status: 429, headers: { 'Retry-After': '3600' } },
+      ),
+    );
+    await tick();
+    const d = (await state()).drafts[0];
+    expect(d).toMatchObject({ id, status: 'queued', retry: { attempts: 1 } });
+    expect(d.error).toContain('Exact draft provider diagnostic');
+    expect(d.retry!.nextAt).toBeGreaterThan(Date.now() + 3500000);
+    const called = vi.mocked(fetch).mock.calls.length;
+    await restart();
+    await tick();
+    expect(vi.mocked(fetch)).toHaveBeenCalledTimes(called);
+    await releaseRetries();
+    await tick();
+    expect((await state()).drafts[0]).toMatchObject({ id, status: 'preparing' });
+    expect((await state()).drafts[0].retry).toBeUndefined();
+    expect((await finishAutomatic()).status).toBe('ready');
+  });
+  it('keeps policy replay active through rate limits and passes cost and identity gates after recovery', async () => {
+    const id = await draftAndFreeze();
+    vi.mocked(fetch).mockImplementationOnce(async () =>
+      Response.json(
+        { error: { code: 429, message: 'Exact replay quota detail' } },
+        { status: 429, headers: { 'Retry-After': '3600' } },
+      ),
+    );
+    await tick();
+    await tick();
+    const summary = (
+      (await (await call('/improvement?view=summary')).json()) as ImprovementOverview
+    ).drafts[0];
+    expect(summary).toMatchObject({ id, status: 'development', retry: { attempts: 1 } });
+    expect(summary.error).toContain('Exact replay quota detail');
+    const called = vi.mocked(fetch).mock.calls.length;
+    await restart();
+    await tick();
+    expect(vi.mocked(fetch)).toHaveBeenCalledTimes(called);
+    await releaseRetries();
+    const completed = (await advance(id, 'validated')).drafts[0];
+    expect(completed.results?.development?.checks).toMatchObject({
+      inferenceCostKnownAndBounded: true,
+      fixedModelAndProvider: true,
+    });
+    expect(completed.error).toBe('');
+    expect(completed.retry).toBeUndefined();
+  });
   it('starts directly from three corrections and requires those original corrections to be fixed', async () => {
     optimizerMode = 'repair';
     await call('/datasets', { name: 'Correction reference messages', data: automaticPool });
@@ -400,6 +482,8 @@ describe('policy replay lifecycle', () => {
       totalChecks: 0,
     });
     expect(compact.drafts[0].results).toBeUndefined();
+    expect(compact.drafts[0].assessment).toMatchObject({ phase: 'test', failedChecks: [] });
+    expect(compact.drafts[0].assessment).not.toHaveProperty('rows');
     expect(compact.drafts[0].runs).toBeUndefined();
     expect(compact.drafts[0].optimization?.revision).toBeUndefined();
     expect(compact.feedback).toEqual([]);

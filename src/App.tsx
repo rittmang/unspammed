@@ -71,6 +71,7 @@ import { ThemeControl } from './ThemeControl';
 import { signOutBrowser } from './SignIn';
 import { Disclosure } from './Disclosure';
 import { policyFingerprint } from '../shared/improvement';
+import { evaluatedPolicy } from '../shared/moderation-policy';
 
 type Page = 'overview' | 'messages' | 'users' | 'lab' | 'improvement' | 'settings';
 const pages: { id: Page; title: string; icon: typeof Shield }[] = [
@@ -2614,6 +2615,14 @@ function SettingsPage({ data, act, busy }: { data: Overview; act: Act; busy: boo
   const [checkingImage, setCheckingImage] = useState(false);
   const [imageCheck, setImageCheck] = useState('');
   const dirty = JSON.stringify(settings) !== saved;
+  const thinkingSupported =
+    settings.model === 'google/gemini-2.5-flash-lite' &&
+    data.providers.some(
+      (p) =>
+        p.id === settings.provider &&
+        p.format !== 'decisions' &&
+        p.baseUrl.replace(/\/$/, '') === 'https://openrouter.ai/api/v1',
+    );
   function update<K extends keyof Settings>(key: K, value: Settings[K]) {
     setSettings((s) => ({ ...s, [key]: value }));
   }
@@ -2715,6 +2724,30 @@ function SettingsPage({ data, act, busy }: { data: Overview; act: Act; busy: boo
               snapshot.
             </small>
           </label>
+          <button
+            type="button"
+            className="button secondary"
+            disabled={busy}
+            onClick={() => {
+              void act(async () => {
+                const policy = evaluatedPolicy(settings.policy);
+                setSettings({
+                  ...settings,
+                  policy,
+                  provider: 'openrouter',
+                  model: 'google/gemini-2.5-flash-lite',
+                  batchSize: 1,
+                  reasoningTokens: 1024,
+                });
+              }, 'Gemini setup prepared. Review the changes and save settings to apply.');
+            }}
+          >
+            Use evaluated Gemini setup
+          </button>
+          <p className="field-help">
+            Updates the bait criteria and selects one message per call with 1,024 thinking tokens.
+            Keeps your moderation mode and thresholds. Provider usage increases.
+          </p>
         </Disclosure>
         <Disclosure
           className="panel settings-panel"
@@ -2751,6 +2784,27 @@ function SettingsPage({ data, act, busy }: { data: Overview; act: Act; busy: boo
                 onChange={(e) => update('model', e.target.value)}
               />
               <small>Any model supported by the selected endpoint.</small>
+            </label>
+            <label className="field">
+              Gemini Flash-Lite thinking
+              <select
+                value={settings.reasoningTokens}
+                disabled={!thinkingSupported}
+                onChange={(e) => {
+                  const reasoningTokens = Number(e.target.value) as 0 | 1024;
+                  setSettings((s) => ({
+                    ...s,
+                    reasoningTokens,
+                    ...(reasoningTokens ? { batchSize: 1 } : {}),
+                  }));
+                }}
+              >
+                <option value={1024}>1,024 tokens · one message per call</option>
+                <option value={0}>Off · use configured batch size</option>
+              </select>
+              <small>
+                Thinking is billed as output. Reasoning text is excluded from responses.
+              </small>
             </label>
             <label className="field">
               Spam threshold
@@ -2917,10 +2971,11 @@ function SettingsPage({ data, act, busy }: { data: Overview; act: Act; busy: boo
                 type="number"
                 min="1"
                 max="30"
-                value={settings.batchSize}
+                disabled={thinkingSupported && settings.reasoningTokens > 0}
+                value={thinkingSupported && settings.reasoningTokens > 0 ? 1 : settings.batchSize}
                 onChange={(e) => update('batchSize', Number(e.target.value))}
               />
-              <small>Messages share one policy prompt.</small>
+              <small>Thinking-enabled Gemini calls classify one message at a time.</small>
             </label>
             <label className="field">
               Daily moderation token budget

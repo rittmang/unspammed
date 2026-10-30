@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { replayCostRatio } from '../shared/improvement';
 import { defaultSettings } from '../shared/types';
 import type { Env } from '../worker/env';
+import type { CorrectionSnapshot } from '../shared/improvement';
 import { applyPolicyEdits, mergePolicyLessons, proposePolicy } from '../worker/improvement';
 
 const env = {
@@ -14,6 +15,48 @@ const candidate =
 afterEach(() => vi.unstubAllGlobals());
 
 describe('policy drafting provider requests in the Workers runtime', () => {
+  it('sends the behavioral reason and full owner note and returns a diagnosis alongside applied edits', async () => {
+    const fetcher = vi.fn(async (_input, init) => {
+      const body = JSON.parse(String(init?.body));
+      const evidence = JSON.parse(body.messages[1].content).developmentCorrections[0];
+      expect(evidence).toMatchObject({
+        reasonCode: 'attention_bait',
+        reason: 'Empty attention or contact bait',
+        note: 'Empty request plus exaggerated punctuation and unrelated emojis. Preserve real topic questions.',
+      });
+      return Response.json({
+        model: defaultSettings.model,
+        choices: [
+          {
+            message: {
+              content: JSON.stringify({
+                diagnosis:
+                  'The current allowance ignores the combination of missing subject and exaggerated attention cues.',
+                edits: [{ before: defaultSettings.policy, after: candidate }],
+              }),
+            },
+          },
+        ],
+        usage: { total_tokens: 100, cost: 0.00001 },
+      });
+    });
+    vi.stubGlobal('fetch', fetcher);
+    const evidence: CorrectionSnapshot = {
+      example: { id: 'correction', text: 'An empty availability hook', label: 'spam', context: [] },
+      prediction: null,
+      policy: defaultSettings.policy,
+      settings: defaultSettings,
+      action: { status: 'allowed' },
+      feedback: {
+        reasonCode: 'attention_bait',
+        note: 'Empty request plus exaggerated punctuation and unrelated emojis. Preserve real topic questions.',
+      },
+    };
+    expect(await proposePolicy(env, defaultSettings, [evidence], '')).toMatchObject({
+      diagnosis: expect.stringContaining('missing subject'),
+      policy: candidate,
+    });
+  });
   it('constructs a valid request and reads the proposed policy and usage', async () => {
     const fetcher = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       // Exercise workerd request validation before returning the mocked provider response.

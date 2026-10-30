@@ -121,6 +121,7 @@ describe('classification adapters', () => {
       'google/gemini-2.5-flash-lite',
       defaultSettings.policy,
       examples,
+      { ...defaultSettings, reasoningTokens: 0 },
     );
     expect(result.results.map((p) => p.id)).toEqual(['a', 'b']);
   });
@@ -176,7 +177,15 @@ describe('classification adapters', () => {
   it('bounds decision batches and fits the remaining budget without truncating messages', () => {
     const many = Array.from({ length: 20 }, (_, i) => ({ ...examples[0], id: String(i) }));
     expect(
-      fitExamples(fakeEnv, 'openrouter', 'cloudflare/clef-omni', defaultSettings.policy, many),
+      fitExamples(
+        fakeEnv,
+        'openrouter',
+        'cloudflare/clef-omni',
+        defaultSettings.policy,
+        many,
+        Infinity,
+        { ...defaultSettings, batchSize: 20 },
+      ),
     ).toHaveLength(5);
     const one = estimateTokens(
       fakeEnv,

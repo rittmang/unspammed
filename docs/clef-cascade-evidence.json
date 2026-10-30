@@ -1,0 +1,2043 @@
+{
+  "version": 1,
+  "date": "2026-10-30",
+  "scope": "Read-only paid model experiments; no deployment, database or Telegram mutations.",
+  "interpretation": {
+    "development": "Threshold sweeps reuse full-batch Gemini predictions; counterfactual only.",
+    "validation": "Actual sequential Clef then Gemini on residual inputs, paired with Gemini on all inputs.",
+    "thresholds": "0.99 primary; 0.95 secondary selected from development before validation.",
+    "attribution": "Only early-stage changes are direct Clef gains/errors. Identical-input fallback differences are Gemini A/A variation; reduced-batch differences are composition or sampling effects.",
+    "latency": "Case-weighted batch request duration, early=Clef, remaining=Clef+Gemini. Excludes rate-limit waits; repeated cases are not independent latency samples.",
+    "cost": "Provider-reported USD receipts including observed price/cache variation; excludes earlier investigation and separate smoke probe.",
+    "labels": "Synthetic intended behavior, frozen before development results; repeated orders are robustness tests, not fresh independent production observations."
+  },
+  "successfulRequests": 236,
+  "reportedSuccessfulCostUSD": 0.08223306999999999,
+  "smokeProbe": {
+    "ledger": "clef-cascade-probe.json",
+    "ledgerSHA256": "00ff6dee8de1e4fec3aefbeaca0b770d0478f8b98193a06f255c1c25bdd0c8cc",
+    "successfulRequests": 1,
+    "reportedSuccessfulCostUSD": 0.00021336,
+    "actualModel": "cloudflare/clef",
+    "actualProvider": "PrimeIntellect"
+  },
+  "successfulRequestsIncludingProbe": 237,
+  "reportedTotalIncludingProbeUSD": 0.08244642999999999,
+  "experiments": [
+    {
+      "ledger": "clef-cascade-development-current.json",
+      "ledgerSHA256": "bb9d8335baf3e55306f5dfc90716025c3a017d34ef0e1eec4cc31e10769ce318",
+      "seal": "302a9bb01e9d9d8571af1386942af198a4ac7d28a9305bc5b69e43c1c0d6e4fa",
+      "plan": {
+        "version": 1,
+        "split": "development",
+        "policyName": "current",
+        "policyHash": "40a3426fc347f70ab344d311ee72da763fd837f4faa8f484a33535a331050be4",
+        "inputsHash": "a5e71740e778ef1503245d66ccb2a69fa6807dcf9bce7eb3c5d37d8f1bf2dc0e",
+        "cutoff": 0.99,
+        "repeats": 3,
+        "batchSize": 8,
+        "examples": 16,
+        "mode": "counterfactual-development",
+        "firstModel": "cloudflare/clef",
+        "secondModel": "google/gemini-2.5-flash-lite",
+        "provider": "openrouter",
+        "firstEndpoint": "primeintellect",
+        "secondEndpoint": "google-ai-studio",
+        "classifierSourceHash": "2f4eeb9bdaa7136e700b23b7b8cb7d62d29bc9d6ec5011c0cfa637677c497f23",
+        "helperSourceHash": "bb6247ed9b3294ec4aa97b4a5664e51b737c42ebc220c30cd296c88764c8767d",
+        "maxRequests": 12
+      },
+      "createdAt": "2026-10-30T18:59:57.301Z",
+      "completedAt": "2026-10-30T19:04:13.194Z",
+      "labels": {
+        "spam": 7,
+        "ham": 9,
+        "review": 0
+      },
+      "identities": {
+        "clef": ["cloudflare/clef / PrimeIntellect"],
+        "gemini": ["google/gemini-2.5-flash-lite / Google AI Studio"]
+      },
+      "successfulRequests": 12,
+      "reportedSuccessfulCostUSD": 0.004368530000000001,
+      "failedRequests": {
+        "rejectedUnbilled": 2,
+        "other": 0
+      },
+      "totals": {
+        "baselineInputTokens": 6729,
+        "cascadeInputTokens": 11073,
+        "baselineOutputTokens": 2978,
+        "cascadeOutputTokens": 0
+      },
+      "rounds": [
+        {
+          "repeat": 0,
+          "baseline": {
+            "spamCaught": 2,
+            "spamAllowed": 1,
+            "spamReviewed": 4,
+            "legitimateBlocked": 0,
+            "legitimateReviewed": 1,
+            "totalReviews": 5,
+            "weightedLoss": 4.25
+          },
+          "cascade": {
+            "spamCaught": 2,
+            "spamAllowed": 1,
+            "spamReviewed": 4,
+            "legitimateBlocked": 0,
+            "legitimateReviewed": 1,
+            "totalReviews": 5,
+            "weightedLoss": 4.25
+          },
+          "earlyCounts": {
+            "total": 0,
+            "spam": 0,
+            "ham": 0,
+            "review": 0
+          },
+          "earlyAttribution": {
+            "spamAlreadyCaught": 0,
+            "spamRecoveredFromAllowed": 0,
+            "spamPromotedFromReview": 0,
+            "legitimateAlreadyBlocked": 0,
+            "legitimateNewlyBlocked": 0,
+            "other": 0,
+            "targetBaitOrFiller": 0
+          },
+          "fallbackAttribution": null,
+          "baselineCostUSD": 0.0006127000000000001,
+          "cascadeCostUSD": null,
+          "costRatio": null,
+          "baselineLatencyMs": {
+            "mean": 2019,
+            "p50": 1822,
+            "p95": 2216
+          },
+          "cascadeLatencyMs": null,
+          "thresholdSweep": [
+            {
+              "cutoff": 0.95,
+              "earlySpam": 1,
+              "earlyHam": 0,
+              "simulated": {
+                "spamCaught": 2,
+                "spamAllowed": 1,
+                "spamReviewed": 4,
+                "legitimateBlocked": 0,
+                "legitimateReviewed": 1,
+                "totalReviews": 5,
+                "weightedLoss": 4.25
+              }
+            },
+            {
+              "cutoff": 0.975,
+              "earlySpam": 0,
+              "earlyHam": 0,
+              "simulated": {
+                "spamCaught": 2,
+                "spamAllowed": 1,
+                "spamReviewed": 4,
+                "legitimateBlocked": 0,
+                "legitimateReviewed": 1,
+                "totalReviews": 5,
+                "weightedLoss": 4.25
+              }
+            },
+            {
+              "cutoff": 0.99,
+              "earlySpam": 0,
+              "earlyHam": 0,
+              "simulated": {
+                "spamCaught": 2,
+                "spamAllowed": 1,
+                "spamReviewed": 4,
+                "legitimateBlocked": 0,
+                "legitimateReviewed": 1,
+                "totalReviews": 5,
+                "weightedLoss": 4.25
+              }
+            },
+            {
+              "cutoff": 0.995,
+              "earlySpam": 0,
+              "earlyHam": 0,
+              "simulated": {
+                "spamCaught": 2,
+                "spamAllowed": 1,
+                "spamReviewed": 4,
+                "legitimateBlocked": 0,
+                "legitimateReviewed": 1,
+                "totalReviews": 5,
+                "weightedLoss": 4.25
+              }
+            },
+            {
+              "cutoff": 0.999,
+              "earlySpam": 0,
+              "earlyHam": 0,
+              "simulated": {
+                "spamCaught": 2,
+                "spamAllowed": 1,
+                "spamReviewed": 4,
+                "legitimateBlocked": 0,
+                "legitimateReviewed": 1,
+                "totalReviews": 5,
+                "weightedLoss": 4.25
+              }
+            }
+          ]
+        },
+        {
+          "repeat": 1,
+          "baseline": {
+            "spamCaught": 7,
+            "spamAllowed": 0,
+            "spamReviewed": 0,
+            "legitimateBlocked": 2,
+            "legitimateReviewed": 0,
+            "totalReviews": 0,
+            "weightedLoss": 20
+          },
+          "cascade": {
+            "spamCaught": 7,
+            "spamAllowed": 0,
+            "spamReviewed": 0,
+            "legitimateBlocked": 2,
+            "legitimateReviewed": 0,
+            "totalReviews": 0,
+            "weightedLoss": 20
+          },
+          "earlyCounts": {
+            "total": 0,
+            "spam": 0,
+            "ham": 0,
+            "review": 0
+          },
+          "earlyAttribution": {
+            "spamAlreadyCaught": 0,
+            "spamRecoveredFromAllowed": 0,
+            "spamPromotedFromReview": 0,
+            "legitimateAlreadyBlocked": 0,
+            "legitimateNewlyBlocked": 0,
+            "other": 0,
+            "targetBaitOrFiller": 0
+          },
+          "fallbackAttribution": null,
+          "baselineCostUSD": 0.000545,
+          "cascadeCostUSD": null,
+          "costRatio": null,
+          "baselineLatencyMs": {
+            "mean": 1868.5,
+            "p50": 1766,
+            "p95": 1971
+          },
+          "cascadeLatencyMs": null,
+          "thresholdSweep": [
+            {
+              "cutoff": 0.95,
+              "earlySpam": 2,
+              "earlyHam": 0,
+              "simulated": {
+                "spamCaught": 7,
+                "spamAllowed": 0,
+                "spamReviewed": 0,
+                "legitimateBlocked": 2,
+                "legitimateReviewed": 0,
+                "totalReviews": 0,
+                "weightedLoss": 20
+              }
+            },
+            {
+              "cutoff": 0.975,
+              "earlySpam": 0,
+              "earlyHam": 0,
+              "simulated": {
+                "spamCaught": 7,
+                "spamAllowed": 0,
+                "spamReviewed": 0,
+                "legitimateBlocked": 2,
+                "legitimateReviewed": 0,
+                "totalReviews": 0,
+                "weightedLoss": 20
+              }
+            },
+            {
+              "cutoff": 0.99,
+              "earlySpam": 0,
+              "earlyHam": 0,
+              "simulated": {
+                "spamCaught": 7,
+                "spamAllowed": 0,
+                "spamReviewed": 0,
+                "legitimateBlocked": 2,
+                "legitimateReviewed": 0,
+                "totalReviews": 0,
+                "weightedLoss": 20
+              }
+            },
+            {
+              "cutoff": 0.995,
+              "earlySpam": 0,
+              "earlyHam": 0,
+              "simulated": {
+                "spamCaught": 7,
+                "spamAllowed": 0,
+                "spamReviewed": 0,
+                "legitimateBlocked": 2,
+                "legitimateReviewed": 0,
+                "totalReviews": 0,
+                "weightedLoss": 20
+              }
+            },
+            {
+              "cutoff": 0.999,
+              "earlySpam": 0,
+              "earlyHam": 0,
+              "simulated": {
+                "spamCaught": 7,
+                "spamAllowed": 0,
+                "spamReviewed": 0,
+                "legitimateBlocked": 2,
+                "legitimateReviewed": 0,
+                "totalReviews": 0,
+                "weightedLoss": 20
+              }
+            }
+          ]
+        },
+        {
+          "repeat": 2,
+          "baseline": {
+            "spamCaught": 2,
+            "spamAllowed": 1,
+            "spamReviewed": 4,
+            "legitimateBlocked": 0,
+            "legitimateReviewed": 1,
+            "totalReviews": 5,
+            "weightedLoss": 4.25
+          },
+          "cascade": {
+            "spamCaught": 2,
+            "spamAllowed": 1,
+            "spamReviewed": 4,
+            "legitimateBlocked": 0,
+            "legitimateReviewed": 1,
+            "totalReviews": 5,
+            "weightedLoss": 4.25
+          },
+          "earlyCounts": {
+            "total": 0,
+            "spam": 0,
+            "ham": 0,
+            "review": 0
+          },
+          "earlyAttribution": {
+            "spamAlreadyCaught": 0,
+            "spamRecoveredFromAllowed": 0,
+            "spamPromotedFromReview": 0,
+            "legitimateAlreadyBlocked": 0,
+            "legitimateNewlyBlocked": 0,
+            "other": 0,
+            "targetBaitOrFiller": 0
+          },
+          "fallbackAttribution": null,
+          "baselineCostUSD": 0.00055331,
+          "cascadeCostUSD": null,
+          "costRatio": null,
+          "baselineLatencyMs": {
+            "mean": 1560,
+            "p50": 1520,
+            "p95": 1600
+          },
+          "cascadeLatencyMs": null,
+          "thresholdSweep": [
+            {
+              "cutoff": 0.95,
+              "earlySpam": 2,
+              "earlyHam": 0,
+              "simulated": {
+                "spamCaught": 2,
+                "spamAllowed": 1,
+                "spamReviewed": 4,
+                "legitimateBlocked": 0,
+                "legitimateReviewed": 1,
+                "totalReviews": 5,
+                "weightedLoss": 4.25
+              }
+            },
+            {
+              "cutoff": 0.975,
+              "earlySpam": 0,
+              "earlyHam": 0,
+              "simulated": {
+                "spamCaught": 2,
+                "spamAllowed": 1,
+                "spamReviewed": 4,
+                "legitimateBlocked": 0,
+                "legitimateReviewed": 1,
+                "totalReviews": 5,
+                "weightedLoss": 4.25
+              }
+            },
+            {
+              "cutoff": 0.99,
+              "earlySpam": 0,
+              "earlyHam": 0,
+              "simulated": {
+                "spamCaught": 2,
+                "spamAllowed": 1,
+                "spamReviewed": 4,
+                "legitimateBlocked": 0,
+                "legitimateReviewed": 1,
+                "totalReviews": 5,
+                "weightedLoss": 4.25
+              }
+            },
+            {
+              "cutoff": 0.995,
+              "earlySpam": 0,
+              "earlyHam": 0,
+              "simulated": {
+                "spamCaught": 2,
+                "spamAllowed": 1,
+                "spamReviewed": 4,
+                "legitimateBlocked": 0,
+                "legitimateReviewed": 1,
+                "totalReviews": 5,
+                "weightedLoss": 4.25
+              }
+            },
+            {
+              "cutoff": 0.999,
+              "earlySpam": 0,
+              "earlyHam": 0,
+              "simulated": {
+                "spamCaught": 2,
+                "spamAllowed": 1,
+                "spamReviewed": 4,
+                "legitimateBlocked": 0,
+                "legitimateReviewed": 1,
+                "totalReviews": 5,
+                "weightedLoss": 4.25
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ledger": "clef-cascade-development-candidate.json",
+      "ledgerSHA256": "f33c059ffbc5d3194c7ed0f3562a640e250bf2582c86b7df2bdb3afb709fe071",
+      "seal": "40dd88ef8675546a812f329c256048464ce585eb8fd2161fddfd5a8abbb8b15a",
+      "plan": {
+        "version": 1,
+        "split": "development",
+        "policyName": "candidate",
+        "policyHash": "1cd28c7d81acd5b7f66ede8932f950c4e92f77b649689c54077a76fea2ebb67a",
+        "inputsHash": "a5e71740e778ef1503245d66ccb2a69fa6807dcf9bce7eb3c5d37d8f1bf2dc0e",
+        "cutoff": 0.99,
+        "repeats": 3,
+        "batchSize": 8,
+        "examples": 16,
+        "mode": "counterfactual-development",
+        "firstModel": "cloudflare/clef",
+        "secondModel": "google/gemini-2.5-flash-lite",
+        "provider": "openrouter",
+        "firstEndpoint": "primeintellect",
+        "secondEndpoint": "google-ai-studio",
+        "classifierSourceHash": "2f4eeb9bdaa7136e700b23b7b8cb7d62d29bc9d6ec5011c0cfa637677c497f23",
+        "helperSourceHash": "bb6247ed9b3294ec4aa97b4a5664e51b737c42ebc220c30cd296c88764c8767d",
+        "maxRequests": 12
+      },
+      "createdAt": "2026-10-30T19:00:23.320Z",
+      "completedAt": "2026-10-30T19:00:37.718Z",
+      "labels": {
+        "spam": 7,
+        "ham": 9,
+        "review": 0
+      },
+      "identities": {
+        "clef": ["cloudflare/clef / PrimeIntellect"],
+        "gemini": ["google/gemini-2.5-flash-lite / Google AI Studio"]
+      },
+      "successfulRequests": 12,
+      "reportedSuccessfulCostUSD": 0.005627579999999999,
+      "failedRequests": {
+        "rejectedUnbilled": 0,
+        "other": 0
+      },
+      "totals": {
+        "baselineInputTokens": 9843,
+        "cascadeInputTokens": 14277,
+        "baselineOutputTokens": 3042,
+        "cascadeOutputTokens": 0
+      },
+      "rounds": [
+        {
+          "repeat": 0,
+          "baseline": {
+            "spamCaught": 7,
+            "spamAllowed": 0,
+            "spamReviewed": 0,
+            "legitimateBlocked": 0,
+            "legitimateReviewed": 5,
+            "totalReviews": 5,
+            "weightedLoss": 1.25
+          },
+          "cascade": {
+            "spamCaught": 7,
+            "spamAllowed": 0,
+            "spamReviewed": 0,
+            "legitimateBlocked": 0,
+            "legitimateReviewed": 5,
+            "totalReviews": 5,
+            "weightedLoss": 1.25
+          },
+          "earlyCounts": {
+            "total": 0,
+            "spam": 0,
+            "ham": 0,
+            "review": 0
+          },
+          "earlyAttribution": {
+            "spamAlreadyCaught": 0,
+            "spamRecoveredFromAllowed": 0,
+            "spamPromotedFromReview": 0,
+            "legitimateAlreadyBlocked": 0,
+            "legitimateNewlyBlocked": 0,
+            "other": 0,
+            "targetBaitOrFiller": 0
+          },
+          "fallbackAttribution": null,
+          "baselineCostUSD": 0.0007397,
+          "cascadeCostUSD": null,
+          "costRatio": null,
+          "baselineLatencyMs": {
+            "mean": 1818,
+            "p50": 1528,
+            "p95": 2108
+          },
+          "cascadeLatencyMs": null,
+          "thresholdSweep": [
+            {
+              "cutoff": 0.95,
+              "earlySpam": 1,
+              "earlyHam": 0,
+              "simulated": {
+                "spamCaught": 7,
+                "spamAllowed": 0,
+                "spamReviewed": 0,
+                "legitimateBlocked": 0,
+                "legitimateReviewed": 5,
+                "totalReviews": 5,
+                "weightedLoss": 1.25
+              }
+            },
+            {
+              "cutoff": 0.975,
+              "earlySpam": 0,
+              "earlyHam": 0,
+              "simulated": {
+                "spamCaught": 7,
+                "spamAllowed": 0,
+                "spamReviewed": 0,
+                "legitimateBlocked": 0,
+                "legitimateReviewed": 5,
+                "totalReviews": 5,
+                "weightedLoss": 1.25
+              }
+            },
+            {
+              "cutoff": 0.99,
+              "earlySpam": 0,
+              "earlyHam": 0,
+              "simulated": {
+                "spamCaught": 7,
+                "spamAllowed": 0,
+                "spamReviewed": 0,
+                "legitimateBlocked": 0,
+                "legitimateReviewed": 5,
+                "totalReviews": 5,
+                "weightedLoss": 1.25
+              }
+            },
+            {
+              "cutoff": 0.995,
+              "earlySpam": 0,
+              "earlyHam": 0,
+              "simulated": {
+                "spamCaught": 7,
+                "spamAllowed": 0,
+                "spamReviewed": 0,
+                "legitimateBlocked": 0,
+                "legitimateReviewed": 5,
+                "totalReviews": 5,
+                "weightedLoss": 1.25
+              }
+            },
+            {
+              "cutoff": 0.999,
+              "earlySpam": 0,
+              "earlyHam": 0,
+              "simulated": {
+                "spamCaught": 7,
+                "spamAllowed": 0,
+                "spamReviewed": 0,
+                "legitimateBlocked": 0,
+                "legitimateReviewed": 5,
+                "totalReviews": 5,
+                "weightedLoss": 1.25
+              }
+            }
+          ]
+        },
+        {
+          "repeat": 1,
+          "baseline": {
+            "spamCaught": 7,
+            "spamAllowed": 0,
+            "spamReviewed": 0,
+            "legitimateBlocked": 1,
+            "legitimateReviewed": 0,
+            "totalReviews": 0,
+            "weightedLoss": 10
+          },
+          "cascade": {
+            "spamCaught": 7,
+            "spamAllowed": 0,
+            "spamReviewed": 0,
+            "legitimateBlocked": 1,
+            "legitimateReviewed": 0,
+            "totalReviews": 0,
+            "weightedLoss": 10
+          },
+          "earlyCounts": {
+            "total": 0,
+            "spam": 0,
+            "ham": 0,
+            "review": 0
+          },
+          "earlyAttribution": {
+            "spamAlreadyCaught": 0,
+            "spamRecoveredFromAllowed": 0,
+            "spamPromotedFromReview": 0,
+            "legitimateAlreadyBlocked": 0,
+            "legitimateNewlyBlocked": 0,
+            "other": 0,
+            "targetBaitOrFiller": 0
+          },
+          "fallbackAttribution": null,
+          "baselineCostUSD": 0.0007377,
+          "cascadeCostUSD": null,
+          "costRatio": null,
+          "baselineLatencyMs": {
+            "mean": 1868,
+            "p50": 1776,
+            "p95": 1960
+          },
+          "cascadeLatencyMs": null,
+          "thresholdSweep": [
+            {
+              "cutoff": 0.95,
+              "earlySpam": 2,
+              "earlyHam": 0,
+              "simulated": {
+                "spamCaught": 7,
+                "spamAllowed": 0,
+                "spamReviewed": 0,
+                "legitimateBlocked": 1,
+                "legitimateReviewed": 0,
+                "totalReviews": 0,
+                "weightedLoss": 10
+              }
+            },
+            {
+              "cutoff": 0.975,
+              "earlySpam": 0,
+              "earlyHam": 0,
+              "simulated": {
+                "spamCaught": 7,
+                "spamAllowed": 0,
+                "spamReviewed": 0,
+                "legitimateBlocked": 1,
+                "legitimateReviewed": 0,
+                "totalReviews": 0,
+                "weightedLoss": 10
+              }
+            },
+            {
+              "cutoff": 0.99,
+              "earlySpam": 0,
+              "earlyHam": 0,
+              "simulated": {
+                "spamCaught": 7,
+                "spamAllowed": 0,
+                "spamReviewed": 0,
+                "legitimateBlocked": 1,
+                "legitimateReviewed": 0,
+                "totalReviews": 0,
+                "weightedLoss": 10
+              }
+            },
+            {
+              "cutoff": 0.995,
+              "earlySpam": 0,
+              "earlyHam": 0,
+              "simulated": {
+                "spamCaught": 7,
+                "spamAllowed": 0,
+                "spamReviewed": 0,
+                "legitimateBlocked": 1,
+                "legitimateReviewed": 0,
+                "totalReviews": 0,
+                "weightedLoss": 10
+              }
+            },
+            {
+              "cutoff": 0.999,
+              "earlySpam": 0,
+              "earlyHam": 0,
+              "simulated": {
+                "spamCaught": 7,
+                "spamAllowed": 0,
+                "spamReviewed": 0,
+                "legitimateBlocked": 1,
+                "legitimateReviewed": 0,
+                "totalReviews": 0,
+                "weightedLoss": 10
+              }
+            }
+          ]
+        },
+        {
+          "repeat": 2,
+          "baseline": {
+            "spamCaught": 5,
+            "spamAllowed": 0,
+            "spamReviewed": 2,
+            "legitimateBlocked": 1,
+            "legitimateReviewed": 4,
+            "totalReviews": 6,
+            "weightedLoss": 12
+          },
+          "cascade": {
+            "spamCaught": 5,
+            "spamAllowed": 0,
+            "spamReviewed": 2,
+            "legitimateBlocked": 1,
+            "legitimateReviewed": 4,
+            "totalReviews": 6,
+            "weightedLoss": 12
+          },
+          "earlyCounts": {
+            "total": 0,
+            "spam": 0,
+            "ham": 0,
+            "review": 0
+          },
+          "earlyAttribution": {
+            "spamAlreadyCaught": 0,
+            "spamRecoveredFromAllowed": 0,
+            "spamPromotedFromReview": 0,
+            "legitimateAlreadyBlocked": 0,
+            "legitimateNewlyBlocked": 0,
+            "other": 0,
+            "targetBaitOrFiller": 0
+          },
+          "fallbackAttribution": null,
+          "baselineCostUSD": 0.0007237000000000001,
+          "cascadeCostUSD": null,
+          "costRatio": null,
+          "baselineLatencyMs": {
+            "mean": 1637,
+            "p50": 1534,
+            "p95": 1740
+          },
+          "cascadeLatencyMs": null,
+          "thresholdSweep": [
+            {
+              "cutoff": 0.95,
+              "earlySpam": 2,
+              "earlyHam": 0,
+              "simulated": {
+                "spamCaught": 5,
+                "spamAllowed": 0,
+                "spamReviewed": 2,
+                "legitimateBlocked": 1,
+                "legitimateReviewed": 4,
+                "totalReviews": 6,
+                "weightedLoss": 12
+              }
+            },
+            {
+              "cutoff": 0.975,
+              "earlySpam": 0,
+              "earlyHam": 0,
+              "simulated": {
+                "spamCaught": 5,
+                "spamAllowed": 0,
+                "spamReviewed": 2,
+                "legitimateBlocked": 1,
+                "legitimateReviewed": 4,
+                "totalReviews": 6,
+                "weightedLoss": 12
+              }
+            },
+            {
+              "cutoff": 0.99,
+              "earlySpam": 0,
+              "earlyHam": 0,
+              "simulated": {
+                "spamCaught": 5,
+                "spamAllowed": 0,
+                "spamReviewed": 2,
+                "legitimateBlocked": 1,
+                "legitimateReviewed": 4,
+                "totalReviews": 6,
+                "weightedLoss": 12
+              }
+            },
+            {
+              "cutoff": 0.995,
+              "earlySpam": 0,
+              "earlyHam": 0,
+              "simulated": {
+                "spamCaught": 5,
+                "spamAllowed": 0,
+                "spamReviewed": 2,
+                "legitimateBlocked": 1,
+                "legitimateReviewed": 4,
+                "totalReviews": 6,
+                "weightedLoss": 12
+              }
+            },
+            {
+              "cutoff": 0.999,
+              "earlySpam": 0,
+              "earlyHam": 0,
+              "simulated": {
+                "spamCaught": 5,
+                "spamAllowed": 0,
+                "spamReviewed": 2,
+                "legitimateBlocked": 1,
+                "legitimateReviewed": 4,
+                "totalReviews": 6,
+                "weightedLoss": 12
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ledger": "clef-cascade-development-focused.json",
+      "ledgerSHA256": "0977f30a12717013ed1606ec678e02b017444863d282537581b3e04d67f3d5c9",
+      "seal": "981892e17f01422308003aba1a7c3d20dbeb17917ff6e657bdfa8c1ffe8ac8a7",
+      "plan": {
+        "version": 1,
+        "split": "development",
+        "policyName": "candidate",
+        "policyHash": "1cd28c7d81acd5b7f66ede8932f950c4e92f77b649689c54077a76fea2ebb67a",
+        "firstPolicyName": "focused",
+        "firstPolicyHash": "b689e40ce0fa7eef7a7bac80d2e865368c97c47673531161b89ff63525df7a83",
+        "inputsHash": "a5e71740e778ef1503245d66ccb2a69fa6807dcf9bce7eb3c5d37d8f1bf2dc0e",
+        "cutoff": 0.99,
+        "repeats": 3,
+        "batchSize": 8,
+        "examples": 16,
+        "mode": "counterfactual-development",
+        "firstModel": "cloudflare/clef",
+        "secondModel": "google/gemini-2.5-flash-lite",
+        "provider": "openrouter",
+        "firstEndpoint": "primeintellect",
+        "secondEndpoint": "google-ai-studio",
+        "classifierSourceHash": "2f4eeb9bdaa7136e700b23b7b8cb7d62d29bc9d6ec5011c0cfa637677c497f23",
+        "helperSourceHash": "bb6247ed9b3294ec4aa97b4a5664e51b737c42ebc220c30cd296c88764c8767d",
+        "maxRequests": 12
+      },
+      "createdAt": "2026-10-30T19:02:01.251Z",
+      "completedAt": "2026-10-30T19:04:15.419Z",
+      "labels": {
+        "spam": 7,
+        "ham": 9,
+        "review": 0
+      },
+      "identities": {
+        "clef": ["cloudflare/clef / PrimeIntellect"],
+        "gemini": ["google/gemini-2.5-flash-lite / Google AI Studio"]
+      },
+      "successfulRequests": 12,
+      "reportedSuccessfulCostUSD": 0.00427065,
+      "failedRequests": {
+        "rejectedUnbilled": 1,
+        "other": 0
+      },
+      "totals": {
+        "baselineInputTokens": 9843,
+        "cascadeInputTokens": 9633,
+        "baselineOutputTokens": 3042,
+        "cascadeOutputTokens": 0
+      },
+      "rounds": [
+        {
+          "repeat": 0,
+          "baseline": {
+            "spamCaught": 7,
+            "spamAllowed": 0,
+            "spamReviewed": 0,
+            "legitimateBlocked": 0,
+            "legitimateReviewed": 5,
+            "totalReviews": 5,
+            "weightedLoss": 1.25
+          },
+          "cascade": {
+            "spamCaught": 7,
+            "spamAllowed": 0,
+            "spamReviewed": 0,
+            "legitimateBlocked": 0,
+            "legitimateReviewed": 5,
+            "totalReviews": 5,
+            "weightedLoss": 1.25
+          },
+          "earlyCounts": {
+            "total": 0,
+            "spam": 0,
+            "ham": 0,
+            "review": 0
+          },
+          "earlyAttribution": {
+            "spamAlreadyCaught": 0,
+            "spamRecoveredFromAllowed": 0,
+            "spamPromotedFromReview": 0,
+            "legitimateAlreadyBlocked": 0,
+            "legitimateNewlyBlocked": 0,
+            "other": 0,
+            "targetBaitOrFiller": 0
+          },
+          "fallbackAttribution": null,
+          "baselineCostUSD": 0.0006588799999999999,
+          "cascadeCostUSD": null,
+          "costRatio": null,
+          "baselineLatencyMs": {
+            "mean": 1799,
+            "p50": 1789,
+            "p95": 1809
+          },
+          "cascadeLatencyMs": null,
+          "thresholdSweep": [
+            {
+              "cutoff": 0.95,
+              "earlySpam": 0,
+              "earlyHam": 0,
+              "simulated": {
+                "spamCaught": 7,
+                "spamAllowed": 0,
+                "spamReviewed": 0,
+                "legitimateBlocked": 0,
+                "legitimateReviewed": 5,
+                "totalReviews": 5,
+                "weightedLoss": 1.25
+              }
+            },
+            {
+              "cutoff": 0.975,
+              "earlySpam": 0,
+              "earlyHam": 0,
+              "simulated": {
+                "spamCaught": 7,
+                "spamAllowed": 0,
+                "spamReviewed": 0,
+                "legitimateBlocked": 0,
+                "legitimateReviewed": 5,
+                "totalReviews": 5,
+                "weightedLoss": 1.25
+              }
+            },
+            {
+              "cutoff": 0.99,
+              "earlySpam": 0,
+              "earlyHam": 0,
+              "simulated": {
+                "spamCaught": 7,
+                "spamAllowed": 0,
+                "spamReviewed": 0,
+                "legitimateBlocked": 0,
+                "legitimateReviewed": 5,
+                "totalReviews": 5,
+                "weightedLoss": 1.25
+              }
+            },
+            {
+              "cutoff": 0.995,
+              "earlySpam": 0,
+              "earlyHam": 0,
+              "simulated": {
+                "spamCaught": 7,
+                "spamAllowed": 0,
+                "spamReviewed": 0,
+                "legitimateBlocked": 0,
+                "legitimateReviewed": 5,
+                "totalReviews": 5,
+                "weightedLoss": 1.25
+              }
+            },
+            {
+              "cutoff": 0.999,
+              "earlySpam": 0,
+              "earlyHam": 0,
+              "simulated": {
+                "spamCaught": 7,
+                "spamAllowed": 0,
+                "spamReviewed": 0,
+                "legitimateBlocked": 0,
+                "legitimateReviewed": 5,
+                "totalReviews": 5,
+                "weightedLoss": 1.25
+              }
+            }
+          ]
+        },
+        {
+          "repeat": 1,
+          "baseline": {
+            "spamCaught": 7,
+            "spamAllowed": 0,
+            "spamReviewed": 0,
+            "legitimateBlocked": 1,
+            "legitimateReviewed": 0,
+            "totalReviews": 0,
+            "weightedLoss": 10
+          },
+          "cascade": {
+            "spamCaught": 7,
+            "spamAllowed": 0,
+            "spamReviewed": 0,
+            "legitimateBlocked": 1,
+            "legitimateReviewed": 0,
+            "totalReviews": 0,
+            "weightedLoss": 10
+          },
+          "earlyCounts": {
+            "total": 0,
+            "spam": 0,
+            "ham": 0,
+            "review": 0
+          },
+          "earlyAttribution": {
+            "spamAlreadyCaught": 0,
+            "spamRecoveredFromAllowed": 0,
+            "spamPromotedFromReview": 0,
+            "legitimateAlreadyBlocked": 0,
+            "legitimateNewlyBlocked": 0,
+            "other": 0,
+            "targetBaitOrFiller": 0
+          },
+          "fallbackAttribution": null,
+          "baselineCostUSD": 0.00057615,
+          "cascadeCostUSD": null,
+          "costRatio": null,
+          "baselineLatencyMs": {
+            "mean": 1762,
+            "p50": 1603,
+            "p95": 1921
+          },
+          "cascadeLatencyMs": null,
+          "thresholdSweep": [
+            {
+              "cutoff": 0.95,
+              "earlySpam": 0,
+              "earlyHam": 0,
+              "simulated": {
+                "spamCaught": 7,
+                "spamAllowed": 0,
+                "spamReviewed": 0,
+                "legitimateBlocked": 1,
+                "legitimateReviewed": 0,
+                "totalReviews": 0,
+                "weightedLoss": 10
+              }
+            },
+            {
+              "cutoff": 0.975,
+              "earlySpam": 0,
+              "earlyHam": 0,
+              "simulated": {
+                "spamCaught": 7,
+                "spamAllowed": 0,
+                "spamReviewed": 0,
+                "legitimateBlocked": 1,
+                "legitimateReviewed": 0,
+                "totalReviews": 0,
+                "weightedLoss": 10
+              }
+            },
+            {
+              "cutoff": 0.99,
+              "earlySpam": 0,
+              "earlyHam": 0,
+              "simulated": {
+                "spamCaught": 7,
+                "spamAllowed": 0,
+                "spamReviewed": 0,
+                "legitimateBlocked": 1,
+                "legitimateReviewed": 0,
+                "totalReviews": 0,
+                "weightedLoss": 10
+              }
+            },
+            {
+              "cutoff": 0.995,
+              "earlySpam": 0,
+              "earlyHam": 0,
+              "simulated": {
+                "spamCaught": 7,
+                "spamAllowed": 0,
+                "spamReviewed": 0,
+                "legitimateBlocked": 1,
+                "legitimateReviewed": 0,
+                "totalReviews": 0,
+                "weightedLoss": 10
+              }
+            },
+            {
+              "cutoff": 0.999,
+              "earlySpam": 0,
+              "earlyHam": 0,
+              "simulated": {
+                "spamCaught": 7,
+                "spamAllowed": 0,
+                "spamReviewed": 0,
+                "legitimateBlocked": 1,
+                "legitimateReviewed": 0,
+                "totalReviews": 0,
+                "weightedLoss": 10
+              }
+            }
+          ]
+        },
+        {
+          "repeat": 2,
+          "baseline": {
+            "spamCaught": 5,
+            "spamAllowed": 0,
+            "spamReviewed": 2,
+            "legitimateBlocked": 1,
+            "legitimateReviewed": 4,
+            "totalReviews": 6,
+            "weightedLoss": 12
+          },
+          "cascade": {
+            "spamCaught": 5,
+            "spamAllowed": 0,
+            "spamReviewed": 2,
+            "legitimateBlocked": 1,
+            "legitimateReviewed": 4,
+            "totalReviews": 6,
+            "weightedLoss": 12
+          },
+          "earlyCounts": {
+            "total": 0,
+            "spam": 0,
+            "ham": 0,
+            "review": 0
+          },
+          "earlyAttribution": {
+            "spamAlreadyCaught": 0,
+            "spamRecoveredFromAllowed": 0,
+            "spamPromotedFromReview": 0,
+            "legitimateAlreadyBlocked": 0,
+            "legitimateNewlyBlocked": 0,
+            "other": 0,
+            "targetBaitOrFiller": 0
+          },
+          "fallbackAttribution": null,
+          "baselineCostUSD": 0.0007237000000000001,
+          "cascadeCostUSD": null,
+          "costRatio": null,
+          "baselineLatencyMs": {
+            "mean": 1605,
+            "p50": 1407,
+            "p95": 1803
+          },
+          "cascadeLatencyMs": null,
+          "thresholdSweep": [
+            {
+              "cutoff": 0.95,
+              "earlySpam": 0,
+              "earlyHam": 0,
+              "simulated": {
+                "spamCaught": 5,
+                "spamAllowed": 0,
+                "spamReviewed": 2,
+                "legitimateBlocked": 1,
+                "legitimateReviewed": 4,
+                "totalReviews": 6,
+                "weightedLoss": 12
+              }
+            },
+            {
+              "cutoff": 0.975,
+              "earlySpam": 0,
+              "earlyHam": 0,
+              "simulated": {
+                "spamCaught": 5,
+                "spamAllowed": 0,
+                "spamReviewed": 2,
+                "legitimateBlocked": 1,
+                "legitimateReviewed": 4,
+                "totalReviews": 6,
+                "weightedLoss": 12
+              }
+            },
+            {
+              "cutoff": 0.99,
+              "earlySpam": 0,
+              "earlyHam": 0,
+              "simulated": {
+                "spamCaught": 5,
+                "spamAllowed": 0,
+                "spamReviewed": 2,
+                "legitimateBlocked": 1,
+                "legitimateReviewed": 4,
+                "totalReviews": 6,
+                "weightedLoss": 12
+              }
+            },
+            {
+              "cutoff": 0.995,
+              "earlySpam": 0,
+              "earlyHam": 0,
+              "simulated": {
+                "spamCaught": 5,
+                "spamAllowed": 0,
+                "spamReviewed": 2,
+                "legitimateBlocked": 1,
+                "legitimateReviewed": 4,
+                "totalReviews": 6,
+                "weightedLoss": 12
+              }
+            },
+            {
+              "cutoff": 0.999,
+              "earlySpam": 0,
+              "earlyHam": 0,
+              "simulated": {
+                "spamCaught": 5,
+                "spamAllowed": 0,
+                "spamReviewed": 2,
+                "legitimateBlocked": 1,
+                "legitimateReviewed": 4,
+                "totalReviews": 6,
+                "weightedLoss": 12
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ledger": "clef-cascade-development-single.json",
+      "ledgerSHA256": "d8eb3a8a89b13d5095dc6d1bb1b29b4e380499abc76f004c19d0a9203f0935ba",
+      "seal": "37a6749c41514f5a3cf66a8673e04bcbaaf0624044713a39e6095427ccfbe401",
+      "plan": {
+        "version": 1,
+        "split": "development",
+        "policyName": "candidate",
+        "policyHash": "1cd28c7d81acd5b7f66ede8932f950c4e92f77b649689c54077a76fea2ebb67a",
+        "inputsHash": "a5e71740e778ef1503245d66ccb2a69fa6807dcf9bce7eb3c5d37d8f1bf2dc0e",
+        "cutoff": 0.99,
+        "repeats": 1,
+        "batchSize": 1,
+        "examples": 16,
+        "mode": "counterfactual-development",
+        "firstModel": "cloudflare/clef",
+        "secondModel": "google/gemini-2.5-flash-lite",
+        "provider": "openrouter",
+        "firstEndpoint": "primeintellect",
+        "secondEndpoint": "google-ai-studio",
+        "classifierSourceHash": "2f4eeb9bdaa7136e700b23b7b8cb7d62d29bc9d6ec5011c0cfa637677c497f23",
+        "helperSourceHash": "bb6247ed9b3294ec4aa97b4a5664e51b737c42ebc220c30cd296c88764c8767d",
+        "maxRequests": 32
+      },
+      "createdAt": "2026-10-30T19:07:20.333Z",
+      "completedAt": "2026-10-30T19:07:37.897Z",
+      "labels": {
+        "spam": 7,
+        "ham": 9,
+        "review": 0
+      },
+      "identities": {
+        "clef": ["cloudflare/clef / PrimeIntellect"],
+        "gemini": ["google/gemini-2.5-flash-lite / Google AI Studio"]
+      },
+      "successfulRequests": 32,
+      "reportedSuccessfulCostUSD": 0.006603849999999998,
+      "failedRequests": {
+        "rejectedUnbilled": 0,
+        "other": 0
+      },
+      "totals": {
+        "baselineInputTokens": 22503,
+        "cascadeInputTokens": 20551,
+        "baselineOutputTokens": 1159,
+        "cascadeOutputTokens": 0
+      },
+      "rounds": [
+        {
+          "repeat": 0,
+          "baseline": {
+            "spamCaught": 7,
+            "spamAllowed": 0,
+            "spamReviewed": 0,
+            "legitimateBlocked": 0,
+            "legitimateReviewed": 0,
+            "totalReviews": 0,
+            "weightedLoss": 0
+          },
+          "cascade": {
+            "spamCaught": 7,
+            "spamAllowed": 0,
+            "spamReviewed": 0,
+            "legitimateBlocked": 0,
+            "legitimateReviewed": 0,
+            "totalReviews": 0,
+            "weightedLoss": 0
+          },
+          "earlyCounts": {
+            "total": 0,
+            "spam": 0,
+            "ham": 0,
+            "review": 0
+          },
+          "earlyAttribution": {
+            "spamAlreadyCaught": 0,
+            "spamRecoveredFromAllowed": 0,
+            "spamPromotedFromReview": 0,
+            "legitimateAlreadyBlocked": 0,
+            "legitimateNewlyBlocked": 0,
+            "other": 0,
+            "targetBaitOrFiller": 0
+          },
+          "fallbackAttribution": null,
+          "baselineCostUSD": 0.0016716099999999998,
+          "cascadeCostUSD": null,
+          "costRatio": null,
+          "baselineLatencyMs": {
+            "mean": 644.875,
+            "p50": 586,
+            "p95": 941
+          },
+          "cascadeLatencyMs": null,
+          "thresholdSweep": [
+            {
+              "cutoff": 0.95,
+              "earlySpam": 2,
+              "earlyHam": 0,
+              "simulated": {
+                "spamCaught": 7,
+                "spamAllowed": 0,
+                "spamReviewed": 0,
+                "legitimateBlocked": 0,
+                "legitimateReviewed": 0,
+                "totalReviews": 0,
+                "weightedLoss": 0
+              }
+            },
+            {
+              "cutoff": 0.975,
+              "earlySpam": 1,
+              "earlyHam": 0,
+              "simulated": {
+                "spamCaught": 7,
+                "spamAllowed": 0,
+                "spamReviewed": 0,
+                "legitimateBlocked": 0,
+                "legitimateReviewed": 0,
+                "totalReviews": 0,
+                "weightedLoss": 0
+              }
+            },
+            {
+              "cutoff": 0.99,
+              "earlySpam": 0,
+              "earlyHam": 0,
+              "simulated": {
+                "spamCaught": 7,
+                "spamAllowed": 0,
+                "spamReviewed": 0,
+                "legitimateBlocked": 0,
+                "legitimateReviewed": 0,
+                "totalReviews": 0,
+                "weightedLoss": 0
+              }
+            },
+            {
+              "cutoff": 0.995,
+              "earlySpam": 0,
+              "earlyHam": 0,
+              "simulated": {
+                "spamCaught": 7,
+                "spamAllowed": 0,
+                "spamReviewed": 0,
+                "legitimateBlocked": 0,
+                "legitimateReviewed": 0,
+                "totalReviews": 0,
+                "weightedLoss": 0
+              }
+            },
+            {
+              "cutoff": 0.999,
+              "earlySpam": 0,
+              "earlyHam": 0,
+              "simulated": {
+                "spamCaught": 7,
+                "spamAllowed": 0,
+                "spamReviewed": 0,
+                "legitimateBlocked": 0,
+                "legitimateReviewed": 0,
+                "totalReviews": 0,
+                "weightedLoss": 0
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "ledger": "clef-cascade-validation-candidate-099.json",
+      "ledgerSHA256": "9fa5749269d717ce278e74564bb257ac271544e9d21bc018408eba438bddf817",
+      "seal": "93d1d8041ebc72ad2befd97329de7fabd0b85270e38b3f60d2d774123bc357bf",
+      "plan": {
+        "version": 1,
+        "split": "validation",
+        "policyName": "candidate",
+        "policyHash": "1cd28c7d81acd5b7f66ede8932f950c4e92f77b649689c54077a76fea2ebb67a",
+        "inputsHash": "22009b350a07b6356b4922a60c12bbc1ef28119d62a45906ce9379ab7a5e2b2b",
+        "cutoff": 0.99,
+        "repeats": 1,
+        "batchSize": 8,
+        "examples": 64,
+        "mode": "actual-sequential-cascade",
+        "firstModel": "cloudflare/clef",
+        "secondModel": "google/gemini-2.5-flash-lite",
+        "provider": "openrouter",
+        "firstEndpoint": "primeintellect",
+        "secondEndpoint": "google-ai-studio",
+        "classifierSourceHash": "2f4eeb9bdaa7136e700b23b7b8cb7d62d29bc9d6ec5011c0cfa637677c497f23",
+        "helperSourceHash": "bb6247ed9b3294ec4aa97b4a5664e51b737c42ebc220c30cd296c88764c8767d",
+        "maxRequests": 24
+      },
+      "createdAt": "2026-10-30T19:06:14.421Z",
+      "completedAt": "2026-10-30T19:06:46.332Z",
+      "labels": {
+        "spam": 24,
+        "ham": 40,
+        "review": 0
+      },
+      "identities": {
+        "clef": ["cloudflare/clef / PrimeIntellect"],
+        "gemini": ["google/gemini-2.5-flash-lite / Google AI Studio"]
+      },
+      "successfulRequests": 24,
+      "reportedSuccessfulCostUSD": 0.00978445,
+      "failedRequests": {
+        "rejectedUnbilled": 0,
+        "other": 0
+      },
+      "totals": {
+        "baselineInputTokens": 13290,
+        "cascadeInputTokens": 32541,
+        "baselineOutputTokens": 4043,
+        "cascadeOutputTokens": 4043
+      },
+      "rounds": [
+        {
+          "repeat": 0,
+          "baseline": {
+            "spamCaught": 23,
+            "spamAllowed": 0,
+            "spamReviewed": 1,
+            "legitimateBlocked": 6,
+            "legitimateReviewed": 3,
+            "totalReviews": 4,
+            "weightedLoss": 61.25
+          },
+          "cascade": {
+            "spamCaught": 23,
+            "spamAllowed": 0,
+            "spamReviewed": 1,
+            "legitimateBlocked": 6,
+            "legitimateReviewed": 3,
+            "totalReviews": 4,
+            "weightedLoss": 61.25
+          },
+          "earlyCounts": {
+            "total": 0,
+            "spam": 0,
+            "ham": 0,
+            "review": 0
+          },
+          "earlyAttribution": {
+            "spamAlreadyCaught": 0,
+            "spamRecoveredFromAllowed": 0,
+            "spamPromotedFromReview": 0,
+            "legitimateAlreadyBlocked": 0,
+            "legitimateNewlyBlocked": 0,
+            "other": 0,
+            "targetBaitOrFiller": 0
+          },
+          "fallbackAttribution": {
+            "identicalInputs": {
+              "batches": 8,
+              "cases": 64,
+              "changedRoutes": 0,
+              "repairedAllowedSpam": 0,
+              "newlyAllowedSpam": 0,
+              "newFalsePositives": 0,
+              "repairedFalsePositives": 0
+            },
+            "reducedInputs": {
+              "batches": 0,
+              "cases": 0,
+              "changedRoutes": 0,
+              "repairedAllowedSpam": 0,
+              "newlyAllowedSpam": 0,
+              "newFalsePositives": 0,
+              "repairedFalsePositives": 0
+            }
+          },
+          "baselineCostUSD": 0.00262265,
+          "cascadeCostUSD": 0.007161800000000001,
+          "costRatio": 2.730749432825578,
+          "baselineLatencyMs": {
+            "mean": 1764.625,
+            "p50": 1679,
+            "p95": 2164
+          },
+          "cascadeLatencyMs": {
+            "mean": 2213.625,
+            "p50": 2118,
+            "p95": 2538
+          }
+        }
+      ]
+    },
+    {
+      "ledger": "clef-cascade-validation-current-095.json",
+      "ledgerSHA256": "73cc31b4d74c3f4dee1b13a77e59a51f013aa9aa59d567d59cd72443feac7629",
+      "seal": "30428357d486a3702ae5b6451d44169595f518b4ac57e65822c7d954ad656416",
+      "plan": {
+        "version": 1,
+        "split": "validation",
+        "policyName": "current",
+        "policyHash": "40a3426fc347f70ab344d311ee72da763fd837f4faa8f484a33535a331050be4",
+        "inputsHash": "22009b350a07b6356b4922a60c12bbc1ef28119d62a45906ce9379ab7a5e2b2b",
+        "cutoff": 0.95,
+        "repeats": 3,
+        "batchSize": 8,
+        "examples": 64,
+        "mode": "actual-sequential-cascade",
+        "firstModel": "cloudflare/clef",
+        "secondModel": "google/gemini-2.5-flash-lite",
+        "provider": "openrouter",
+        "firstEndpoint": "primeintellect",
+        "secondEndpoint": "google-ai-studio",
+        "classifierSourceHash": "2f4eeb9bdaa7136e700b23b7b8cb7d62d29bc9d6ec5011c0cfa637677c497f23",
+        "helperSourceHash": "bb6247ed9b3294ec4aa97b4a5664e51b737c42ebc220c30cd296c88764c8767d",
+        "maxRequests": 72
+      },
+      "createdAt": "2026-10-30T19:04:08.332Z",
+      "completedAt": "2026-10-30T19:14:44.539Z",
+      "labels": {
+        "spam": 24,
+        "ham": 40,
+        "review": 0
+      },
+      "identities": {
+        "clef": ["cloudflare/clef / PrimeIntellect"],
+        "gemini": ["google/gemini-2.5-flash-lite / Google AI Studio"]
+      },
+      "successfulRequests": 72,
+      "reportedSuccessfulCostUSD": 0.023578070000000013,
+      "failedRequests": {
+        "rejectedUnbilled": 6,
+        "other": 0
+      },
+      "totals": {
+        "baselineInputTokens": 27414,
+        "cascadeInputTokens": 71830,
+        "baselineOutputTokens": 11619,
+        "cascadeOutputTokens": 10810
+      },
+      "rounds": [
+        {
+          "repeat": 0,
+          "baseline": {
+            "spamCaught": 8,
+            "spamAllowed": 12,
+            "spamReviewed": 4,
+            "legitimateBlocked": 1,
+            "legitimateReviewed": 0,
+            "totalReviews": 4,
+            "weightedLoss": 36
+          },
+          "cascade": {
+            "spamCaught": 10,
+            "spamAllowed": 11,
+            "spamReviewed": 3,
+            "legitimateBlocked": 0,
+            "legitimateReviewed": 1,
+            "totalReviews": 4,
+            "weightedLoss": 23.75
+          },
+          "earlyCounts": {
+            "total": 6,
+            "spam": 6,
+            "ham": 0,
+            "review": 0
+          },
+          "earlyAttribution": {
+            "spamAlreadyCaught": 6,
+            "spamRecoveredFromAllowed": 0,
+            "spamPromotedFromReview": 0,
+            "legitimateAlreadyBlocked": 0,
+            "legitimateNewlyBlocked": 0,
+            "other": 0,
+            "targetBaitOrFiller": 0
+          },
+          "fallbackAttribution": {
+            "identicalInputs": {
+              "batches": 3,
+              "cases": 24,
+              "changedRoutes": 0,
+              "repairedAllowedSpam": 0,
+              "newlyAllowedSpam": 0,
+              "newFalsePositives": 0,
+              "repairedFalsePositives": 0
+            },
+            "reducedInputs": {
+              "batches": 5,
+              "cases": 34,
+              "changedRoutes": 5,
+              "repairedAllowedSpam": 0,
+              "newlyAllowedSpam": 0,
+              "newFalsePositives": 0,
+              "repairedFalsePositives": 1
+            }
+          },
+          "baselineCostUSD": 0.00226471,
+          "cascadeCostUSD": 0.005719190000000001,
+          "costRatio": 2.5253520318274747,
+          "baselineLatencyMs": {
+            "mean": 1450.5,
+            "p50": 1400,
+            "p95": 1674
+          },
+          "cascadeLatencyMs": {
+            "mean": 1804.46875,
+            "p50": 1839,
+            "p95": 2444
+          }
+        },
+        {
+          "repeat": 1,
+          "baseline": {
+            "spamCaught": 8,
+            "spamAllowed": 12,
+            "spamReviewed": 4,
+            "legitimateBlocked": 1,
+            "legitimateReviewed": 2,
+            "totalReviews": 6,
+            "weightedLoss": 36.5
+          },
+          "cascade": {
+            "spamCaught": 8,
+            "spamAllowed": 12,
+            "spamReviewed": 4,
+            "legitimateBlocked": 1,
+            "legitimateReviewed": 5,
+            "totalReviews": 9,
+            "weightedLoss": 37.25
+          },
+          "earlyCounts": {
+            "total": 4,
+            "spam": 4,
+            "ham": 0,
+            "review": 0
+          },
+          "earlyAttribution": {
+            "spamAlreadyCaught": 4,
+            "spamRecoveredFromAllowed": 0,
+            "spamPromotedFromReview": 0,
+            "legitimateAlreadyBlocked": 0,
+            "legitimateNewlyBlocked": 0,
+            "other": 0,
+            "targetBaitOrFiller": 0
+          },
+          "fallbackAttribution": {
+            "identicalInputs": {
+              "batches": 5,
+              "cases": 40,
+              "changedRoutes": 0,
+              "repairedAllowedSpam": 0,
+              "newlyAllowedSpam": 0,
+              "newFalsePositives": 0,
+              "repairedFalsePositives": 0
+            },
+            "reducedInputs": {
+              "batches": 3,
+              "cases": 20,
+              "changedRoutes": 7,
+              "repairedAllowedSpam": 0,
+              "newlyAllowedSpam": 2,
+              "newFalsePositives": 0,
+              "repairedFalsePositives": 0
+            }
+          },
+          "baselineCostUSD": 0.00201546,
+          "cascadeCostUSD": 0.00574313,
+          "costRatio": 2.8495380707133853,
+          "baselineLatencyMs": {
+            "mean": 1493.875,
+            "p50": 1434,
+            "p95": 1764
+          },
+          "cascadeLatencyMs": {
+            "mean": 1857.828125,
+            "p50": 1812,
+            "p95": 2585
+          }
+        },
+        {
+          "repeat": 2,
+          "baseline": {
+            "spamCaught": 10,
+            "spamAllowed": 10,
+            "spamReviewed": 4,
+            "legitimateBlocked": 1,
+            "legitimateReviewed": 3,
+            "totalReviews": 7,
+            "weightedLoss": 32.75
+          },
+          "cascade": {
+            "spamCaught": 10,
+            "spamAllowed": 9,
+            "spamReviewed": 5,
+            "legitimateBlocked": 1,
+            "legitimateReviewed": 5,
+            "totalReviews": 10,
+            "weightedLoss": 31.75
+          },
+          "earlyCounts": {
+            "total": 5,
+            "spam": 5,
+            "ham": 0,
+            "review": 0
+          },
+          "earlyAttribution": {
+            "spamAlreadyCaught": 5,
+            "spamRecoveredFromAllowed": 0,
+            "spamPromotedFromReview": 0,
+            "legitimateAlreadyBlocked": 0,
+            "legitimateNewlyBlocked": 0,
+            "other": 0,
+            "targetBaitOrFiller": 0
+          },
+          "fallbackAttribution": {
+            "identicalInputs": {
+              "batches": 4,
+              "cases": 32,
+              "changedRoutes": 0,
+              "repairedAllowedSpam": 0,
+              "newlyAllowedSpam": 0,
+              "newFalsePositives": 0,
+              "repairedFalsePositives": 0
+            },
+            "reducedInputs": {
+              "batches": 4,
+              "cases": 27,
+              "changedRoutes": 3,
+              "repairedAllowedSpam": 0,
+              "newlyAllowedSpam": 0,
+              "newFalsePositives": 0,
+              "repairedFalsePositives": 0
+            }
+          },
+          "baselineCostUSD": 0.00203621,
+          "cascadeCostUSD": 0.00579937,
+          "costRatio": 2.8481197911806735,
+          "baselineLatencyMs": {
+            "mean": 1571.75,
+            "p50": 1584,
+            "p95": 1777
+          },
+          "cascadeLatencyMs": {
+            "mean": 1912.953125,
+            "p50": 1935,
+            "p95": 2267
+          }
+        }
+      ]
+    },
+    {
+      "ledger": "clef-cascade-validation-candidate-095.json",
+      "ledgerSHA256": "2a852527d7dbfed76f33b8a541c49465d3b0e54f1238176de68eb7047609464d",
+      "seal": "14b743f3c392d9b3b11934004e9794dd544cc31b8ada265aa23b0eb345712077",
+      "plan": {
+        "version": 1,
+        "split": "validation",
+        "policyName": "candidate",
+        "policyHash": "1cd28c7d81acd5b7f66ede8932f950c4e92f77b649689c54077a76fea2ebb67a",
+        "inputsHash": "22009b350a07b6356b4922a60c12bbc1ef28119d62a45906ce9379ab7a5e2b2b",
+        "cutoff": 0.95,
+        "repeats": 3,
+        "batchSize": 8,
+        "examples": 64,
+        "mode": "actual-sequential-cascade",
+        "firstModel": "cloudflare/clef",
+        "secondModel": "google/gemini-2.5-flash-lite",
+        "provider": "openrouter",
+        "firstEndpoint": "primeintellect",
+        "secondEndpoint": "google-ai-studio",
+        "classifierSourceHash": "2f4eeb9bdaa7136e700b23b7b8cb7d62d29bc9d6ec5011c0cfa637677c497f23",
+        "helperSourceHash": "bb6247ed9b3294ec4aa97b4a5664e51b737c42ebc220c30cd296c88764c8767d",
+        "maxRequests": 72
+      },
+      "createdAt": "2026-10-30T19:08:27.888Z",
+      "completedAt": "2026-10-30T19:14:48.896Z",
+      "labels": {
+        "spam": 24,
+        "ham": 40,
+        "review": 0
+      },
+      "identities": {
+        "clef": ["cloudflare/clef / PrimeIntellect"],
+        "gemini": ["google/gemini-2.5-flash-lite / Google AI Studio"]
+      },
+      "successfulRequests": 72,
+      "reportedSuccessfulCostUSD": 0.027999939999999987,
+      "failedRequests": {
+        "rejectedUnbilled": 3,
+        "other": 0
+      },
+      "totals": {
+        "baselineInputTokens": 39870,
+        "cascadeInputTokens": 97069,
+        "baselineOutputTokens": 12140,
+        "cascadeOutputTokens": 11296
+      },
+      "rounds": [
+        {
+          "repeat": 0,
+          "baseline": {
+            "spamCaught": 23,
+            "spamAllowed": 0,
+            "spamReviewed": 1,
+            "legitimateBlocked": 6,
+            "legitimateReviewed": 3,
+            "totalReviews": 4,
+            "weightedLoss": 61.25
+          },
+          "cascade": {
+            "spamCaught": 24,
+            "spamAllowed": 0,
+            "spamReviewed": 0,
+            "legitimateBlocked": 8,
+            "legitimateReviewed": 0,
+            "totalReviews": 0,
+            "weightedLoss": 80
+          },
+          "earlyCounts": {
+            "total": 7,
+            "spam": 7,
+            "ham": 0,
+            "review": 0
+          },
+          "earlyAttribution": {
+            "spamAlreadyCaught": 7,
+            "spamRecoveredFromAllowed": 0,
+            "spamPromotedFromReview": 0,
+            "legitimateAlreadyBlocked": 0,
+            "legitimateNewlyBlocked": 0,
+            "other": 0,
+            "targetBaitOrFiller": 0
+          },
+          "fallbackAttribution": {
+            "identicalInputs": {
+              "batches": 3,
+              "cases": 24,
+              "changedRoutes": 0,
+              "repairedAllowedSpam": 0,
+              "newlyAllowedSpam": 0,
+              "newFalsePositives": 0,
+              "repairedFalsePositives": 0
+            },
+            "reducedInputs": {
+              "batches": 5,
+              "cases": 33,
+              "changedRoutes": 6,
+              "repairedAllowedSpam": 0,
+              "newlyAllowedSpam": 0,
+              "newFalsePositives": 2,
+              "repairedFalsePositives": 0
+            }
+          },
+          "baselineCostUSD": 0.00246092,
+          "cascadeCostUSD": 0.007061930000000001,
+          "costRatio": 2.8696300570518347,
+          "baselineLatencyMs": {
+            "mean": 1498.75,
+            "p50": 1500,
+            "p95": 1678
+          },
+          "cascadeLatencyMs": {
+            "mean": 1998.765625,
+            "p50": 2034,
+            "p95": 2854
+          }
+        },
+        {
+          "repeat": 1,
+          "baseline": {
+            "spamCaught": 22,
+            "spamAllowed": 0,
+            "spamReviewed": 2,
+            "legitimateBlocked": 4,
+            "legitimateReviewed": 1,
+            "totalReviews": 3,
+            "weightedLoss": 41.25
+          },
+          "cascade": {
+            "spamCaught": 24,
+            "spamAllowed": 0,
+            "spamReviewed": 0,
+            "legitimateBlocked": 6,
+            "legitimateReviewed": 1,
+            "totalReviews": 1,
+            "weightedLoss": 60.25
+          },
+          "earlyCounts": {
+            "total": 4,
+            "spam": 4,
+            "ham": 0,
+            "review": 0
+          },
+          "earlyAttribution": {
+            "spamAlreadyCaught": 4,
+            "spamRecoveredFromAllowed": 0,
+            "spamPromotedFromReview": 0,
+            "legitimateAlreadyBlocked": 0,
+            "legitimateNewlyBlocked": 0,
+            "other": 0,
+            "targetBaitOrFiller": 0
+          },
+          "fallbackAttribution": {
+            "identicalInputs": {
+              "batches": 4,
+              "cases": 32,
+              "changedRoutes": 0,
+              "repairedAllowedSpam": 0,
+              "newlyAllowedSpam": 0,
+              "newFalsePositives": 0,
+              "repairedFalsePositives": 0
+            },
+            "reducedInputs": {
+              "batches": 4,
+              "cases": 28,
+              "changedRoutes": 4,
+              "repairedAllowedSpam": 0,
+              "newlyAllowedSpam": 0,
+              "newFalsePositives": 2,
+              "repairedFalsePositives": 0
+            }
+          },
+          "baselineCostUSD": 0.00232732,
+          "cascadeCostUSD": 0.00683702,
+          "costRatio": 2.9377223587645878,
+          "baselineLatencyMs": {
+            "mean": 1580.875,
+            "p50": 1538,
+            "p95": 2041
+          },
+          "cascadeLatencyMs": {
+            "mean": 2048.6875,
+            "p50": 1956,
+            "p95": 3081
+          }
+        },
+        {
+          "repeat": 2,
+          "baseline": {
+            "spamCaught": 24,
+            "spamAllowed": 0,
+            "spamReviewed": 0,
+            "legitimateBlocked": 5,
+            "legitimateReviewed": 3,
+            "totalReviews": 3,
+            "weightedLoss": 50.75
+          },
+          "cascade": {
+            "spamCaught": 24,
+            "spamAllowed": 0,
+            "spamReviewed": 0,
+            "legitimateBlocked": 5,
+            "legitimateReviewed": 2,
+            "totalReviews": 2,
+            "weightedLoss": 50.5
+          },
+          "earlyCounts": {
+            "total": 5,
+            "spam": 5,
+            "ham": 0,
+            "review": 0
+          },
+          "earlyAttribution": {
+            "spamAlreadyCaught": 5,
+            "spamRecoveredFromAllowed": 0,
+            "spamPromotedFromReview": 0,
+            "legitimateAlreadyBlocked": 0,
+            "legitimateNewlyBlocked": 0,
+            "other": 0,
+            "targetBaitOrFiller": 0
+          },
+          "fallbackAttribution": {
+            "identicalInputs": {
+              "batches": 4,
+              "cases": 32,
+              "changedRoutes": 0,
+              "repairedAllowedSpam": 0,
+              "newlyAllowedSpam": 0,
+              "newFalsePositives": 0,
+              "repairedFalsePositives": 0
+            },
+            "reducedInputs": {
+              "batches": 4,
+              "cases": 27,
+              "changedRoutes": 3,
+              "repairedAllowedSpam": 0,
+              "newlyAllowedSpam": 0,
+              "newFalsePositives": 1,
+              "repairedFalsePositives": 1
+            }
+          },
+          "baselineCostUSD": 0.00243683,
+          "cascadeCostUSD": 0.00687592,
+          "costRatio": 2.821665852767735,
+          "baselineLatencyMs": {
+            "mean": 1575.75,
+            "p50": 1527,
+            "p95": 1915
+          },
+          "cascadeLatencyMs": {
+            "mean": 2029.234375,
+            "p50": 2138,
+            "p95": 2447
+          }
+        }
+      ]
+    }
+  ]
+}

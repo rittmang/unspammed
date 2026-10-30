@@ -1,0 +1,104 @@
+{
+  "version": 1,
+  "generatedAt": "2026-10-30T21:07:32.000Z",
+  "scope": "Retrospective rescoring of unchanged first-round predictions using three explicit owner labels. All other labels remain experimental. Original fixture, gate result and model receipts are preserved. This is not a new blind validation or deployment approval.",
+  "adjudicationFile": "tests/fixtures/gemini-owner-adjudication.json",
+  "adjudicationSHA256": "5614281444d2e2f3dfc51e1e85c595c9b71fb8a13b40f24ba68a23a2782ac3a7",
+  "originalEvidenceSHA256": "129cfddb2fd0aa96d04c004f25981a91f53343e330dbbed70a689c15298c64a9",
+  "originalFixtureSHA256": "0a820b8fd64a3f4e0cbb158bf27a2ddde83b236f4df2fa48e8ab2e17956a3942",
+  "newModelRequests": 0,
+  "originalLabels": {
+    "spam": 24,
+    "ham": 40
+  },
+  "ownerAdjudicatedLabels": {
+    "spam": 27,
+    "ham": 37
+  },
+  "arms": [
+    {
+      "ledger": "gemini-protocol-validation-candidate-thinking1024-b1.json",
+      "ledgerSHA256": "00c4ce1a73f955b250abbeaa483e7b47fbab129e99455cba5b5ba5f17f81924a",
+      "policySHA256": "1cd28c7d81acd5b7f66ede8932f950c4e92f77b649689c54077a76fea2ebb67a",
+      "protocol": "standard",
+      "batchSize": 1,
+      "reasoningTokens": 1024,
+      "originalLabelMetrics": {
+        "classified": 64,
+        "spamCaught": 24,
+        "spamAllowed": 0,
+        "spamReviewed": 0,
+        "legitimateBlocked": 3,
+        "legitimateReviewed": 0,
+        "weightedLoss": 30
+      },
+      "ownerAdjudicatedMetrics": {
+        "classified": 64,
+        "spamCaught": 27,
+        "spamAllowed": 0,
+        "spamReviewed": 0,
+        "legitimateBlocked": 0,
+        "legitimateReviewed": 0,
+        "weightedLoss": 0
+      },
+      "completedRounds": 1,
+      "plannedRounds": 3
+    },
+    {
+      "ledger": "gemini-protocol-validation-candidate-standard-b8.json",
+      "ledgerSHA256": "0a0fdc605158e97548c4f9ad64d5b0ad509b892981e1c2ea3991cd0e5f63daba",
+      "policySHA256": "1cd28c7d81acd5b7f66ede8932f950c4e92f77b649689c54077a76fea2ebb67a",
+      "protocol": "standard",
+      "batchSize": 8,
+      "reasoningTokens": 0,
+      "originalLabelMetrics": {
+        "classified": 64,
+        "spamCaught": 24,
+        "spamAllowed": 0,
+        "spamReviewed": 0,
+        "legitimateBlocked": 6,
+        "legitimateReviewed": 7,
+        "weightedLoss": 61.75
+      },
+      "ownerAdjudicatedMetrics": {
+        "classified": 64,
+        "spamCaught": 27,
+        "spamAllowed": 0,
+        "spamReviewed": 0,
+        "legitimateBlocked": 3,
+        "legitimateReviewed": 7,
+        "weightedLoss": 31.75
+      },
+      "completedRounds": 1,
+      "plannedRounds": 3
+    },
+    {
+      "ledger": "gemini-protocol-validation-current-thinking1024-b1.json",
+      "ledgerSHA256": "9cfb0c5adee2fe48594f905eb0209131c99ae19bf45fc7f1ddee34e1bbc597d2",
+      "policySHA256": "40a3426fc347f70ab344d311ee72da763fd837f4faa8f484a33535a331050be4",
+      "protocol": "standard",
+      "batchSize": 1,
+      "reasoningTokens": 1024,
+      "originalLabelMetrics": {
+        "classified": 64,
+        "spamCaught": 11,
+        "spamAllowed": 12,
+        "spamReviewed": 1,
+        "legitimateBlocked": 2,
+        "legitimateReviewed": 0,
+        "weightedLoss": 44.5
+      },
+      "ownerAdjudicatedMetrics": {
+        "classified": 64,
+        "spamCaught": 12,
+        "spamAllowed": 14,
+        "spamReviewed": 1,
+        "legitimateBlocked": 1,
+        "legitimateReviewed": 0,
+        "weightedLoss": 38.5
+      },
+      "completedRounds": 1,
+      "plannedRounds": 3
+    }
+  ]
+}

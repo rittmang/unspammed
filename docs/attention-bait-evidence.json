@@ -1,0 +1,851 @@
+{
+  "date": "2026-10-30",
+  "result": "No tested candidate passed the robustness and false-positive checks. No production publication or second model.",
+  "reportedSuccessfulCostUSD": 0.063132248,
+  "unknownBillingFailures": 1,
+  "experiments": [
+    {
+      "name": "challenge-thinking-v4",
+      "reportSha256": "58c6cb5845cf2f1f0bebf9dd75feca76b1817bdc3368f08b767a0cb73ab7e9fb",
+      "plan": {
+        "split": "challenge",
+        "repeats": 3,
+        "reasonFirst": false,
+        "batchSize": 10,
+        "reasoningTokens": 1024,
+        "examples": 24,
+        "requests": 18,
+        "estimatedTokensPerRepeat": 31916,
+        "model": "google/gemini-2.5-flash-lite",
+        "baselineHash": "40a3426fc347f70ab344d311ee72da763fd837f4faa8f484a33535a331050be4",
+        "candidateHash": "1cd28c7d81acd5b7f66ede8932f950c4e92f77b649689c54077a76fea2ebb67a"
+      },
+      "complete": true,
+      "successfulRequests": 18,
+      "rejectedRequests": 1,
+      "unknownBillingFailures": 0,
+      "reportedSuccessfulCostUSD": 0.010781069999999999,
+      "observedIdentities": ["google/gemini-2.5-flash-lite / Google AI Studio"],
+      "comparisons": [
+        {
+          "repeat": 0,
+          "baseline": {
+            "loss": 14,
+            "spamCaught": 2,
+            "spamAllowed": 7,
+            "spamDeferred": 0,
+            "falsePositives": 0,
+            "unnecessaryReviews": 0
+          },
+          "candidate": {
+            "loss": 20,
+            "spamCaught": 9,
+            "spamAllowed": 0,
+            "spamDeferred": 0,
+            "falsePositives": 2,
+            "unnecessaryReviews": 0
+          }
+        },
+        {
+          "repeat": 1,
+          "baseline": {
+            "loss": 24,
+            "spamCaught": 2,
+            "spamAllowed": 7,
+            "spamDeferred": 0,
+            "falsePositives": 1,
+            "unnecessaryReviews": 0
+          },
+          "candidate": {
+            "loss": 22.5,
+            "spamCaught": 8,
+            "spamAllowed": 1,
+            "spamDeferred": 0,
+            "falsePositives": 2,
+            "unnecessaryReviews": 2
+          }
+        },
+        {
+          "repeat": 2,
+          "baseline": {
+            "loss": 12.5,
+            "spamCaught": 2,
+            "spamAllowed": 6,
+            "spamDeferred": 1,
+            "falsePositives": 0,
+            "unnecessaryReviews": 0
+          },
+          "candidate": {
+            "loss": 20,
+            "spamCaught": 9,
+            "spamAllowed": 0,
+            "spamDeferred": 0,
+            "falsePositives": 2,
+            "unnecessaryReviews": 0
+          }
+        }
+      ],
+      "scope": "Synthetic development/challenge or retrospective owner-labelled regression; not sealed production certification."
+    },
+    {
+      "name": "challenge-v2",
+      "reportSha256": "1d6a7e8eda0ef8ff54b74412ffce95a24d5fde555d3842ff02a4f026b8371687",
+      "plan": {
+        "split": "challenge",
+        "repeats": 2,
+        "examples": 24,
+        "requests": 12,
+        "estimatedTokensPerRepeat": 29452,
+        "model": "google/gemini-2.5-flash-lite",
+        "baselineHash": "40a3426fc347f70ab344d311ee72da763fd837f4faa8f484a33535a331050be4",
+        "candidateHash": "e244f8e512a7a827cf99b1183ede65313c5444b7254b9de8b4721d57b2339f11"
+      },
+      "complete": true,
+      "successfulRequests": 12,
+      "rejectedRequests": 0,
+      "unknownBillingFailures": 0,
+      "reportedSuccessfulCostUSD": 0.0035685500000000006,
+      "observedIdentities": ["google/gemini-2.5-flash-lite / Google AI Studio"],
+      "comparisons": [
+        {
+          "repeat": 0,
+          "baseline": {
+            "loss": 24,
+            "spamCaught": 2,
+            "spamAllowed": 7,
+            "spamDeferred": 0,
+            "falsePositives": 1,
+            "unnecessaryReviews": 0
+          },
+          "candidate": {
+            "loss": 3,
+            "spamCaught": 3,
+            "spamAllowed": 0,
+            "spamDeferred": 6,
+            "falsePositives": 0,
+            "unnecessaryReviews": 0
+          }
+        },
+        {
+          "repeat": 1,
+          "baseline": {
+            "loss": 22.5,
+            "spamCaught": 2,
+            "spamAllowed": 6,
+            "spamDeferred": 1,
+            "falsePositives": 1,
+            "unnecessaryReviews": 0
+          },
+          "candidate": {
+            "loss": 8.5,
+            "spamCaught": 3,
+            "spamAllowed": 3,
+            "spamDeferred": 3,
+            "falsePositives": 0,
+            "unnecessaryReviews": 4
+          }
+        }
+      ],
+      "scope": "Exploratory; control c18 corrected before later thinking-budget run."
+    },
+    {
+      "name": "challenge-v3",
+      "reportSha256": "4f310d3103a419296a73aca6ccc12b6af06a2dcb76253c427dc1e66c62e5b6e3",
+      "plan": {
+        "split": "challenge",
+        "repeats": 3,
+        "examples": 24,
+        "requests": 18,
+        "estimatedTokensPerRepeat": 30865,
+        "model": "google/gemini-2.5-flash-lite",
+        "baselineHash": "40a3426fc347f70ab344d311ee72da763fd837f4faa8f484a33535a331050be4",
+        "candidateHash": "41319ca908428654051a2b088584e0017479b603bc81e10a4439fda78a412651"
+      },
+      "complete": true,
+      "successfulRequests": 18,
+      "rejectedRequests": 0,
+      "unknownBillingFailures": 0,
+      "reportedSuccessfulCostUSD": 0.0051833,
+      "observedIdentities": ["google/gemini-2.5-flash-lite / Google AI Studio"],
+      "comparisons": [
+        {
+          "repeat": 0,
+          "baseline": {
+            "loss": 24,
+            "spamCaught": 2,
+            "spamAllowed": 7,
+            "spamDeferred": 0,
+            "falsePositives": 1,
+            "unnecessaryReviews": 0
+          },
+          "candidate": {
+            "loss": 0,
+            "spamCaught": 9,
+            "spamAllowed": 0,
+            "spamDeferred": 0,
+            "falsePositives": 0,
+            "unnecessaryReviews": 0
+          }
+        },
+        {
+          "repeat": 1,
+          "baseline": {
+            "loss": 22.5,
+            "spamCaught": 2,
+            "spamAllowed": 6,
+            "spamDeferred": 1,
+            "falsePositives": 1,
+            "unnecessaryReviews": 0
+          },
+          "candidate": {
+            "loss": 54.25,
+            "spamCaught": 7,
+            "spamAllowed": 2,
+            "spamDeferred": 0,
+            "falsePositives": 5,
+            "unnecessaryReviews": 1
+          }
+        },
+        {
+          "repeat": 2,
+          "baseline": {
+            "loss": 24,
+            "spamCaught": 2,
+            "spamAllowed": 7,
+            "spamDeferred": 0,
+            "falsePositives": 1,
+            "unnecessaryReviews": 0
+          },
+          "candidate": {
+            "loss": 0,
+            "spamCaught": 9,
+            "spamAllowed": 0,
+            "spamDeferred": 0,
+            "falsePositives": 0,
+            "unnecessaryReviews": 0
+          }
+        }
+      ],
+      "scope": "Exploratory; control c18 corrected before later thinking-budget run."
+    },
+    {
+      "name": "development-reason-first",
+      "reportSha256": "8b0e1a7a7d84f1c118b501430d0e67757820e5cbf4227d5fcb136634ab7f318a",
+      "plan": {
+        "split": "development",
+        "repeats": 3,
+        "reasonFirst": true,
+        "examples": 16,
+        "requests": 12,
+        "estimatedTokensPerRepeat": 20092,
+        "model": "google/gemini-2.5-flash-lite",
+        "baselineHash": "40a3426fc347f70ab344d311ee72da763fd837f4faa8f484a33535a331050be4",
+        "candidateHash": "41319ca908428654051a2b088584e0017479b603bc81e10a4439fda78a412651"
+      },
+      "complete": true,
+      "successfulRequests": 12,
+      "rejectedRequests": 1,
+      "unknownBillingFailures": 0,
+      "reportedSuccessfulCostUSD": 0.00400296,
+      "observedIdentities": ["google/gemini-2.5-flash-lite / Google AI Studio"],
+      "comparisons": [
+        {
+          "repeat": 0,
+          "baseline": {
+            "loss": 20,
+            "spamCaught": 7,
+            "spamAllowed": 0,
+            "spamDeferred": 0,
+            "falsePositives": 2,
+            "unnecessaryReviews": 0
+          },
+          "candidate": {
+            "loss": 0,
+            "spamCaught": 7,
+            "spamAllowed": 0,
+            "spamDeferred": 0,
+            "falsePositives": 0,
+            "unnecessaryReviews": 0
+          }
+        },
+        {
+          "repeat": 1,
+          "baseline": {
+            "loss": 20.5,
+            "spamCaught": 6,
+            "spamAllowed": 0,
+            "spamDeferred": 1,
+            "falsePositives": 2,
+            "unnecessaryReviews": 0
+          },
+          "candidate": {
+            "loss": 0,
+            "spamCaught": 7,
+            "spamAllowed": 0,
+            "spamDeferred": 0,
+            "falsePositives": 0,
+            "unnecessaryReviews": 0
+          }
+        },
+        {
+          "repeat": 2,
+          "baseline": {
+            "loss": 8,
+            "spamCaught": 3,
+            "spamAllowed": 4,
+            "spamDeferred": 0,
+            "falsePositives": 0,
+            "unnecessaryReviews": 0
+          },
+          "candidate": {
+            "loss": 6,
+            "spamCaught": 4,
+            "spamAllowed": 3,
+            "spamDeferred": 0,
+            "falsePositives": 0,
+            "unnecessaryReviews": 0
+          }
+        }
+      ],
+      "scope": "Synthetic development/challenge or retrospective owner-labelled regression; not sealed production certification."
+    },
+    {
+      "name": "development-thinking-reason-first-v4",
+      "reportSha256": "055c307fb99728e719e8ca9082d64a8195147dcebaf3b844c25de61db96249ae",
+      "plan": {
+        "split": "development",
+        "repeats": 3,
+        "reasonFirst": true,
+        "batchSize": 10,
+        "reasoningTokens": 2048,
+        "examples": 16,
+        "requests": 12,
+        "estimatedTokensPerRepeat": 20772,
+        "model": "google/gemini-2.5-flash-lite",
+        "baselineHash": "40a3426fc347f70ab344d311ee72da763fd837f4faa8f484a33535a331050be4",
+        "candidateHash": "1cd28c7d81acd5b7f66ede8932f950c4e92f77b649689c54077a76fea2ebb67a"
+      },
+      "complete": true,
+      "successfulRequests": 12,
+      "rejectedRequests": 1,
+      "unknownBillingFailures": 0,
+      "reportedSuccessfulCostUSD": 0.01076534,
+      "observedIdentities": ["google/gemini-2.5-flash-lite / Google AI Studio"],
+      "comparisons": [
+        {
+          "repeat": 0,
+          "baseline": {
+            "loss": 8,
+            "spamCaught": 3,
+            "spamAllowed": 4,
+            "spamDeferred": 0,
+            "falsePositives": 0,
+            "unnecessaryReviews": 0
+          },
+          "candidate": {
+            "loss": 0,
+            "spamCaught": 7,
+            "spamAllowed": 0,
+            "spamDeferred": 0,
+            "falsePositives": 0,
+            "unnecessaryReviews": 0
+          }
+        },
+        {
+          "repeat": 1,
+          "baseline": {
+            "loss": 2,
+            "spamCaught": 6,
+            "spamAllowed": 1,
+            "spamDeferred": 0,
+            "falsePositives": 0,
+            "unnecessaryReviews": 0
+          },
+          "candidate": {
+            "loss": 2,
+            "spamCaught": 6,
+            "spamAllowed": 1,
+            "spamDeferred": 0,
+            "falsePositives": 0,
+            "unnecessaryReviews": 0
+          }
+        },
+        {
+          "repeat": 2,
+          "baseline": {
+            "loss": 8,
+            "spamCaught": 3,
+            "spamAllowed": 4,
+            "spamDeferred": 0,
+            "falsePositives": 0,
+            "unnecessaryReviews": 0
+          },
+          "candidate": {
+            "loss": 6,
+            "spamCaught": 4,
+            "spamAllowed": 3,
+            "spamDeferred": 0,
+            "falsePositives": 0,
+            "unnecessaryReviews": 0
+          }
+        }
+      ],
+      "scope": "Synthetic development/challenge or retrospective owner-labelled regression; not sealed production certification."
+    },
+    {
+      "name": "development-thinking-v4",
+      "reportSha256": "7df6a50ee395b76e5543c3d66417ee2bd2ee0b4d124f011b88a0e630bf8e79a3",
+      "plan": {
+        "split": "development",
+        "repeats": 3,
+        "reasonFirst": false,
+        "batchSize": 10,
+        "reasoningTokens": 1024,
+        "examples": 16,
+        "requests": 12,
+        "estimatedTokensPerRepeat": 20772,
+        "model": "google/gemini-2.5-flash-lite",
+        "baselineHash": "40a3426fc347f70ab344d311ee72da763fd837f4faa8f484a33535a331050be4",
+        "candidateHash": "1cd28c7d81acd5b7f66ede8932f950c4e92f77b649689c54077a76fea2ebb67a"
+      },
+      "complete": true,
+      "successfulRequests": 12,
+      "rejectedRequests": 3,
+      "unknownBillingFailures": 0,
+      "reportedSuccessfulCostUSD": 0.007468600000000001,
+      "observedIdentities": ["google/gemini-2.5-flash-lite / Google AI Studio"],
+      "comparisons": [
+        {
+          "repeat": 0,
+          "baseline": {
+            "loss": 0,
+            "spamCaught": 7,
+            "spamAllowed": 0,
+            "spamDeferred": 0,
+            "falsePositives": 0,
+            "unnecessaryReviews": 0
+          },
+          "candidate": {
+            "loss": 10,
+            "spamCaught": 7,
+            "spamAllowed": 0,
+            "spamDeferred": 0,
+            "falsePositives": 1,
+            "unnecessaryReviews": 0
+          }
+        },
+        {
+          "repeat": 1,
+          "baseline": {
+            "loss": 2,
+            "spamCaught": 3,
+            "spamAllowed": 0,
+            "spamDeferred": 4,
+            "falsePositives": 0,
+            "unnecessaryReviews": 0
+          },
+          "candidate": {
+            "loss": 20,
+            "spamCaught": 7,
+            "spamAllowed": 0,
+            "spamDeferred": 0,
+            "falsePositives": 2,
+            "unnecessaryReviews": 0
+          }
+        },
+        {
+          "repeat": 2,
+          "baseline": {
+            "loss": 8,
+            "spamCaught": 3,
+            "spamAllowed": 4,
+            "spamDeferred": 0,
+            "falsePositives": 0,
+            "unnecessaryReviews": 0
+          },
+          "candidate": {
+            "loss": 0,
+            "spamCaught": 7,
+            "spamAllowed": 0,
+            "spamDeferred": 0,
+            "falsePositives": 0,
+            "unnecessaryReviews": 0
+          }
+        }
+      ],
+      "scope": "Synthetic development/challenge or retrospective owner-labelled regression; not sealed production certification."
+    },
+    {
+      "name": "development-v1",
+      "reportSha256": "2695291273c9fae78583c77e2ee6c64c9f72f9755a76cb963d0344fbf1be7420",
+      "plan": {
+        "split": "development",
+        "repeats": 2,
+        "examples": 16,
+        "requests": 8,
+        "estimatedTokensPerRepeat": 19144,
+        "model": "google/gemini-2.5-flash-lite",
+        "baselineHash": "40a3426fc347f70ab344d311ee72da763fd837f4faa8f484a33535a331050be4",
+        "candidateHash": "74275e73a2eba2f0132655ef0d028a858300438a65c114c161afe810ddc875b0"
+      },
+      "complete": true,
+      "successfulRequests": 8,
+      "rejectedRequests": 2,
+      "unknownBillingFailures": 0,
+      "reportedSuccessfulCostUSD": 0.0025683999999999998,
+      "observedIdentities": ["google/gemini-2.5-flash-lite / Google AI Studio"],
+      "comparisons": [
+        {
+          "repeat": 0,
+          "baseline": {
+            "loss": 10,
+            "spamCaught": 2,
+            "spamAllowed": 5,
+            "spamDeferred": 0,
+            "falsePositives": 0,
+            "unnecessaryReviews": 0
+          },
+          "candidate": {
+            "loss": 0,
+            "spamCaught": 7,
+            "spamAllowed": 0,
+            "spamDeferred": 0,
+            "falsePositives": 0,
+            "unnecessaryReviews": 0
+          }
+        },
+        {
+          "repeat": 1,
+          "baseline": {
+            "loss": 2.5,
+            "spamCaught": 3,
+            "spamAllowed": 0,
+            "spamDeferred": 4,
+            "falsePositives": 0,
+            "unnecessaryReviews": 2
+          },
+          "candidate": {
+            "loss": 20,
+            "spamCaught": 7,
+            "spamAllowed": 0,
+            "spamDeferred": 0,
+            "falsePositives": 2,
+            "unnecessaryReviews": 0
+          }
+        }
+      ],
+      "scope": "Synthetic development/challenge or retrospective owner-labelled regression; not sealed production certification."
+    },
+    {
+      "name": "development-v2",
+      "reportSha256": "aeed27e04567fb80b82b0c652e61348f59fcefaac38604b965b3d2f5099a60b6",
+      "plan": {
+        "split": "development",
+        "repeats": 3,
+        "examples": 16,
+        "requests": 12,
+        "estimatedTokensPerRepeat": 19150,
+        "model": "google/gemini-2.5-flash-lite",
+        "baselineHash": "40a3426fc347f70ab344d311ee72da763fd837f4faa8f484a33535a331050be4",
+        "candidateHash": "e244f8e512a7a827cf99b1183ede65313c5444b7254b9de8b4721d57b2339f11"
+      },
+      "complete": true,
+      "successfulRequests": 12,
+      "rejectedRequests": 0,
+      "unknownBillingFailures": 0,
+      "reportedSuccessfulCostUSD": 0.0036063799999999993,
+      "observedIdentities": ["google/gemini-2.5-flash-lite / Google AI Studio"],
+      "comparisons": [
+        {
+          "repeat": 0,
+          "baseline": {
+            "loss": 10,
+            "spamCaught": 2,
+            "spamAllowed": 5,
+            "spamDeferred": 0,
+            "falsePositives": 0,
+            "unnecessaryReviews": 0
+          },
+          "candidate": {
+            "loss": 0,
+            "spamCaught": 7,
+            "spamAllowed": 0,
+            "spamDeferred": 0,
+            "falsePositives": 0,
+            "unnecessaryReviews": 0
+          }
+        },
+        {
+          "repeat": 1,
+          "baseline": {
+            "loss": 2.5,
+            "spamCaught": 3,
+            "spamAllowed": 0,
+            "spamDeferred": 4,
+            "falsePositives": 0,
+            "unnecessaryReviews": 2
+          },
+          "candidate": {
+            "loss": 2.5,
+            "spamCaught": 3,
+            "spamAllowed": 0,
+            "spamDeferred": 4,
+            "falsePositives": 0,
+            "unnecessaryReviews": 2
+          }
+        },
+        {
+          "repeat": 2,
+          "baseline": {
+            "loss": 10,
+            "spamCaught": 2,
+            "spamAllowed": 5,
+            "spamDeferred": 0,
+            "falsePositives": 0,
+            "unnecessaryReviews": 0
+          },
+          "candidate": {
+            "loss": 0,
+            "spamCaught": 7,
+            "spamAllowed": 0,
+            "spamDeferred": 0,
+            "falsePositives": 0,
+            "unnecessaryReviews": 0
+          }
+        }
+      ],
+      "scope": "Synthetic development/challenge or retrospective owner-labelled regression; not sealed production certification."
+    },
+    {
+      "name": "development-v3",
+      "reportSha256": "903f53d2743493589fe8250074b7dc774514f90f8ca9897213e117c6585f2a94",
+      "plan": {
+        "split": "development",
+        "repeats": 3,
+        "examples": 16,
+        "requests": 12,
+        "estimatedTokensPerRepeat": 20092,
+        "model": "google/gemini-2.5-flash-lite",
+        "baselineHash": "40a3426fc347f70ab344d311ee72da763fd837f4faa8f484a33535a331050be4",
+        "candidateHash": "41319ca908428654051a2b088584e0017479b603bc81e10a4439fda78a412651"
+      },
+      "complete": true,
+      "successfulRequests": 12,
+      "rejectedRequests": 0,
+      "unknownBillingFailures": 0,
+      "reportedSuccessfulCostUSD": 0.00384798,
+      "observedIdentities": ["google/gemini-2.5-flash-lite / Google AI Studio"],
+      "comparisons": [
+        {
+          "repeat": 0,
+          "baseline": {
+            "loss": 10,
+            "spamCaught": 2,
+            "spamAllowed": 5,
+            "spamDeferred": 0,
+            "falsePositives": 0,
+            "unnecessaryReviews": 0
+          },
+          "candidate": {
+            "loss": 0,
+            "spamCaught": 7,
+            "spamAllowed": 0,
+            "spamDeferred": 0,
+            "falsePositives": 0,
+            "unnecessaryReviews": 0
+          }
+        },
+        {
+          "repeat": 1,
+          "baseline": {
+            "loss": 2.5,
+            "spamCaught": 3,
+            "spamAllowed": 0,
+            "spamDeferred": 4,
+            "falsePositives": 0,
+            "unnecessaryReviews": 2
+          },
+          "candidate": {
+            "loss": 20,
+            "spamCaught": 7,
+            "spamAllowed": 0,
+            "spamDeferred": 0,
+            "falsePositives": 2,
+            "unnecessaryReviews": 0
+          }
+        },
+        {
+          "repeat": 2,
+          "baseline": {
+            "loss": 10,
+            "spamCaught": 2,
+            "spamAllowed": 5,
+            "spamDeferred": 0,
+            "falsePositives": 0,
+            "unnecessaryReviews": 0
+          },
+          "candidate": {
+            "loss": 0,
+            "spamCaught": 7,
+            "spamAllowed": 0,
+            "spamDeferred": 0,
+            "falsePositives": 0,
+            "unnecessaryReviews": 0
+          }
+        }
+      ],
+      "scope": "Synthetic development/challenge or retrospective owner-labelled regression; not sealed production certification."
+    },
+    {
+      "name": "development-v4-reason-first",
+      "reportSha256": "efeafd1c9b6f6c7daf3fc35aa4f171a9fe2b1d72587e001ac009549aef4f7b83",
+      "plan": {
+        "split": "development",
+        "repeats": 3,
+        "reasonFirst": true,
+        "examples": 16,
+        "requests": 12,
+        "estimatedTokensPerRepeat": 20772,
+        "model": "google/gemini-2.5-flash-lite",
+        "baselineHash": "40a3426fc347f70ab344d311ee72da763fd837f4faa8f484a33535a331050be4",
+        "candidateHash": "1cd28c7d81acd5b7f66ede8932f950c4e92f77b649689c54077a76fea2ebb67a"
+      },
+      "complete": true,
+      "successfulRequests": 12,
+      "rejectedRequests": 1,
+      "unknownBillingFailures": 0,
+      "reportedSuccessfulCostUSD": 0.00409219,
+      "observedIdentities": ["google/gemini-2.5-flash-lite / Google AI Studio"],
+      "comparisons": [
+        {
+          "repeat": 0,
+          "baseline": {
+            "loss": 20,
+            "spamCaught": 7,
+            "spamAllowed": 0,
+            "spamDeferred": 0,
+            "falsePositives": 2,
+            "unnecessaryReviews": 0
+          },
+          "candidate": {
+            "loss": 0,
+            "spamCaught": 7,
+            "spamAllowed": 0,
+            "spamDeferred": 0,
+            "falsePositives": 0,
+            "unnecessaryReviews": 0
+          }
+        },
+        {
+          "repeat": 1,
+          "baseline": {
+            "loss": 20.5,
+            "spamCaught": 6,
+            "spamAllowed": 0,
+            "spamDeferred": 1,
+            "falsePositives": 2,
+            "unnecessaryReviews": 0
+          },
+          "candidate": {
+            "loss": 0,
+            "spamCaught": 7,
+            "spamAllowed": 0,
+            "spamDeferred": 0,
+            "falsePositives": 0,
+            "unnecessaryReviews": 0
+          }
+        },
+        {
+          "repeat": 2,
+          "baseline": {
+            "loss": 8,
+            "spamCaught": 3,
+            "spamAllowed": 4,
+            "spamDeferred": 0,
+            "falsePositives": 0,
+            "unnecessaryReviews": 0
+          },
+          "candidate": {
+            "loss": 16,
+            "spamCaught": 4,
+            "spamAllowed": 3,
+            "spamDeferred": 0,
+            "falsePositives": 1,
+            "unnecessaryReviews": 0
+          }
+        }
+      ],
+      "scope": "Synthetic development/challenge or retrospective owner-labelled regression; not sealed production certification."
+    },
+    {
+      "name": "development-v4",
+      "reportSha256": "91abe4193ca4c0aaa6763f47962f6a9b544310a7450cb9829eee1b6b114bc6a2",
+      "plan": {
+        "split": "development",
+        "repeats": 3,
+        "reasonFirst": false,
+        "examples": 16,
+        "requests": 12,
+        "estimatedTokensPerRepeat": 20772,
+        "model": "google/gemini-2.5-flash-lite",
+        "baselineHash": "40a3426fc347f70ab344d311ee72da763fd837f4faa8f484a33535a331050be4",
+        "candidateHash": "1cd28c7d81acd5b7f66ede8932f950c4e92f77b649689c54077a76fea2ebb67a"
+      },
+      "complete": false,
+      "successfulRequests": 7,
+      "rejectedRequests": 2,
+      "unknownBillingFailures": 0,
+      "reportedSuccessfulCostUSD": 0.0022291900000000003,
+      "observedIdentities": ["google/gemini-2.5-flash-lite / Google AI Studio"],
+      "scope": "Synthetic development/challenge or retrospective owner-labelled regression; not sealed production certification."
+    },
+    {
+      "name": "regression-thinking-v4",
+      "reportSha256": "13b0d1e16741abb7ce117e7fb4c654fd63afe3cc2e5a1933c55cd9456d54fea3",
+      "plan": {
+        "split": "regression",
+        "repeats": 1,
+        "reasonFirst": false,
+        "batchSize": 10,
+        "reasoningTokens": 1024,
+        "examples": 97,
+        "requests": 20,
+        "estimatedTokensPerRepeat": 144060,
+        "model": "google/gemini-2.5-flash-lite",
+        "baselineHash": "40a3426fc347f70ab344d311ee72da763fd837f4faa8f484a33535a331050be4",
+        "candidateHash": "1cd28c7d81acd5b7f66ede8932f950c4e92f77b649689c54077a76fea2ebb67a"
+      },
+      "complete": false,
+      "successfulRequests": 6,
+      "rejectedRequests": 0,
+      "unknownBillingFailures": 1,
+      "reportedSuccessfulCostUSD": 0.00463793,
+      "observedIdentities": ["google/gemini-2.5-flash-lite / Google AI Studio"],
+      "scope": "Synthetic development/challenge or retrospective owner-labelled regression; not sealed production certification."
+    },
+    {
+      "name": "single-message-v4",
+      "reportSha256": "fbe10a953ed492abd0c112128d63b26de198922a6a81e5352a71f950edc71f41",
+      "plan": {
+        "split": "development",
+        "repeats": 1,
+        "reasonFirst": false,
+        "batchSize": 1,
+        "endpoint": "google-ai-studio/priority",
+        "examples": 16,
+        "requests": 32,
+        "estimatedTokensPerRepeat": 141274,
+        "model": "google/gemini-2.5-flash-lite",
+        "baselineHash": "40a3426fc347f70ab344d311ee72da763fd837f4faa8f484a33535a331050be4",
+        "candidateHash": "1cd28c7d81acd5b7f66ede8932f950c4e92f77b649689c54077a76fea2ebb67a"
+      },
+      "complete": false,
+      "successfulRequests": 2,
+      "rejectedRequests": 1,
+      "unknownBillingFailures": 0,
+      "reportedSuccessfulCostUSD": 0.000380358,
+      "observedIdentities": ["google/gemini-2.5-flash-lite / Google AI Studio"],
+      "scope": "Synthetic development/challenge or retrospective owner-labelled regression; not sealed production certification."
+    }
+  ]
+}

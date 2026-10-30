@@ -1,0 +1,28 @@
+{
+  "version": 2,
+  "date": "2026-10-30",
+  "scope": "Adaptive development follow-up after the original batching screen. Original failures and paid ledgers remain evidence. No live publication.",
+  "model": "google/gemini-2.5-flash-lite",
+  "endpoint": "google-ai-studio",
+  "thresholds": { "spam": 0.9, "review": 0.75 },
+  "ideas": [
+    { "policy": "concise", "protocol": "standard", "batchSize": 1 },
+    { "policy": "candidate", "protocol": "criteria", "batchSize": 1 },
+    { "policy": "concise", "protocol": "criteria", "batchSize": 1 },
+    { "policy": "candidate", "protocol": "standard", "batchSize": 1, "reasoningTokens": 1024 }
+  ],
+  "development": {
+    "examples": "16 original development cases, then the 64 previously inspected cascade stress cases; neither is fresh validation.",
+    "rounds": 1,
+    "stopRule": "Reject an arm on any wrong route or terminal unclassified case in a completed screen. Do not complete repeats of rejected arms. The combined concise+criteria arm may be screened if either independent idea appears useful.",
+    "selection": "Among arms with complete coverage and no errors on both screens, prefer lower reported cost, then less protocol change. If none qualify, do not open fresh validation or claim a winner."
+  },
+  "validation": {
+    "fixtureSHA256": "0a820b8fd64a3f4e0cbb158bf27a2ddde83b236f4df2fa48e8ab2e17956a3942",
+    "lockBeforeCalls": "Record one selected arm before evaluating the frozen fresh fixture. No tuning on validation outcomes.",
+    "requirements": "Three opaque-ID perturbations, full classification coverage, known reported cost/identity, no false positives, misses or incorrect reviews. Paired same-policy standard batch-eight baseline, separate installed-policy controls, then frozen retrospective owner-labelled regression. Repeats are not independent cases."
+  },
+  "criteriaGuard": "One model call. The model emits explicit evidence predicates before its verdict. Contradictory spam verdicts or invalid predicates are classification failures, never silently rewritten to ham or review. This is an experimental protocol, not a generic runtime policy parser.",
+  "thinkingAmendment": "Added after the concise/criteria development screens failed, before any new stress or fresh validation results. Earlier thinking experiments used multiple messages per call; test the remaining single-message plus 1024-token thinking interaction. Keep all earlier outcomes.",
+  "installedThinkingControl": "Before fresh validation, screen the installed policy on the original 16 development cases with the same single-message/1024-token settings. If it passes, also screen it on the 64 previously inspected stress cases before choosing a policy. This distinguishes a necessary policy change from an execution-only improvement."
+}
