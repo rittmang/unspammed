@@ -143,6 +143,74 @@ async function tick(s: DurableObjectStub) {
 }
 
 describe('durable moderation', () => {
+  it('streams public model metadata only behind owner authentication and never forwards credentials', async () => {
+    expect(
+      (
+        await worker.fetch(
+          new Request('https://bot.example/api/model-catalog?provider=openrouter'),
+          env,
+        )
+      ).status,
+    ).toBe(401);
+    const catalog = {
+      data: [
+        { id: 'future/model', reasoning: { supported_efforts: ['high', 'low'], mandatory: true } },
+      ],
+    };
+    const fetcher = vi.fn(async (url: string, init: RequestInit) => {
+      expect(url).toBe('https://openrouter.ai/api/v1/models');
+      expect(init.headers).toBeUndefined();
+      expect(init.redirect).toBe('manual');
+      return Response.json(catalog);
+    });
+    vi.stubGlobal('fetch', fetcher);
+    const s = stub();
+    const response = await s.fetch('https://group.internal/api/model-catalog?provider=openrouter');
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual(catalog);
+    expect((await s.fetch('https://group.internal/api/model-catalog?provider=jev')).status).toBe(
+      400,
+    );
+    expect(
+      (await s.fetch('https://group.internal/api/model-catalog?provider=https://attacker.example'))
+        .status,
+    ).toBe(400);
+    expect(fetcher).toHaveBeenCalledTimes(1);
+  });
+
+  it('preserves new thinking fields for old clients and clears them on an explicit model-default save', async () => {
+    const s = stub();
+    const first = await configure(s, {
+      reasoningMode: 'effort',
+      reasoningTokens: 0,
+      reasoningEffort: 'high',
+      maxOutputTokens: 16384,
+      modelEndpoint: 'fixture-provider',
+    });
+    expect(first.status).toBe(200);
+    const olderClient = await configure(s, { reasoningTokens: 0 });
+    expect(await olderClient.json()).toMatchObject({
+      reasoningMode: 'effort',
+      reasoningEffort: 'high',
+      maxOutputTokens: 16384,
+      modelEndpoint: 'fixture-provider',
+    });
+    const reset = await configure(s, {
+      reasoningMode: 'default',
+      reasoningTokens: 0,
+      model: 'vendor/new-model',
+    });
+    const saved = await reset.json();
+    expect(saved).toMatchObject({
+      reasoningMode: 'default',
+      model: 'vendor/new-model',
+      mode: 'observe',
+    });
+    expect(saved).not.toHaveProperty('reasoningEffort');
+    expect(saved).not.toHaveProperty('maxOutputTokens');
+    expect(saved).not.toHaveProperty('modelEndpoint');
+  });
+
   it('retries only the submitted thinking target when fitting shrinks a larger configured batch', async () => {
     const s = stub();
     await configure(s, { batchSize: 3, reasoningTokens: 1024 });
@@ -919,6 +987,70 @@ describe('worker authorization', () => {
 });
 
 describe('model evaluation jobs', () => {
+  it('does not inherit new thinking overrides when a legacy run lacks a settings snapshot', async () => {
+    const s = stub();
+    const id = await dataset(s);
+    expect(
+      (
+        await request(s, '/evaluations', {
+          datasetId: id,
+          models: [{ provider: 'openrouter', model: defaultSettings.model }],
+        })
+      ).status,
+    ).toBe(202);
+    await runInDurableObject(s, (_instance, state) => {
+      state.storage.sql.exec("UPDATE evaluations SET settings_snapshot=''");
+    });
+    await configure(s, {
+      reasoningMode: 'effort',
+      reasoningEffort: 'high',
+      maxOutputTokens: 16384,
+      modelEndpoint: 'new-live-provider',
+    });
+    await tick(s);
+    const payloads = calls.filter((call) => call.method === 'classify').map((call) => call.body);
+    expect(payloads).toHaveLength(1);
+    expect(payloads[0]).not.toHaveProperty('reasoning');
+    expect(payloads[0]).not.toHaveProperty('provider');
+    expect(JSON.parse(payloads[0].messages[1].content).messages).toHaveLength(3);
+  });
+
+  it('freezes arbitrary effort, output cap and upstream route independently of later live edits', async () => {
+    const s = stub();
+    const id = await dataset(s);
+    await configure(s, {
+      model: 'vendor/future-model',
+      batchSize: 2,
+      reasoningMode: 'effort',
+      reasoningTokens: 0,
+      reasoningEffort: 'high',
+      maxOutputTokens: 16384,
+      modelEndpoint: 'fixture-provider',
+    });
+    expect(
+      (
+        await request(s, '/evaluations', {
+          datasetId: id,
+          models: [{ provider: 'openrouter', model: 'vendor/future-model' }],
+        })
+      ).status,
+    ).toBe(202);
+    await configure(s, { reasoningMode: 'off', reasoningTokens: 0, batchSize: 20 });
+    await tick(s);
+    await tick(s);
+    const [run] = (await (await s.fetch('https://group.internal/api/evaluations')).json()) as any[];
+    expect(run).toMatchObject({ status: 'complete', cursor: 3 });
+    const payloads = calls.filter((call) => call.method === 'classify').map((call) => call.body);
+    expect(payloads).toHaveLength(2);
+    for (const payload of payloads)
+      expect(payload).toMatchObject({
+        model: 'vendor/future-model',
+        reasoning: { effort: 'high', exclude: true },
+        max_tokens: 16384,
+        provider: { only: ['fixture-provider'], allow_fallbacks: false },
+      });
+  });
+
   it('keeps an old replay batched with thinking off after the live setup changes', async () => {
     const s = stub();
     const id = await dataset(s);

@@ -102,6 +102,10 @@ export function decisionSettings(s: Settings) {
     ...(s.reasoningTokens === undefined
       ? {}
       : { batchSize: s.batchSize, reasoningTokens: s.reasoningTokens }),
+    ...(s.reasoningMode === undefined ? {} : { reasoningMode: s.reasoningMode }),
+    ...(s.reasoningEffort === undefined ? {} : { reasoningEffort: s.reasoningEffort }),
+    ...(s.maxOutputTokens === undefined ? {} : { maxOutputTokens: s.maxOutputTokens }),
+    ...(s.modelEndpoint === undefined ? {} : { modelEndpoint: s.modelEndpoint }),
   };
 }
 export const policyFingerprint = (s: Settings) => digest(decisionSettings(s));

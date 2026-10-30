@@ -60,7 +60,9 @@ describe('evaluated moderation setup', () => {
       policy: legacyDefaultPolicy,
       mode: 'observe',
     });
-    expect(() => settingsSchema.parse({ reasoningTokens: 8192 })).toThrow();
+    expect(settingsSchema.parse({ reasoningTokens: 8192 }).reasoningTokens).toBe(8192);
+    expect(() => settingsSchema.parse({ reasoningTokens: -1 })).toThrow();
+    expect(() => settingsSchema.parse({ reasoningTokens: 65537 })).toThrow();
   });
 
   it('sends the audited budget, keeps output headroom, and refuses accidental multi-message thinking calls', async () => {

@@ -3,6 +3,7 @@ import { defaultSettings } from '../shared/types';
 import type { Example, Prediction, ProviderPublic, Settings } from '../shared/types';
 import type { Env } from './env';
 import { ProviderError, providerError, errorText } from './provider-errors';
+import { isOpenRouter, legacyThinking, supportsReasoningControls } from '../shared/reasoning';
 
 const providerSchema = z.object({
   id: z.string().min(1).max(60),
@@ -11,6 +12,18 @@ const providerSchema = z.object({
   apiKeyEnv: z.string().regex(/^[A-Z][A-Z0-9_]*$/),
   format: z.enum(['json_schema', 'json_object', 'plain', 'decisions']).default('json_schema'),
   imageModels: z.array(z.string().min(1).max(200)).max(100).optional(),
+  // Custom chat endpoints opt in only when they implement the OpenRouter reasoning object.
+  reasoning: z
+    .object({
+      supports_max_tokens: z.boolean(),
+      supported_efforts: z
+        .array(z.string().regex(/^[a-z][a-z0-9_-]{0,39}$/))
+        .max(20)
+        .optional(),
+      mandatory: z.boolean().optional(),
+      default_effort: z.string().max(40).optional(),
+    })
+    .optional(),
 });
 type Provider = z.infer<typeof providerSchema>;
 // Image bytes exist only for a single live request, never in lab datasets or logs.
@@ -18,15 +31,25 @@ export interface ClassificationExample extends Example {
   image?: string;
 }
 export type ClassificationSettings = Pick<Settings, 'threshold' | 'reviewThreshold'> &
-  Partial<Pick<Settings, 'reasoningTokens' | 'batchSize'>>;
+  Partial<
+    Pick<
+      Settings,
+      | 'reasoningTokens'
+      | 'batchSize'
+      | 'reasoningMode'
+      | 'reasoningEffort'
+      | 'maxOutputTokens'
+      | 'modelEndpoint'
+    >
+  >;
 
 function reasoningBudget(provider: Provider, model: string, settings: ClassificationSettings) {
-  // Only the audited OpenRouter/Gemini route has a verified thinking contract.
-  return provider.format !== 'decisions' &&
-    provider.baseUrl.replace(/\/$/, '') === 'https://openrouter.ai/api/v1' &&
-    model === 'google/gemini-2.5-flash-lite'
-    ? settings.reasoningTokens || 0
-    : 0;
+  if (!supportsReasoningControls(provider)) return 0;
+  if (settings.reasoningMode === 'tokens') return settings.reasoningTokens || 0;
+  return legacyThinking(provider, model, {
+    reasoningTokens: settings.reasoningTokens ?? 0,
+    ...settings,
+  });
 }
 const defaults: Provider[] = [
   {
@@ -64,6 +87,7 @@ export function publicProviders(env: Env): ProviderPublic[] {
     baseUrl: p.baseUrl,
     format: p.format,
     configured: Boolean(env[p.apiKeyEnv]),
+    ...(p.reasoning ? { reasoning: p.reasoning } : {}),
   }));
 }
 export function configuredProvider(env: Env, id: string) {
@@ -134,8 +158,40 @@ export function requestPayload(
   thresholds: ClassificationSettings = defaultSettings,
 ) {
   const thinking = reasoningBudget(provider, model, thresholds);
-  if (thinking && examples.length !== 1)
-    throw new Error('Gemini thinking moderation requires exactly one message per call.');
+  const legacy = legacyThinking(provider, model, {
+    reasoningTokens: thresholds.reasoningTokens ?? 0,
+    ...thresholds,
+  });
+  if (legacy && examples.length !== 1)
+    throw new Error('Legacy thinking moderation requires exactly one message per call.');
+  const explicit = thresholds.reasoningMode;
+  const compatible = supportsReasoningControls(provider);
+  if (
+    compatible &&
+    ((explicit === 'tokens' && !thinking) || (explicit === 'effort' && !thresholds.reasoningEffort))
+  )
+    throw new Error('Choose a thinking budget or effort before making a request.');
+  if (explicit && explicit !== 'default' && !compatible && provider.format !== 'decisions')
+    throw new Error('This endpoint has not declared support for thinking controls.');
+  const reasoning = compatible
+    ? explicit === 'off'
+      ? { enabled: false, exclude: true }
+      : thinking
+        ? { max_tokens: thinking, exclude: true }
+        : explicit === 'effort'
+          ? { effort: thresholds.reasoningEffort, exclude: true }
+          : explicit === 'default'
+            ? { exclude: true }
+            : undefined
+    : undefined;
+  const visible = Math.max(1000, examples.length * 160);
+  const outputLimit =
+    thresholds.maxOutputTokens ??
+    (compatible && explicit === 'default'
+      ? Math.max(8192, visible)
+      : visible + (thinking || (explicit === 'effort' ? 8192 : 0)));
+  if (thinking && outputLimit < thinking + visible)
+    throw new Error('The output limit must leave room for classification results after thinking.');
   if (provider.format === 'decisions') {
     if (examples.some((e) => e.image))
       throw new Error('This decision model adapter does not accept images.');
@@ -243,12 +299,15 @@ export function requestPayload(
             }),
       },
     ],
-    temperature: 0,
-    max_tokens: Math.max(1000, examples.length * 160) + thinking,
-    ...(thinking
+    ...(explicit === 'effort' || explicit === 'default' ? {} : { temperature: 0 }),
+    max_tokens: outputLimit,
+    ...(reasoning ? { reasoning } : {}),
+    ...(isOpenRouter(provider) && (thresholds.modelEndpoint || legacy)
       ? {
-          reasoning: { max_tokens: thinking, exclude: true },
-          provider: { only: ['google-ai-studio'], allow_fallbacks: false },
+          provider: {
+            only: [thresholds.modelEndpoint || 'google-ai-studio'],
+            allow_fallbacks: false,
+          },
         }
       : {}),
     ...(format ? { response_format: format } : {}),
@@ -297,7 +356,11 @@ export function fitExamples(
   const provider = modelProvider(env, providerId, model);
   const maxBatch = Math.min(
     settings.batchSize ?? 20,
-    reasoningBudget(provider, model, settings) ? 1 : provider.format === 'decisions' ? 5 : 20,
+    legacyThinking(provider, model, { reasoningTokens: settings.reasoningTokens ?? 0, ...settings })
+      ? 1
+      : provider.format === 'decisions'
+        ? 5
+        : 20,
   );
   for (const example of examples) {
     if (fitted.length >= maxBatch) break;

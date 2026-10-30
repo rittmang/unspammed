@@ -45,6 +45,7 @@ import { IMPORT_BATCH_MESSAGES, validateExamples } from '../shared/import';
 import { feedbackSchema, type CorrectionSnapshot, type FeedbackInput } from '../shared/improvement';
 import { ImprovementService } from './improvement';
 import { errorText, rateLimitRetry } from './provider-errors';
+import { settingsForModel } from '../shared/reasoning';
 import { writeAudit } from './logging';
 import {
   mediaType,
@@ -536,6 +537,7 @@ export class GroupService {
         if (!processing[0].image_file_id)
           throw new Error('No supported image file is available for this photo.');
       }
+      const requestSettings = settingsForModel(settings, route.provider, route.model);
       const examples = fitExamples(
         this.env,
         route.provider,
@@ -545,7 +547,7 @@ export class GroupService {
           image ? { ...e, image: 'pending-download' } : e,
         ),
         await this.remainingBudget(),
-        settings,
+        requestSettings,
       );
       // Fitting can shrink a configured batch to one thinking target. Only
       // submitted messages should receive this request's failure/retry state.
@@ -561,7 +563,7 @@ export class GroupService {
         settings.policy,
         examples,
         undefined,
-        settings,
+        requestSettings,
       );
       // Config changes during an upstream call invalidate its decisions.
       if (JSON.stringify(await this.settings()) !== JSON.stringify(settings)) return;
@@ -584,7 +586,7 @@ export class GroupService {
             },
             prediction,
             policy: settings.policy,
-            settings: { ...settings, provider: route.provider, model: route.model },
+            settings: requestSettings,
             model: { provider: route.provider, model: route.model },
             action: { status: m.status, deleted: m.deleted, strikeAwarded: m.strike_awarded },
           } satisfies CorrectionSnapshot),
@@ -996,6 +998,10 @@ export class GroupService {
         : storedSettings({
             ...(await this.settings()),
             reasoningTokens: 0,
+            reasoningMode: undefined,
+            reasoningEffort: undefined,
+            maxOutputTokens: undefined,
+            modelEndpoint: undefined,
             batchSize: run.batch_size,
           });
       const examples = fitExamples(
@@ -1314,6 +1320,25 @@ export class GroupService {
         return json({ ok: true });
       }
       if (path === '/api/overview' && request.method === 'GET') return json(await this.overview());
+      if (path === '/api/model-catalog' && request.method === 'GET') {
+        const provider = publicProviders(this.env).find(
+          (p) => p.id === url.searchParams.get('provider'),
+        );
+        if (
+          !provider ||
+          provider.format === 'decisions' ||
+          provider.baseUrl.replace(/\/$/, '') !== 'https://openrouter.ai/api/v1'
+        )
+          throw new HttpError(400, 'No public model catalog is available for this endpoint.');
+        // Stream public metadata to the owner. Do not parse the complete catalog
+        // on a CPU-limited Worker or forward credentials to a metadata request.
+        const response = await fetch('https://openrouter.ai/api/v1/models', {
+          redirect: 'manual',
+          signal: AbortSignal.timeout(8000),
+        });
+        if (!response.ok) throw new HttpError(502, 'Model capabilities could not be loaded.');
+        return new Response(response.body, { headers: { 'Content-Type': 'application/json' } });
+      }
       if (path.startsWith('/api/improvement')) {
         await this.requireLiveStorage();
         return (await this.improvement().handle(request))!;
@@ -1330,15 +1355,22 @@ export class GroupService {
           })
           .parse(await readJson(request));
         const route = await imageRoute(this.env, { ...saved, ...draft });
-        const result = await this.classifyBatch(route.provider, route.model, saved.policy, [
-          {
-            id: 'vision-check',
-            text: 'Connection check: classify this ordinary geometric illustration.',
-            label: null,
-            media: 'photo',
-            image: VISION_CHECK_IMAGE,
-          },
-        ]);
+        const result = await this.classifyBatch(
+          route.provider,
+          route.model,
+          saved.policy,
+          [
+            {
+              id: 'vision-check',
+              text: 'Connection check: classify this ordinary geometric illustration.',
+              label: null,
+              media: 'photo',
+              image: VISION_CHECK_IMAGE,
+            },
+          ],
+          undefined,
+          settingsForModel(saved, route.provider, route.model),
+        );
         // This verifies the real provider path, never ingestion or enforcement.
         return json({
           ...route,
@@ -1349,8 +1381,18 @@ export class GroupService {
       }
       if (path === '/api/settings' && request.method === 'PUT') {
         const raw = z.record(z.string(), z.unknown()).parse(await readJson(request));
+        const current = await this.settings();
         const settings = settingsSchema.parse({
-          reasoningTokens: (await this.settings()).reasoningTokens,
+          reasoningTokens: current.reasoningTokens,
+          ...(raw.reasoningMode === undefined
+            ? Object.fromEntries(
+                Object.entries(current).filter(([key]) =>
+                  ['reasoningMode', 'reasoningEffort', 'maxOutputTokens', 'modelEndpoint'].includes(
+                    key,
+                  ),
+                ),
+              )
+            : {}),
           ...raw,
         });
         const { expectedPolicyFingerprint } = z
@@ -2002,7 +2044,7 @@ export class GroupService {
               examples.length,
               Date.now(),
               JSON.stringify({
-                ...(await this.settings()),
+                ...settingsForModel(await this.settings(), model.provider, model.model),
                 policy: body.policy || (await this.settings()).policy,
                 provider: model.provider,
                 model: model.model,

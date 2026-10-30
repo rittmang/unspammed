@@ -467,6 +467,10 @@ describe('policy identity and human-readable diffs', () => {
     { imageModel: 'another-image-model' },
     { batchSize: 10 },
     { reasoningTokens: 0 as const },
+    { reasoningMode: 'default' as const },
+    { reasoningEffort: 'high' },
+    { maxOutputTokens: 16384 },
+    { modelEndpoint: 'another-provider' },
   ])('changes the fingerprint for a decision setting %j', async (change) => {
     expect(await policyFingerprint({ ...defaultSettings, ...change })).not.toBe(
       await policyFingerprint(defaultSettings),

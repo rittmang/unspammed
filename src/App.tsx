@@ -72,6 +72,8 @@ import { signOutBrowser } from './SignIn';
 import { Disclosure } from './Disclosure';
 import { policyFingerprint } from '../shared/improvement';
 import { evaluatedPolicy } from '../shared/moderation-policy';
+import { ThinkingControls } from './ThinkingControls';
+import { legacyThinking } from '../shared/reasoning';
 
 type Page = 'overview' | 'messages' | 'users' | 'lab' | 'improvement' | 'settings';
 const pages: { id: Page; title: string; icon: typeof Shield }[] = [
@@ -2615,14 +2617,18 @@ function SettingsPage({ data, act, busy }: { data: Overview; act: Act; busy: boo
   const [checkingImage, setCheckingImage] = useState(false);
   const [imageCheck, setImageCheck] = useState('');
   const dirty = JSON.stringify(settings) !== saved;
-  const thinkingSupported =
-    settings.model === 'google/gemini-2.5-flash-lite' &&
-    data.providers.some(
-      (p) =>
-        p.id === settings.provider &&
-        p.format !== 'decisions' &&
-        p.baseUrl.replace(/\/$/, '') === 'https://openrouter.ai/api/v1',
-    );
+  const selectedProvider = data.providers.find((p) => p.id === settings.provider);
+  const changeModel = (provider: string, model: string) =>
+    setSettings((s) => ({
+      ...s,
+      provider,
+      model,
+      reasoningMode: 'default',
+      reasoningTokens: 0,
+      reasoningEffort: undefined,
+      maxOutputTokens: undefined,
+      modelEndpoint: undefined,
+    }));
   function update<K extends keyof Settings>(key: K, value: Settings[K]) {
     setSettings((s) => ({ ...s, [key]: value }));
   }
@@ -2738,6 +2744,10 @@ function SettingsPage({ data, act, busy }: { data: Overview; act: Act; busy: boo
                   model: 'google/gemini-2.5-flash-lite',
                   batchSize: 1,
                   reasoningTokens: 1024,
+                  reasoningMode: 'tokens',
+                  reasoningEffort: undefined,
+                  maxOutputTokens: undefined,
+                  modelEndpoint: 'google-ai-studio',
                 });
               }, 'Gemini setup prepared. Review the changes and save settings to apply.');
             }}
@@ -2761,9 +2771,8 @@ function SettingsPage({ data, act, busy }: { data: Overview; act: Act; busy: boo
               <select
                 value={settings.provider}
                 onChange={(e) => {
-                  update('provider', e.target.value);
-                  update(
-                    'model',
+                  changeModel(
+                    e.target.value,
                     e.target.value === 'jev' ? 'typesafe/jev-1.13' : 'google/gemini-2.5-flash-lite',
                   );
                 }}
@@ -2781,31 +2790,16 @@ function SettingsPage({ data, act, busy }: { data: Overview; act: Act; busy: boo
               <input
                 required
                 value={settings.model}
-                onChange={(e) => update('model', e.target.value)}
+                onChange={(e) => changeModel(settings.provider, e.target.value)}
               />
               <small>Any model supported by the selected endpoint.</small>
             </label>
-            <label className="field">
-              Gemini Flash-Lite thinking
-              <select
-                value={settings.reasoningTokens}
-                disabled={!thinkingSupported}
-                onChange={(e) => {
-                  const reasoningTokens = Number(e.target.value) as 0 | 1024;
-                  setSettings((s) => ({
-                    ...s,
-                    reasoningTokens,
-                    ...(reasoningTokens ? { batchSize: 1 } : {}),
-                  }));
-                }}
-              >
-                <option value={1024}>1,024 tokens · one message per call</option>
-                <option value={0}>Off · use configured batch size</option>
-              </select>
-              <small>
-                Thinking is billed as output. Reasoning text is excluded from responses.
-              </small>
-            </label>
+            <ThinkingControls
+              settings={settings}
+              provider={selectedProvider}
+              api={api}
+              change={setSettings}
+            />
             <label className="field">
               Spam threshold
               <input
@@ -2971,11 +2965,21 @@ function SettingsPage({ data, act, busy }: { data: Overview; act: Act; busy: boo
                 type="number"
                 min="1"
                 max="30"
-                disabled={thinkingSupported && settings.reasoningTokens > 0}
-                value={thinkingSupported && settings.reasoningTokens > 0 ? 1 : settings.batchSize}
-                onChange={(e) => update('batchSize', Number(e.target.value))}
+                value={settings.batchSize}
+                onChange={(e) =>
+                  setSettings((s) => ({
+                    ...s,
+                    batchSize: Number(e.target.value),
+                    ...(selectedProvider && legacyThinking(selectedProvider, s.model, s)
+                      ? { reasoningMode: 'tokens', modelEndpoint: 'google-ai-studio' }
+                      : {}),
+                  }))
+                }
               />
-              <small>Thinking-enabled Gemini calls classify one message at a time.</small>
+              <small>
+                The evaluated preset uses one message per call. Other batch sizes can change
+                results.
+              </small>
             </label>
             <label className="field">
               Daily moderation token budget

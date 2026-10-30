@@ -442,6 +442,7 @@ More screens: [all screenshots](screenshots/).
 
 In **Settings**, open the provider section and add your key. Keys are saved on the server, not in the browser.
 For a custom OpenAI-compatible provider, set `MODEL_PROVIDERS_JSON` in `.env`. See the example in `.env.example`.
+The general [Thinking controls](model-thinking.md) follow the selected model's advertised budget/effort options. Custom endpoints can explicitly declare compatible reasoning capabilities; changing models clears the previous model's overrides.
 
 ### Add a second group
 

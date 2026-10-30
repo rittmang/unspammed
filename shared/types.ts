@@ -15,12 +15,41 @@ export const settingsSchema = z
     reviewThreshold: z.number().min(0).max(1).default(0.6),
     batchSeconds: z.number().int().min(1).max(60).default(10),
     batchSize: z.number().int().min(1).max(30).default(1),
-    reasoningTokens: z.union([z.literal(0), z.literal(1024)]).default(1024),
+    reasoningTokens: z.number().int().min(0).max(65536).default(1024),
+    reasoningMode: z.enum(['default', 'off', 'tokens', 'effort']).optional(),
+    reasoningEffort: z
+      .string()
+      .regex(/^[a-z][a-z0-9_-]{0,39}$/)
+      .optional(),
+    maxOutputTokens: z.number().int().min(1000).max(262144).optional(),
+    modelEndpoint: z
+      .string()
+      .regex(/^[a-z0-9][a-z0-9_./:-]{0,99}$/)
+      .optional(),
     dailyTokenBudget: z.number().int().min(1000).max(10_000_000).default(100_000),
     retentionDays: z.number().int().min(3).max(365).default(30),
     exemptUserIds: z.array(z.string().regex(/^\d+$/)).max(100).default([]),
     policy: z.string().min(20).max(6000).default(defaultPolicy),
   })
+  .refine((s) => s.reasoningMode !== 'tokens' || s.reasoningTokens > 0, {
+    message: 'Choose a positive thinking token budget.',
+  })
+  .refine(
+    (s) =>
+      s.reasoningMode !== 'effort' || Boolean(s.reasoningEffort && s.reasoningEffort !== 'none'),
+    {
+      message: 'Choose a thinking effort level.',
+    },
+  )
+  .refine(
+    (s) =>
+      s.reasoningMode !== 'tokens' ||
+      !s.maxOutputTokens ||
+      s.maxOutputTokens >= s.reasoningTokens + Math.max(1000, s.batchSize * 160),
+    {
+      message: 'The output limit must leave at least 1,000 tokens beyond the thinking budget.',
+    },
+  )
   .refine((s) => s.reviewThreshold <= s.threshold, {
     message: 'Review threshold must not exceed enforcement threshold.',
   });
@@ -62,6 +91,7 @@ export interface ProviderPublic {
   baseUrl: string;
   configured: boolean;
   format: string;
+  reasoning?: import('./reasoning').ReasoningCapabilities;
 }
 export interface StoredMessage {
   id: number;

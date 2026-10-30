@@ -1474,7 +1474,15 @@ export class ImprovementService {
         );
         if (!previous) throw new HttpError(404, 'Policy version not found.');
         const prior = JSON.parse(previous.settings) as Partial<Settings>;
-        const restored = { ...current, ...prior, reasoningTokens: prior.reasoningTokens ?? 0 };
+        const restored = {
+          ...current,
+          ...prior,
+          reasoningTokens: prior.reasoningTokens ?? 0,
+          reasoningMode: prior.reasoningMode,
+          reasoningEffort: prior.reasoningEffort,
+          maxOutputTokens: prior.maxOutputTokens,
+          modelEndpoint: prior.modelEndpoint,
+        };
         await this.db.exec('UPDATE config SET value=? WHERE id=1', JSON.stringify(restored));
         await this.db.exec(
           'INSERT INTO audit (kind,detail,created_at) VALUES (?,?,?)',
